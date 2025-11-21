@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import logoImage from '@/assets/logo.png';
 
 interface PayrollData {
   id: string;
@@ -31,6 +32,10 @@ interface YTDTotals {
   totalNet: number;
   totalHours: number;
 }
+
+const formatCurrency = (amount: number): string => {
+  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
 
 const fetchYTDTotals = async (userId: string, currentYear: number): Promise<YTDTotals> => {
   const { data, error } = await supabase
@@ -67,18 +72,28 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   // Fetch YTD totals
   const ytdTotals = await fetchYTDTotals(payroll.user_id, year);
 
-  // Company Branding Header
-  doc.setFillColor(139, 92, 246); // Primary color
-  doc.rect(0, 0, pageWidth, 40, 'F');
+  // Company Branding Header - CareSync colors (dark blue)
+  doc.setFillColor(36, 51, 74); // CareSync primary dark blue
+  doc.rect(0, 0, pageWidth, 45, 'F');
+  
+  // Add CareSync Logo
+  try {
+    doc.addImage(logoImage, 'PNG', 14, 8, 30, 30);
+  } catch (error) {
+    console.error('Error adding logo:', error);
+  }
   
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
+  doc.setFontSize(26);
   doc.setFont('helvetica', 'bold');
-  doc.text('PAYSLIP', pageWidth / 2, 20, { align: 'center' });
+  doc.text('CareSync', 50, 22);
+  
+  doc.setFontSize(20);
+  doc.text('PAYSLIP', pageWidth / 2, 24, { align: 'center' });
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text('Employee Compensation Statement', pageWidth / 2, 30, { align: 'center' });
+  doc.text('Employee Compensation Statement', pageWidth / 2, 35, { align: 'center' });
 
   // Reset text color
   doc.setTextColor(0, 0, 0);
@@ -86,45 +101,45 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   // Company Information
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Company Name', 14, 55);
+  doc.text('CareSync Inc.', 14, 60);
   doc.setFont('helvetica', 'normal');
-  doc.text('123 Business Street', 14, 60);
-  doc.text('City, State 12345', 14, 65);
-  doc.text('contact@company.com', 14, 70);
+  doc.text('123 Business Street', 14, 65);
+  doc.text('City, State 12345', 14, 70);
+  doc.text('contact@caresync.com', 14, 75);
 
   // Payslip Details Box
-  doc.setDrawColor(139, 92, 246);
+  doc.setDrawColor(36, 51, 74); // CareSync dark blue
   doc.setLineWidth(0.5);
-  doc.rect(pageWidth - 80, 50, 66, 25);
+  doc.rect(pageWidth - 80, 55, 66, 25);
   
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('Payslip ID:', pageWidth - 75, 57);
-  doc.text('Payment Date:', pageWidth - 75, 63);
-  doc.text('Period:', pageWidth - 75, 69);
+  doc.text('Payslip ID:', pageWidth - 75, 62);
+  doc.text('Payment Date:', pageWidth - 75, 68);
+  doc.text('Period:', pageWidth - 75, 74);
   
   doc.setFont('helvetica', 'normal');
-  doc.text(payroll.id.slice(0, 8).toUpperCase(), pageWidth - 35, 57);
+  doc.text(payroll.id.slice(0, 8).toUpperCase(), pageWidth - 35, 62);
   doc.text(
     payroll.payment_date ? format(new Date(payroll.payment_date), 'MMM dd, yyyy') : 'Pending',
     pageWidth - 35,
-    63
+    68
   );
   doc.text(
     `${format(new Date(payroll.period_start), 'MMM dd')} - ${format(new Date(payroll.period_end), 'MMM dd')}`,
     pageWidth - 35,
-    69
+    74
   );
 
   // Employee Information
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Employee Information', 14, 85);
+  doc.text('Employee Information', 14, 90);
   
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   autoTable(doc, {
-    startY: 90,
+    startY: 95,
     head: [[]],
     body: [
       ['Employee Name', payroll.profiles?.full_name || 'N/A'],
@@ -150,20 +165,20 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   const earningsData = [];
   
   if (payroll.hourly_rate) {
-    earningsData.push(['Hourly Rate', `$${payroll.hourly_rate.toFixed(2)}`]);
-    earningsData.push(['Total Hours Worked', `${payroll.total_hours.toFixed(2)} hrs`]);
+    earningsData.push(['Hourly Rate', formatCurrency(payroll.hourly_rate)]);
+    earningsData.push(['Total Hours Worked', `${payroll.total_hours.toLocaleString('en-PH', { minimumFractionDigits: 2 })} hrs`]);
   } else if (payroll.monthly_salary) {
-    earningsData.push(['Monthly Salary', `$${payroll.monthly_salary.toFixed(2)}`]);
+    earningsData.push(['Monthly Salary', formatCurrency(payroll.monthly_salary)]);
   }
   
-  earningsData.push(['Gross Amount', `$${payroll.gross_amount.toFixed(2)}`]);
+  earningsData.push(['Gross Amount', formatCurrency(payroll.gross_amount)]);
   
   if (payroll.allowances > 0) {
-    earningsData.push(['Allowances', `+$${payroll.allowances.toFixed(2)}`]);
+    earningsData.push(['Allowances', `+${formatCurrency(payroll.allowances)}`]);
   }
   
   if (payroll.deductions > 0) {
-    earningsData.push(['Deductions', `-$${payroll.deductions.toFixed(2)}`]);
+    earningsData.push(['Deductions', `-${formatCurrency(payroll.deductions)}`]);
   }
 
   autoTable(doc, {
@@ -172,7 +187,7 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
     body: earningsData,
     theme: 'striped',
     headStyles: {
-      fillColor: [139, 92, 246],
+      fillColor: [36, 51, 74], // CareSync dark blue
       textColor: [255, 255, 255],
       fontStyle: 'bold',
     },
@@ -188,7 +203,7 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   
   doc.setFillColor(240, 253, 244); // Light green background
   doc.rect(14, finalY, pageWidth - 28, 20, 'F');
-  doc.setDrawColor(139, 92, 246);
+  doc.setDrawColor(36, 51, 74); // CareSync dark blue
   doc.setLineWidth(1);
   doc.rect(14, finalY, pageWidth - 28, 20);
   
@@ -197,7 +212,7 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   doc.text('NET PAY', 20, finalY + 8);
   doc.setFontSize(18);
   doc.setTextColor(22, 163, 74); // Green color
-  doc.text(`$${payroll.net_amount.toFixed(2)}`, pageWidth - 20, finalY + 12, { align: 'right' });
+  doc.text(formatCurrency(payroll.net_amount), pageWidth - 20, finalY + 12, { align: 'right' });
   
   doc.setTextColor(0, 0, 0);
 
@@ -212,15 +227,15 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
     startY: finalY + 5,
     head: [['Category', 'YTD Total']],
     body: [
-      ['Total Hours Worked', `${ytdTotals.totalHours.toFixed(2)} hrs`],
-      ['Total Gross Earnings', `$${ytdTotals.totalGross.toFixed(2)}`],
-      ['Total Allowances', `$${ytdTotals.totalAllowances.toFixed(2)}`],
-      ['Total Deductions', `$${ytdTotals.totalDeductions.toFixed(2)}`],
-      ['Total Net Pay', `$${ytdTotals.totalNet.toFixed(2)}`],
+      ['Total Hours Worked', `${ytdTotals.totalHours.toLocaleString('en-PH', { minimumFractionDigits: 2 })} hrs`],
+      ['Total Gross Earnings', formatCurrency(ytdTotals.totalGross)],
+      ['Total Allowances', formatCurrency(ytdTotals.totalAllowances)],
+      ['Total Deductions', formatCurrency(ytdTotals.totalDeductions)],
+      ['Total Net Pay', formatCurrency(ytdTotals.totalNet)],
     ],
     theme: 'striped',
     headStyles: {
-      fillColor: [139, 92, 246],
+      fillColor: [36, 51, 74], // CareSync dark blue
       textColor: [255, 255, 255],
       fontStyle: 'bold',
     },
@@ -238,14 +253,14 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(100, 100, 100);
   doc.text(
-    'This is a computer-generated payslip. No signature is required.',
+    'This is a computer-generated payslip and does not require a physical signature.',
     pageWidth / 2,
     finalY,
     { align: 'center' }
   );
   
   doc.text(
-    'For questions regarding this payslip, please contact HR department.',
+    'For any questions or concerns regarding this payslip, please contact the HR department.',
     pageWidth / 2,
     finalY + 5,
     { align: 'center' }
@@ -254,7 +269,7 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   // Payment Schedule Note
   doc.setFontSize(8);
   doc.text(
-    'Payment Schedule: 1st and 16th of each month (adjusted to Monday if falls on weekend)',
+    'Payment Schedule: 1st and 16th of each month (adjusted to the following Monday if falls on weekend)',
     pageWidth / 2,
     finalY + 12,
     { align: 'center' }

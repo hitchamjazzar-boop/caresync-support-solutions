@@ -170,7 +170,7 @@ export default function Dashboard() {
                     <div key={payroll.id} className="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg p-3 border border-green-200 dark:border-green-800">
                       <div>
                         <p className="font-semibold text-green-900 dark:text-green-100">
-                          ${payroll.net_amount?.toLocaleString()}
+                          ₱{payroll.net_amount?.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </p>
                         <p className="text-sm text-green-700 dark:text-green-400">
                           Period: {format(new Date(payroll.period_start), 'MMM dd')} - {format(new Date(payroll.period_end), 'MMM dd, yyyy')}

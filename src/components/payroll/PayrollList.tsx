@@ -232,28 +232,27 @@ export const PayrollList = ({ refresh }: { refresh: number }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Hours Worked</p>
-                <p className="text-lg font-bold">{payroll.total_hours.toFixed(2)}</p>
+                <p className="text-lg font-bold">{payroll.total_hours.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Gross Amount</p>
-                <p className="text-lg font-bold">${payroll.gross_amount.toFixed(2)}</p>
+                <p className="text-lg font-bold">₱{payroll.gross_amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Deductions</p>
-                <p className="text-lg font-bold text-destructive">-${payroll.deductions.toFixed(2)}</p>
+                <p className="text-lg font-bold text-destructive">-₱{payroll.deductions.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Net Amount</p>
-                <p className="text-xl font-bold text-primary flex items-center gap-1">
-                  <DollarSign className="h-5 w-5" />
-                  {payroll.net_amount.toFixed(2)}
+                <p className="text-xl font-bold text-primary">
+                  ₱{payroll.net_amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
             </div>
 
             {payroll.allowances > 0 && (
               <div className="text-sm text-muted-foreground">
-                Allowances: +${payroll.allowances.toFixed(2)}
+                Allowances: +₱{payroll.allowances.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             )}
 
