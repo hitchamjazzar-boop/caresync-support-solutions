@@ -1,6 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EODReportForm } from '@/components/eod/EODReportForm';
+import { EODReportList } from '@/components/eod/EODReportList';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export default function Reports() {
+  const { isAdmin } = useAdmin();
+
   return (
     <div className="space-y-6">
       <div>
@@ -8,17 +13,33 @@ export default function Reports() {
         <p className="text-muted-foreground">Submit and view daily work reports</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>EOD reporting coming soon</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            This section will include daily report submission forms, report history, and admin
-            review capabilities.
-          </p>
-        </CardContent>
-      </Card>
+      {isAdmin ? (
+        <Tabs defaultValue="view" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="view">View Reports</TabsTrigger>
+            <TabsTrigger value="submit">Submit Report</TabsTrigger>
+          </TabsList>
+          <TabsContent value="view" className="space-y-4">
+            <EODReportList />
+          </TabsContent>
+          <TabsContent value="submit">
+            <EODReportForm />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <Tabs defaultValue="submit" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="submit">Submit Report</TabsTrigger>
+            <TabsTrigger value="history">My Reports</TabsTrigger>
+          </TabsList>
+          <TabsContent value="submit">
+            <EODReportForm />
+          </TabsContent>
+          <TabsContent value="history">
+            <EODReportList />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }
