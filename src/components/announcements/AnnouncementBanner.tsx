@@ -141,14 +141,7 @@ export function AnnouncementBanner() {
   };
 
   const visibleAnnouncements = announcements.filter(
-    (announcement) => {
-      // Pinned announcements must be acknowledged, not dismissed
-      if (announcement.is_pinned) {
-        return !acknowledgedIds.includes(announcement.id);
-      }
-      // Regular announcements can be dismissed
-      return !dismissedIds.includes(announcement.id);
-    }
+    (announcement) => !acknowledgedIds.includes(announcement.id)
   );
 
   if (visibleAnnouncements.length === 0) {
@@ -211,26 +204,19 @@ export function AnnouncementBanner() {
               </AlertDescription>
             </div>
           </div>
-          {announcement.is_pinned ? (
-            <Button
-              variant="default"
-              size="sm"
-              className="absolute right-2 top-2 gap-1 bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-800"
-              onClick={() => handleAcknowledge(announcement.id)}
-            >
-              <Check className="h-3 w-3 sm:h-4 sm:w-4" />
-              <span className="hidden sm:inline">Acknowledge</span>
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-2 top-2 h-7 w-7 sm:h-8 sm:w-8 hover:bg-primary/10"
-              onClick={() => handleDismiss(announcement.id)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
+          <Button
+            variant="default"
+            size="sm"
+            className={`absolute right-2 top-2 gap-1 ${
+              announcement.is_pinned
+                ? 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-800'
+                : ''
+            }`}
+            onClick={() => handleAcknowledge(announcement.id)}
+          >
+            <Check className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Acknowledge</span>
+          </Button>
         </Alert>
       ))}
     </div>
