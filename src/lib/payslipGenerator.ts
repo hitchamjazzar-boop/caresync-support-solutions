@@ -91,12 +91,10 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   // Employee Information
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
-  doc.text('Employee Information', 14, 80);
+  doc.text('Employee Information', 14, 78);
   
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
   autoTable(doc, {
-    startY: 84,
+    startY: 82,
     head: [[]],
     body: [
       ['Employee Name', payroll.profiles?.full_name || 'N/A'],
@@ -105,15 +103,19 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
       ['Email', payroll.profiles?.contact_email || 'N/A'],
     ],
     theme: 'plain',
-    styles: { fontSize: 9, cellPadding: 2.5 },
+    styles: { 
+      fontSize: 9, 
+      cellPadding: 2,
+      overflow: 'linebreak',
+    },
     columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 45 },
-      1: { cellWidth: 'auto' },
+      0: { fontStyle: 'bold', cellWidth: 50 },
+      1: { cellWidth: 130 },
     },
   });
 
   // Earnings & Deductions Table
-  let finalY = (doc as any).lastAutoTable.finalY + 8;
+  let finalY = (doc as any).lastAutoTable.finalY + 10;
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -150,36 +152,39 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       fontSize: 10,
+      cellPadding: 4,
     },
     styles: { 
-      fontSize: 9, 
-      cellPadding: 3,
-      lineColor: [200, 200, 200],
+      fontSize: 9.5, 
+      cellPadding: 4,
+      lineColor: [220, 220, 220],
       lineWidth: 0.1,
+      overflow: 'linebreak',
     },
     columnStyles: {
-      0: { cellWidth: 120, fontStyle: 'normal' },
-      1: { cellWidth: 'auto', halign: 'right', fontStyle: 'normal' },
+      0: { cellWidth: 130 },
+      1: { cellWidth: 52, halign: 'right' },
     },
+    margin: { left: 14, right: 14 },
   });
 
   // Net Pay Box
-  finalY = (doc as any).lastAutoTable.finalY + 10;
+  finalY = (doc as any).lastAutoTable.finalY + 12;
   
   doc.setFillColor(240, 253, 244);
-  doc.rect(14, finalY, pageWidth - 28, 20, 'F');
+  doc.rect(14, finalY, pageWidth - 28, 22, 'F');
   doc.setDrawColor(128, 0, 32);
-  doc.setLineWidth(0.8);
-  doc.rect(14, finalY, pageWidth - 28, 20);
+  doc.setLineWidth(1);
+  doc.rect(14, finalY, pageWidth - 28, 22);
   
-  doc.setFontSize(14);
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text('NET PAY', 20, finalY + 13);
+  doc.text('NET PAY', 20, finalY + 14);
   
-  doc.setFontSize(20);
+  doc.setFontSize(22);
   doc.setTextColor(22, 163, 74);
-  doc.text(formatCurrency(payroll.net_amount), pageWidth - 20, finalY + 13, { align: 'right' });
+  doc.text(formatCurrency(payroll.net_amount), pageWidth - 20, finalY + 14, { align: 'right' });
   
   doc.setTextColor(0, 0, 0);
 
