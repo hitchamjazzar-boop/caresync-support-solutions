@@ -2,3 +2,6 @@ project_id = "odrtrdnjoppdgtaxngmh"
 
 [functions.send-welcome-email]
 verify_jwt = false
+
+[functions.reset-employee-password]
+verify_jwt = true

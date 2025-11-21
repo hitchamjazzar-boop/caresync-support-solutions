@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { AddEmployeeDialog } from '@/components/employees/AddEmployeeDialog';
 import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog';
 import { DeleteEmployeeDialog } from '@/components/employees/DeleteEmployeeDialog';
+import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
 
 export default function Employees() {
   const { user } = useAuth();
@@ -116,7 +117,15 @@ export default function Employees() {
                   className="space-y-2 pt-2 border-t"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <EditEmployeeDialog employee={employee} onSuccess={fetchEmployees} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <EditEmployeeDialog employee={employee} onSuccess={fetchEmployees} />
+                    <ResetPasswordDialog 
+                      userId={employee.id} 
+                      userName={employee.full_name}
+                      variant="outline"
+                      size="sm"
+                    />
+                  </div>
                   <DeleteEmployeeDialog
                     employeeId={employee.id}
                     employeeName={employee.full_name}

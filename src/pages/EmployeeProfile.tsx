@@ -31,6 +31,7 @@ import {
   TrendingUp,
   FileText,
 } from 'lucide-react';
+import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
 
 interface Profile {
   id: string;
@@ -201,14 +202,24 @@ export default function EmployeeProfile() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/employees')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Employee Profile</h1>
-          <p className="text-muted-foreground">Comprehensive employee information and history</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/employees')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Employee Profile</h1>
+            <p className="text-muted-foreground">Comprehensive employee information and history</p>
+          </div>
         </div>
+        {isAdmin && id !== user?.id && (
+          <ResetPasswordDialog 
+            userId={profile.id} 
+            userName={profile.full_name}
+            variant="default"
+            size="default"
+          />
+        )}
       </div>
 
       {/* Profile Header Card */}
