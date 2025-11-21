@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Users, Clock, FileText, DollarSign, CheckCircle2, Download } from 'lucide-react';
+import { Users, Clock, FileText, DollarSign, CheckCircle2, Download, TrendingUp } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -209,6 +209,14 @@ export default function Dashboard() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <Button 
+                  onClick={() => navigate('/weekly-summary')} 
+                  variant="default" 
+                  className="w-full justify-start"
+                >
+                  <TrendingUp className="mr-2 h-4 w-4" />
+                  Weekly Summary
+                </Button>
                 <Button 
                   onClick={() => navigate('/attendance')} 
                   variant="outline" 

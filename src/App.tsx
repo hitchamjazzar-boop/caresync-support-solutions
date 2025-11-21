@@ -15,6 +15,7 @@ import Schedules from "./pages/Schedules";
 import Reports from "./pages/Reports";
 import Payroll from "./pages/Payroll";
 import PayrollAnalytics from "./pages/PayrollAnalytics";
+import WeeklySummary from "./pages/WeeklySummary";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
@@ -105,6 +106,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <PayrollAnalytics />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/weekly-summary"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <WeeklySummary />
                   </Layout>
                 </ProtectedRoute>
               }
