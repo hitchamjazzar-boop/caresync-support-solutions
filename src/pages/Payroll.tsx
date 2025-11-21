@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { InfoIcon, BarChart3 } from 'lucide-react';
 import { PayrollGenerator } from '@/components/payroll/PayrollGenerator';
 import { PayrollList } from '@/components/payroll/PayrollList';
 
 export default function Payroll() {
   const { isAdmin } = useAdmin();
+  const navigate = useNavigate();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const handlePayrollGenerated = () => {
@@ -16,11 +19,19 @@ export default function Payroll() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Payroll Management</h1>
-        <p className="text-muted-foreground">
-          {isAdmin ? 'Generate and manage employee payroll' : 'View your payroll history'}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Payroll Management</h1>
+          <p className="text-muted-foreground">
+            {isAdmin ? 'Generate and manage employee payroll' : 'View your payroll history'}
+          </p>
+        </div>
+        {isAdmin && (
+          <Button onClick={() => navigate('/payroll/analytics')} variant="outline">
+            <BarChart3 className="mr-2 h-4 w-4" />
+            View Analytics
+          </Button>
+        )}
       </div>
 
       <Alert>
