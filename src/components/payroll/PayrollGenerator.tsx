@@ -267,13 +267,13 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
 
           <div className="space-y-2">
             <Label htmlFor="salary">
-              Salary {selectedEmployee?.hourly_rate ? '(Hourly Rate)' : '(Monthly)'}
+              Salary {selectedEmployee?.hourly_rate && '(Hourly Rate)'}
             </Label>
             <Input
               id="salary"
               type="number"
               step="0.01"
-              placeholder={selectedEmployee?.hourly_rate ? "Hourly rate" : "Monthly salary"}
+              placeholder={selectedEmployee?.hourly_rate ? "Hourly rate" : "Salary amount"}
               value={formData.salary}
               onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
               className={errors.salary ? 'border-destructive' : ''}
