@@ -19,6 +19,10 @@ interface Announcement {
   expires_at: string | null;
   is_active: boolean;
   is_pinned: boolean;
+  target_type: string;
+  target_users: string[] | null;
+  target_roles: string[] | null;
+  target_departments: string[] | null;
 }
 
 export default function Announcements() {
