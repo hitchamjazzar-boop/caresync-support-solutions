@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AnnouncementDialog } from '@/components/announcements/AnnouncementDialog';
 import { DeleteAnnouncementDialog } from '@/components/announcements/DeleteAnnouncementDialog';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import { useAdmin } from '@/hooks/useAdmin';
 
 interface Announcement {
   id: string;
@@ -32,6 +34,8 @@ export default function Announcements() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
 
   useEffect(() => {
     fetchAnnouncements();
@@ -126,10 +130,22 @@ export default function Announcements() {
     <div className="container mx-auto px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <h1 className="text-2xl sm:text-3xl font-bold">Announcements</h1>
-        <Button onClick={handleCreateNew} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Announcement
-        </Button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/announcement-analytics')}
+              className="flex-1 sm:flex-initial"
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Analytics
+            </Button>
+          )}
+          <Button onClick={handleCreateNew} className="flex-1 sm:flex-initial">
+            <Plus className="h-4 w-4 mr-2" />
+            Create
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:gap-4">

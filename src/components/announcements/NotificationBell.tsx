@@ -153,13 +153,18 @@ export function NotificationBell() {
     try {
       await supabase
         .from('announcement_reads')
-        .insert({
+        .upsert({
           user_id: user.id,
           announcement_id: announcementId,
+        }, {
+          onConflict: 'user_id,announcement_id',
+          ignoreDuplicates: true,
         });
+      
+      // Refresh counts after marking as read
+      fetchUnreadCount();
     } catch (error) {
-      // Ignore duplicate errors (already read)
-      console.log('Read tracking:', error);
+      console.error('Error marking as read:', error);
     }
   };
 
