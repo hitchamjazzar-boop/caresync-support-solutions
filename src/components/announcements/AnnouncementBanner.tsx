@@ -97,27 +97,40 @@ export function AnnouncementBanner() {
   };
 
   return (
-    <div className="space-y-4 mb-6">
+    <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
       {visibleAnnouncements.map((announcement) => (
-        <Alert key={announcement.id} className="relative">
-          <Megaphone className="h-4 w-4" />
+        <Alert 
+          key={announcement.id} 
+          className="relative border-2 shadow-lg animate-fade-in bg-gradient-to-r from-primary/10 via-primary/5 to-background dark:from-primary/20 dark:via-primary/10 dark:to-background"
+        >
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="flex-shrink-0 mt-1">
+              <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-primary/20 dark:bg-primary/30 flex items-center justify-center animate-pulse">
+                <Megaphone className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              </div>
+            </div>
+            <div className="flex-1 min-w-0 pr-8">
+              <AlertTitle className="text-base sm:text-lg font-bold mb-2 text-foreground">
+                📢 {announcement.title}
+              </AlertTitle>
+              <AlertDescription className="text-sm sm:text-base whitespace-pre-wrap text-foreground/90">
+                {announcement.content}
+                {getExpirationText(announcement.expires_at) && (
+                  <span className="block mt-3 text-xs sm:text-sm font-semibold text-primary">
+                    ⏰ {getExpirationText(announcement.expires_at)}
+                  </span>
+                )}
+              </AlertDescription>
+            </div>
+          </div>
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-2 h-6 w-6"
+            className="absolute right-2 top-2 h-7 w-7 sm:h-8 sm:w-8 hover:bg-primary/10"
             onClick={() => handleDismiss(announcement.id)}
           >
             <X className="h-4 w-4" />
           </Button>
-          <AlertTitle className="pr-8">{announcement.title}</AlertTitle>
-          <AlertDescription className="whitespace-pre-wrap">
-            {announcement.content}
-            {getExpirationText(announcement.expires_at) && (
-              <span className="block mt-2 text-xs text-muted-foreground">
-                {getExpirationText(announcement.expires_at)}
-              </span>
-            )}
-          </AlertDescription>
         </Alert>
       ))}
     </div>
