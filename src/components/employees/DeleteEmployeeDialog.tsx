@@ -34,7 +34,7 @@ export const DeleteEmployeeDialog = ({
     setLoading(true);
 
     try {
-      // Call the edge function to delete the employee
+      // Call secure backend function to delete employee and related data
       const { data, error } = await supabase.functions.invoke('delete-employee', {
         body: { employeeId },
       });
@@ -53,7 +53,7 @@ export const DeleteEmployeeDialog = ({
       console.error('Error deleting employee:', error);
       toast({
         title: 'Delete Failed',
-        description: error.message || 'Failed to delete employee. Please try again.',
+        description: error?.message || 'Failed to delete employee. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -78,9 +78,7 @@ export const DeleteEmployeeDialog = ({
               <strong>{employeeName}</strong>'s account and remove all associated data
               from the system.
             </p>
-            <p className="text-destructive font-medium">
-              The following data will be deleted:
-            </p>
+            <p className="text-destructive font-medium">The following data will be deleted:</p>
             <ul className="list-disc list-inside text-sm space-y-1">
               <li>Profile information</li>
               <li>Attendance records</li>
