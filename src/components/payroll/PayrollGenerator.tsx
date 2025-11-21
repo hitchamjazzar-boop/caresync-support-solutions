@@ -39,15 +39,23 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchEmployees = async () => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, full_name, hourly_rate, monthly_salary')
-      .not('hourly_rate', 'is', null)
-      .or('monthly_salary.not.is.null');
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, hourly_rate, monthly_salary')
+        .order('full_name', { ascending: true });
 
-    if (data) setEmployees(data);
+      if (error) throw error;
+      if (data) setEmployees(data);
+    } catch (error) {
+      console.error('Error fetching employees for payroll:', error);
+      toast({
+        title: 'Error loading employees',
+        description: 'Could not load employee list for payroll generation.',
+        variant: 'destructive',
+      });
+    }
   };
-
   useEffect(() => {
     fetchEmployees();
   }, []);
