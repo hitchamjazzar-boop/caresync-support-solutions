@@ -9,6 +9,7 @@ import { Layout } from "./components/Layout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Employees from "./pages/Employees";
+import EmployeeProfile from "./pages/EmployeeProfile";
 import Attendance from "./pages/Attendance";
 import Schedules from "./pages/Schedules";
 import Reports from "./pages/Reports";
@@ -44,6 +45,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Employees />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/employees/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <EmployeeProfile />
                   </Layout>
                 </ProtectedRoute>
               }

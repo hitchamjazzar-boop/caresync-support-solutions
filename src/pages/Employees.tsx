@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { AddEmployeeDialog } from '@/components/employees/AddEmployeeDialog';
 import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog';
@@ -11,6 +12,7 @@ import { DeleteEmployeeDialog } from '@/components/employees/DeleteEmployeeDialo
 export default function Employees() {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState<any[]>([]);
 
   const fetchEmployees = async () => {
@@ -66,7 +68,11 @@ export default function Employees() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {employees.map((employee) => (
-          <Card key={employee.id} className="flex flex-col">
+          <Card
+            key={employee.id}
+            className="flex flex-col cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => navigate(`/employees/${employee.id}`)}
+          >
             <CardHeader className="pb-3">
               <div className="flex items-start gap-4">
                 {employee.photo_url ? (
@@ -106,7 +112,10 @@ export default function Employees() {
                 </div>
               </div>
               {isAdmin && (
-                <div className="space-y-2 pt-2 border-t">
+                <div
+                  className="space-y-2 pt-2 border-t"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <EditEmployeeDialog employee={employee} onSuccess={fetchEmployees} />
                   <DeleteEmployeeDialog
                     employeeId={employee.id}
