@@ -34,59 +34,13 @@ export const DeleteEmployeeDialog = ({
     setLoading(true);
 
     try {
-      // Delete related records first (in order of dependencies)
-      // 1. Delete EOD reports
-      const { error: eodError } = await supabase
-        .from('eod_reports')
-        .delete()
-        .eq('user_id', employeeId);
+      // Call the edge function to delete the employee
+      const { data, error } = await supabase.functions.invoke('delete-employee', {
+        body: { employeeId },
+      });
 
-      if (eodError) throw eodError;
-
-      // 2. Delete schedules
-      const { error: schedulesError } = await supabase
-        .from('schedules')
-        .delete()
-        .eq('user_id', employeeId);
-
-      if (schedulesError) throw schedulesError;
-
-      // 3. Delete payroll records
-      const { error: payrollError } = await supabase
-        .from('payroll')
-        .delete()
-        .eq('user_id', employeeId);
-
-      if (payrollError) throw payrollError;
-
-      // 4. Delete attendance records
-      const { error: attendanceError } = await supabase
-        .from('attendance')
-        .delete()
-        .eq('user_id', employeeId);
-
-      if (attendanceError) throw attendanceError;
-
-      // 5. Delete user roles
-      const { error: rolesError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', employeeId);
-
-      if (rolesError) throw rolesError;
-
-      // 6. Delete profile (this should be handled by cascade, but we do it explicitly)
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', employeeId);
-
-      if (profileError) throw profileError;
-
-      // 7. Finally, delete the auth user (requires admin privileges)
-      const { error: authError } = await supabase.auth.admin.deleteUser(employeeId);
-
-      if (authError) throw authError;
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast({
         title: 'Employee Deleted',
