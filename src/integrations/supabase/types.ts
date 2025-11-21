@@ -200,6 +200,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_holder_name: string | null
+          account_number: string | null
+          bank_name: string | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -208,12 +211,17 @@ export type Database = {
           hourly_rate: number | null
           id: string
           monthly_salary: number | null
+          payment_method: string | null
           photo_url: string | null
           position: string | null
+          routing_number: string | null
           start_date: string
           updated_at: string
         }
         Insert: {
+          account_holder_name?: string | null
+          account_number?: string | null
+          bank_name?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -222,12 +230,17 @@ export type Database = {
           hourly_rate?: number | null
           id: string
           monthly_salary?: number | null
+          payment_method?: string | null
           photo_url?: string | null
           position?: string | null
+          routing_number?: string | null
           start_date?: string
           updated_at?: string
         }
         Update: {
+          account_holder_name?: string | null
+          account_number?: string | null
+          bank_name?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -236,8 +249,10 @@ export type Database = {
           hourly_rate?: number | null
           id?: string
           monthly_salary?: number | null
+          payment_method?: string | null
           photo_url?: string | null
           position?: string | null
+          routing_number?: string | null
           start_date?: string
           updated_at?: string
         }

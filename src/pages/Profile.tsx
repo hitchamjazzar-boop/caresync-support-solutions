@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, User } from 'lucide-react';
 import { z } from 'zod';
+import { PaymentMethodForm } from '@/components/profile/PaymentMethodForm';
 
 const profileSchema = z.object({
   full_name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
@@ -376,6 +377,9 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Payment Method Section */}
+      <PaymentMethodForm />
     </div>
   );
 }
