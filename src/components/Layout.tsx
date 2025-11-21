@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Menu, X } from 'lucide-react';
+import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Menu, X, Megaphone } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -15,9 +15,11 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import logo from '@/assets/logo.png';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { signOut, user } = useAuth();
+  const { isAdmin } = useAdmin();
   const location = useLocation();
   const navigate = useNavigate();
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -60,7 +62,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const navigation = [
     { name: 'Dashboard', href: '/', icon: BarChart3 },
-    { name: 'Employees', href: '/employees', icon: Users },
+    { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
+    { name: 'Employees', href: '/employees', icon: Users, adminOnly: true },
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'Schedules', href: '/schedules', icon: Calendar },
     { name: 'EOD Reports', href: '/reports', icon: FileText },
@@ -69,21 +72,23 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const NavItems = ({ onItemClick }: { onItemClick?: () => void }) => (
     <nav className="space-y-1">
-      {navigation.map((item) => {
-        const Icon = item.icon;
-        const isActive = location.pathname === item.href;
-        return (
-          <Link key={item.name} to={item.href} onClick={onItemClick}>
-            <Button
-              variant={isActive ? 'secondary' : 'ghost'}
-              className="w-full justify-start gap-2"
-            >
-              <Icon className="h-4 w-4" />
-              {item.name}
-            </Button>
-          </Link>
-        );
-      })}
+      {navigation
+        .filter((item) => !item.adminOnly || isAdmin)
+        .map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.href;
+          return (
+            <Link key={item.name} to={item.href} onClick={onItemClick}>
+              <Button
+                variant={isActive ? 'secondary' : 'ghost'}
+                className="w-full justify-start gap-2"
+              >
+                <Icon className="h-4 w-4" />
+                {item.name}
+              </Button>
+            </Link>
+          );
+        })}
     </nav>
   );
 

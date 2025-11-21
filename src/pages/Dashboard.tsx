@@ -8,6 +8,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ClockInOut } from '@/components/attendance/ClockInOut';
+import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 import { format } from 'date-fns';
 
 export default function Dashboard() {
@@ -163,6 +164,8 @@ export default function Dashboard() {
           {isAdmin ? 'Admin overview of Care Sync operations' : 'Welcome to Care Sync'}
         </p>
       </div>
+
+      <AnnouncementBanner />
 
       {isAdmin ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
