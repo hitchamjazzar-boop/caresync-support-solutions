@@ -6,7 +6,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AddToOrgChartDialog } from '@/components/orgchart/AddToOrgChartDialog';
 import { EditOrgChartDialog } from '@/components/orgchart/EditOrgChartDialog';
-import { OrgChartTree } from '@/components/orgchart/OrgChartTree';
+import { DraggableOrgChartTree } from '@/components/orgchart/DraggableOrgChartTree';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -134,6 +134,65 @@ export default function OrgChart() {
     }
   };
 
+  const handleDragEnd = async (nodeId: string, newParentId: string | null, newOrder: number) => {
+    try {
+      const node = nodes.find(n => n.id === nodeId);
+      if (!node) return;
+
+      // Calculate new hierarchy level based on parent
+      let hierarchyLevel = 0;
+      if (newParentId) {
+        const parent = nodes.find(n => n.id === newParentId);
+        hierarchyLevel = parent ? parent.hierarchy_level + 1 : 0;
+      }
+
+      // Get all siblings at the new position
+      const siblings = nodes
+        .filter(n => n.parent_id === newParentId && n.id !== nodeId)
+        .sort((a, b) => a.position_order - b.position_order);
+
+      // Insert at the new position
+      siblings.splice(newOrder, 0, node);
+
+      // Update position orders for all affected nodes
+      const updates = siblings.map((sibling, index) => ({
+        id: sibling.id,
+        position_order: index,
+        ...(sibling.id === nodeId ? {
+          parent_id: newParentId,
+          hierarchy_level: hierarchyLevel,
+        } : {}),
+      }));
+
+      // Execute all updates
+      for (const update of updates) {
+        const { error } = await supabase
+          .from('org_chart')
+          .update({
+            parent_id: update.parent_id !== undefined ? update.parent_id : undefined,
+            hierarchy_level: update.hierarchy_level,
+            position_order: update.position_order,
+          })
+          .eq('id', update.id);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Organization chart updated',
+      });
+
+      fetchOrgChart();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto py-8">
@@ -165,13 +224,16 @@ export default function OrgChart() {
         <Card>
           <CardHeader>
             <CardTitle>Organization Hierarchy</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Drag and drop employees to reorganize the hierarchy
+            </p>
           </CardHeader>
           <CardContent>
-            <OrgChartTree 
+            <DraggableOrgChartTree 
               nodes={nodes} 
               onEdit={handleEdit}
               onDelete={handleDelete}
-              editable={true}
+              onDragEnd={handleDragEnd}
             />
           </CardContent>
         </Card>
