@@ -223,7 +223,7 @@ export const EditEmployeeDialog = ({ employee, onSuccess }: EditEmployeeDialogPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="hourly_rate">Hourly Rate ($)</Label>
+              <Label htmlFor="hourly_rate">Hourly Rate (₱)</Label>
               <Input
                 id="hourly_rate"
                 type="number"
@@ -239,7 +239,7 @@ export const EditEmployeeDialog = ({ employee, onSuccess }: EditEmployeeDialogPr
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="monthly_salary">Monthly Salary ($)</Label>
+              <Label htmlFor="monthly_salary">Monthly Salary (₱)</Label>
               <Input
                 id="monthly_salary"
                 type="number"

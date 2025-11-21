@@ -204,7 +204,7 @@ export default function Dashboard() {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <p className="font-semibold text-green-900 dark:text-green-100">
-                              PHP {payroll.net_amount?.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              ₱{payroll.net_amount?.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                             {isPaid ? (
                               <span className="text-xs font-semibold px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">

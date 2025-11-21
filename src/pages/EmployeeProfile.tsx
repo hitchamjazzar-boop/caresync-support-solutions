@@ -265,9 +265,9 @@ export default function EmployeeProfile() {
                   <span className="text-muted-foreground">Compensation:</span>
                   <span>
                     {profile.hourly_rate
-                      ? `$${profile.hourly_rate}/hr`
+                      ? `₱${profile.hourly_rate}/hr`
                       : profile.monthly_salary
-                      ? `$${profile.monthly_salary}/mo`
+                      ? `₱${profile.monthly_salary}/mo`
                       : 'N/A'}
                   </span>
                 </div>
@@ -307,7 +307,7 @@ export default function EmployeeProfile() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${stats.totalPayroll.toFixed(2)}</div>
+            <div className="text-2xl font-bold">₱{stats.totalPayroll.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
@@ -384,9 +384,9 @@ export default function EmployeeProfile() {
                   <Label className="text-sm font-medium">Compensation</Label>
                   <p className="text-sm text-muted-foreground">
                     {profile.hourly_rate
-                      ? `$${profile.hourly_rate.toFixed(2)} per hour`
+                      ? `₱${profile.hourly_rate.toFixed(2)} per hour`
                       : profile.monthly_salary
-                      ? `$${profile.monthly_salary.toFixed(2)} per month`
+                      ? `₱${profile.monthly_salary.toFixed(2)} per month`
                       : 'Not set'}
                   </p>
                 </div>
@@ -482,12 +482,12 @@ export default function EmployeeProfile() {
                           {format(parseISO(record.period_start), 'MMM dd')} -{' '}
                           {format(parseISO(record.period_end), 'MMM dd, yyyy')}
                         </TableCell>
-                        <TableCell>${record.gross_amount.toFixed(2)}</TableCell>
+                        <TableCell>₱{record.gross_amount.toFixed(2)}</TableCell>
                         <TableCell className="text-destructive">
-                          ${record.deductions.toFixed(2)}
+                          ₱{record.deductions.toFixed(2)}
                         </TableCell>
                         <TableCell className="font-medium">
-                          ${record.net_amount.toFixed(2)}
+                          ₱{record.net_amount.toFixed(2)}
                         </TableCell>
                         <TableCell>
                           {record.payment_date
