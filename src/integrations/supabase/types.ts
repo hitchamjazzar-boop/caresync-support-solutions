@@ -259,6 +259,9 @@ export type Database = {
           id: string
           is_read: boolean
           recipient_id: string
+          resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
           sender_id: string
           title: string
           type: Database["public"]["Enums"]["memo_type"]
@@ -275,6 +278,9 @@ export type Database = {
           id?: string
           is_read?: boolean
           recipient_id: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           sender_id: string
           title: string
           type?: Database["public"]["Enums"]["memo_type"]
@@ -291,6 +297,9 @@ export type Database = {
           id?: string
           is_read?: boolean
           recipient_id?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           sender_id?: string
           title?: string
           type?: Database["public"]["Enums"]["memo_type"]
@@ -302,6 +311,13 @@ export type Database = {
             columns: ["escalation_memo_id"]
             isOneToOne: false
             referencedRelation: "memos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memos_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
