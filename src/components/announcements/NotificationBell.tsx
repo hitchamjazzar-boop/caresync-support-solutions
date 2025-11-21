@@ -5,6 +5,7 @@ import { Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAnnouncementVisibility } from '@/hooks/useAnnouncementVisibility';
 import {
   Popover,
   PopoverContent,
@@ -19,10 +20,16 @@ interface Announcement {
   content: string;
   created_at: string;
   is_pinned: boolean;
+  target_type: string;
+  target_users: string[] | null;
+  target_roles: string[] | null;
+  target_departments: string[] | null;
+  expires_at?: string | null;
 }
 
 export function NotificationBell() {
   const { user } = useAuth();
+  const { canSeeAnnouncement } = useAnnouncementVisibility();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentAnnouncements, setRecentAnnouncements] = useState<Announcement[]>([]);
@@ -72,22 +79,32 @@ export function NotificationBell() {
 
       const acknowledgedIds = acknowledged?.map(a => a.announcement_id) || [];
 
+      // Get read announcements
+      const { data: readAnnouncements } = await supabase
+        .from('announcement_reads')
+        .select('announcement_id')
+        .eq('user_id', user.id);
+
+      const readIds = readAnnouncements?.map(a => a.announcement_id) || [];
+
       // Get active announcements
       const { data: announcements, error } = await supabase
         .from('announcements')
-        .select('id, expires_at')
+        .select('id, expires_at, target_type, target_users, target_roles, target_departments')
         .eq('is_active', true);
 
       if (error) throw error;
 
-      // Filter out expired, dismissed, and acknowledged announcements
+      // Filter announcements: not expired, not dismissed, not acknowledged, not read, and user can see
       const now = new Date();
       const unreadAnnouncements = (announcements || []).filter(
         (announcement) => {
           const isNotExpired = !announcement.expires_at || new Date(announcement.expires_at) > now;
           const isNotDismissed = !dismissedIds.includes(announcement.id);
           const isNotAcknowledged = !acknowledgedIds.includes(announcement.id);
-          return isNotExpired && isNotDismissed && isNotAcknowledged;
+          const isNotRead = !readIds.includes(announcement.id);
+          const canSee = canSeeAnnouncement(announcement);
+          return isNotExpired && isNotDismissed && isNotAcknowledged && isNotRead && canSee;
         }
       );
 
@@ -101,7 +118,7 @@ export function NotificationBell() {
     try {
       const { data, error } = await supabase
         .from('announcements')
-        .select('id, title, content, created_at, is_pinned')
+        .select('id, title, content, created_at, is_pinned, target_type, target_users, target_roles, target_departments, expires_at')
         .eq('is_active', true)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
@@ -109,11 +126,14 @@ export function NotificationBell() {
 
       if (error) throw error;
 
-      // Filter out expired announcements
+      // Filter announcements: not expired and user can see
       const now = new Date();
       const activeAnnouncements = (data || []).filter(
-        (announcement: any) =>
-          !announcement.expires_at || new Date(announcement.expires_at) > now
+        (announcement: any) => {
+          const isNotExpired = !announcement.expires_at || new Date(announcement.expires_at) > now;
+          const canSee = canSeeAnnouncement(announcement);
+          return isNotExpired && canSee;
+        }
       );
 
       setRecentAnnouncements(activeAnnouncements);
@@ -125,6 +145,27 @@ export function NotificationBell() {
   const handleViewAll = () => {
     setOpen(false);
     navigate('/');
+  };
+
+  const markAsRead = async (announcementId: string) => {
+    if (!user) return;
+
+    try {
+      await supabase
+        .from('announcement_reads')
+        .insert({
+          user_id: user.id,
+          announcement_id: announcementId,
+        });
+    } catch (error) {
+      // Ignore duplicate errors (already read)
+      console.log('Read tracking:', error);
+    }
+  };
+
+  const handleAnnouncementClick = async (announcementId: string) => {
+    await markAsRead(announcementId);
+    handleViewAll();
   };
 
   return (
@@ -162,7 +203,7 @@ export function NotificationBell() {
                 <div
                   key={announcement.id}
                   className="p-4 hover:bg-accent cursor-pointer transition-colors"
-                  onClick={handleViewAll}
+                  onClick={() => handleAnnouncementClick(announcement.id)}
                 >
                   <div className="flex items-start gap-2">
                     {announcement.is_pinned && (

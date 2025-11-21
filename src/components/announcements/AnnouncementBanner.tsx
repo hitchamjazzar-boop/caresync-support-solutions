@@ -6,6 +6,7 @@ import { Megaphone, X, Check } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { useAnnouncementVisibility } from '@/hooks/useAnnouncementVisibility';
 
 interface Announcement {
   id: string;
@@ -13,11 +14,16 @@ interface Announcement {
   content: string;
   expires_at: string | null;
   is_pinned: boolean;
+  target_type: string;
+  target_users: string[] | null;
+  target_roles: string[] | null;
+  target_departments: string[] | null;
 }
 
 export function AnnouncementBanner() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { canSeeAnnouncement } = useAnnouncementVisibility();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
   const [acknowledgedIds, setAcknowledgedIds] = useState<string[]>([]);
@@ -59,18 +65,21 @@ export function AnnouncementBanner() {
     try {
       const { data, error } = await supabase
         .from('announcements')
-        .select('id, title, content, expires_at, is_pinned')
+        .select('id, title, content, expires_at, is_pinned, target_type, target_users, target_roles, target_departments')
         .eq('is_active', true)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Filter out expired announcements
+      // Filter out expired announcements and announcements user can't see
       const now = new Date();
       const activeAnnouncements = (data || []).filter(
-        (announcement) =>
-          !announcement.expires_at || new Date(announcement.expires_at) > now
+        (announcement) => {
+          const isNotExpired = !announcement.expires_at || new Date(announcement.expires_at) > now;
+          const canSee = canSeeAnnouncement(announcement);
+          return isNotExpired && canSee;
+        }
       );
 
       setAnnouncements(activeAnnouncements);

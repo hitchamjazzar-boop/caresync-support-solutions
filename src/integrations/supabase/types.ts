@@ -46,6 +46,38 @@ export type Database = {
           },
         ]
       }
+      announcement_reads: {
+        Row: {
+          announcement_id: string
+          created_at: string
+          id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          created_at?: string
+          id?: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          created_at?: string
+          id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_reads_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           content: string
@@ -55,6 +87,10 @@ export type Database = {
           id: string
           is_active: boolean
           is_pinned: boolean
+          target_departments: string[] | null
+          target_roles: string[] | null
+          target_type: string
+          target_users: string[] | null
           title: string
           updated_at: string
         }
@@ -66,6 +102,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_pinned?: boolean
+          target_departments?: string[] | null
+          target_roles?: string[] | null
+          target_type?: string
+          target_users?: string[] | null
           title: string
           updated_at?: string
         }
@@ -77,6 +117,10 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_pinned?: boolean
+          target_departments?: string[] | null
+          target_roles?: string[] | null
+          target_type?: string
+          target_users?: string[] | null
           title?: string
           updated_at?: string
         }
@@ -395,6 +439,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_user_see_announcement: {
+        Args: { announcement_id: string; user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
+import { AnnouncementTargetingFields } from './AnnouncementTargetingFields';
 
 const announcementSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
@@ -32,6 +33,10 @@ const announcementSchema = z.object({
   expires_at: z.string().optional(),
   is_active: z.boolean().default(true),
   is_pinned: z.boolean().default(false),
+  target_type: z.enum(['all', 'specific_users', 'roles', 'departments']).default('all'),
+  target_users: z.array(z.string()).optional(),
+  target_roles: z.array(z.string()).optional(),
+  target_departments: z.array(z.string()).optional(),
 });
 
 type AnnouncementFormData = z.infer<typeof announcementSchema>;
@@ -46,6 +51,10 @@ interface AnnouncementDialogProps {
     expires_at: string | null;
     is_active: boolean;
     is_pinned: boolean;
+    target_type: string;
+    target_users: string[] | null;
+    target_roles: string[] | null;
+    target_departments: string[] | null;
   } | null;
   onSuccess: () => void;
 }
@@ -59,6 +68,25 @@ export function AnnouncementDialog({
   const { user } = useAuth();
   const { toast } = useToast();
   const isEditing = !!announcement;
+  const [employees, setEmployees] = useState<{ id: string; full_name: string; department: string | null }[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchEmployeesAndDepartments();
+  }, []);
+
+  const fetchEmployeesAndDepartments = async () => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, department')
+      .order('full_name');
+    
+    if (data) {
+      setEmployees(data);
+      const uniqueDepts = Array.from(new Set(data.map(e => e.department).filter(Boolean))) as string[];
+      setDepartments(uniqueDepts);
+    }
+  };
 
   const form = useForm<AnnouncementFormData>({
     resolver: zodResolver(announcementSchema),
@@ -68,6 +96,10 @@ export function AnnouncementDialog({
       expires_at: '',
       is_active: true,
       is_pinned: false,
+      target_type: 'all',
+      target_users: [],
+      target_roles: [],
+      target_departments: [],
     },
   });
 
@@ -81,6 +113,10 @@ export function AnnouncementDialog({
           : '',
         is_active: announcement.is_active,
         is_pinned: announcement.is_pinned,
+        target_type: announcement.target_type as any,
+        target_users: announcement.target_users || [],
+        target_roles: announcement.target_roles || [],
+        target_departments: announcement.target_departments || [],
       });
     } else {
       form.reset({
@@ -89,22 +125,32 @@ export function AnnouncementDialog({
         expires_at: '',
         is_active: true,
         is_pinned: false,
+        target_type: 'all',
+        target_users: [],
+        target_roles: [],
+        target_departments: [],
       });
     }
   }, [announcement, form]);
 
   const onSubmit = async (data: AnnouncementFormData) => {
     try {
+      const updateData = {
+        title: data.title.trim(),
+        content: data.content.trim(),
+        expires_at: data.expires_at ? new Date(data.expires_at).toISOString() : null,
+        is_active: data.is_active,
+        is_pinned: data.is_pinned,
+        target_type: data.target_type,
+        target_users: data.target_type === 'specific_users' ? data.target_users : null,
+        target_roles: data.target_type === 'roles' ? data.target_roles : null,
+        target_departments: data.target_type === 'departments' ? data.target_departments : null,
+      };
+
       if (isEditing) {
         const { error } = await supabase
           .from('announcements')
-          .update({
-            title: data.title.trim(),
-            content: data.content.trim(),
-            expires_at: data.expires_at ? new Date(data.expires_at).toISOString() : null,
-            is_active: data.is_active,
-            is_pinned: data.is_pinned,
-          })
+          .update(updateData)
           .eq('id', announcement.id);
 
         if (error) throw error;
@@ -121,11 +167,7 @@ export function AnnouncementDialog({
         const { error } = await supabase
           .from('announcements')
           .insert([{
-            title: data.title.trim(),
-            content: data.content.trim(),
-            expires_at: data.expires_at ? new Date(data.expires_at).toISOString() : null,
-            is_active: data.is_active,
-            is_pinned: data.is_pinned,
+            ...updateData,
             created_by: user.id,
           }]);
 
@@ -151,7 +193,7 @@ export function AnnouncementDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Announcement' : 'Create Announcement'}</DialogTitle>
           <DialogDescription>
@@ -255,6 +297,13 @@ export function AnnouncementDialog({
                   </FormControl>
                 </FormItem>
               )}
+            />
+
+            <AnnouncementTargetingFields
+              control={form.control}
+              watch={form.watch}
+              employees={employees}
+              departments={departments}
             />
 
             <div className="flex justify-end gap-2">
