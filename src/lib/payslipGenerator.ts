@@ -1,7 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { format } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
 import logoImage from '@/assets/logo.png';
 
 interface PayrollData {
@@ -25,55 +24,16 @@ interface PayrollData {
   } | null;
 }
 
-interface YTDTotals {
-  totalGross: number;
-  totalDeductions: number;
-  totalAllowances: number;
-  totalNet: number;
-  totalHours: number;
-}
-
 const formatCurrency = (amount: number): string => {
   return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-};
-
-const fetchYTDTotals = async (userId: string, currentYear: number): Promise<YTDTotals> => {
-  const { data, error } = await supabase
-    .from('payroll')
-    .select('gross_amount, deductions, allowances, net_amount, total_hours')
-    .eq('user_id', userId)
-    .gte('period_start', `${currentYear}-01-01`)
-    .lte('period_end', `${currentYear}-12-31`);
-
-  if (error) {
-    console.error('Error fetching YTD totals:', error);
-    return { totalGross: 0, totalDeductions: 0, totalAllowances: 0, totalNet: 0, totalHours: 0 };
-  }
-
-  const totals = data.reduce(
-    (acc, record) => ({
-      totalGross: acc.totalGross + Number(record.gross_amount),
-      totalDeductions: acc.totalDeductions + Number(record.deductions),
-      totalAllowances: acc.totalAllowances + Number(record.allowances),
-      totalNet: acc.totalNet + Number(record.net_amount),
-      totalHours: acc.totalHours + Number(record.total_hours),
-    }),
-    { totalGross: 0, totalDeductions: 0, totalAllowances: 0, totalNet: 0, totalHours: 0 }
-  );
-
-  return totals;
 };
 
 export const generatePayslipPDF = async (payroll: PayrollData) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  const year = new Date(payroll.period_start).getFullYear();
-
-  // Fetch YTD totals
-  const ytdTotals = await fetchYTDTotals(payroll.user_id, year);
 
   // Company Branding Header - CareSync maroon color
-  doc.setFillColor(128, 0, 32); // CareSync maroon color
+  doc.setFillColor(128, 0, 32);
   doc.rect(0, 0, pageWidth, 40, 'F');
   
   // Add CareSync Logo
@@ -104,7 +64,7 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   doc.text('Australia Wide', 14, 62);
 
   // Payslip Details Box
-  doc.setDrawColor(128, 0, 32); // CareSync maroon
+  doc.setDrawColor(128, 0, 32);
   doc.setLineWidth(0.5);
   doc.rect(pageWidth - 80, 48, 66, 20);
   
@@ -161,8 +121,8 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
 
   const earningsData = [];
   
-  // Add total hours at the top
-  earningsData.push(['Total Hours Worked', `${payroll.total_hours.toLocaleString('en-PH', { minimumFractionDigits: 2 })} hrs`]);
+  // Add total hours worked
+  earningsData.push(['Total Hours Worked', `${payroll.total_hours.toFixed(2)} hrs`]);
   
   if (payroll.hourly_rate) {
     earningsData.push(['Hourly Rate', formatCurrency(payroll.hourly_rate)]);
@@ -181,36 +141,44 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   }
 
   autoTable(doc, {
-    startY: finalY + 3,
+    startY: finalY + 4,
     head: [['Description', 'Amount']],
     body: earningsData,
     theme: 'striped',
     headStyles: {
-      fillColor: [128, 0, 32], // CareSync maroon
+      fillColor: [128, 0, 32],
       textColor: [255, 255, 255],
       fontStyle: 'bold',
+      fontSize: 10,
     },
-    styles: { fontSize: 9, cellPadding: 2.5 },
+    styles: { 
+      fontSize: 9, 
+      cellPadding: 3,
+      lineColor: [200, 200, 200],
+      lineWidth: 0.1,
+    },
     columnStyles: {
-      0: { cellWidth: 120 },
-      1: { cellWidth: 'auto', halign: 'right' },
+      0: { cellWidth: 120, fontStyle: 'normal' },
+      1: { cellWidth: 'auto', halign: 'right', fontStyle: 'normal' },
     },
   });
 
   // Net Pay Box
   finalY = (doc as any).lastAutoTable.finalY + 10;
   
-  doc.setFillColor(240, 253, 244); // Light green background
+  doc.setFillColor(240, 253, 244);
   doc.rect(14, finalY, pageWidth - 28, 20, 'F');
-  doc.setDrawColor(128, 0, 32); // CareSync maroon
+  doc.setDrawColor(128, 0, 32);
   doc.setLineWidth(0.8);
   doc.rect(14, finalY, pageWidth - 28, 20);
   
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('NET PAY', 20, finalY + 8);
-  doc.setFontSize(18);
-  doc.setTextColor(22, 163, 74); // Green color
+  doc.setTextColor(0, 0, 0);
+  doc.text('NET PAY', 20, finalY + 13);
+  
+  doc.setFontSize(20);
+  doc.setTextColor(22, 163, 74);
   doc.text(formatCurrency(payroll.net_amount), pageWidth - 20, finalY + 13, { align: 'right' });
   
   doc.setTextColor(0, 0, 0);
