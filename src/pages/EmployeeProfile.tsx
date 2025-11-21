@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
+import { ProfilePhotoUpload } from '@/components/profile/ProfilePhotoUpload';
 
 interface Profile {
   id: string;
@@ -236,12 +237,21 @@ export default function EmployeeProfile() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col md:flex-row gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={profile.photo_url || undefined} />
-              <AvatarFallback className="text-2xl">
-                {profile.full_name?.charAt(0) || '?'}
-              </AvatarFallback>
-            </Avatar>
+            {user?.id === id ? (
+              <ProfilePhotoUpload
+                userId={id}
+                currentPhotoUrl={profile.photo_url}
+                userName={profile.full_name}
+                onPhotoUpdated={fetchEmployeeData}
+              />
+            ) : (
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={profile.photo_url || undefined} />
+                <AvatarFallback className="text-2xl">
+                  {profile.full_name?.charAt(0) || '?'}
+                </AvatarFallback>
+              </Avatar>
+            )}
 
             <div className="flex-1 space-y-4">
               <div>
