@@ -9,12 +9,17 @@ import { AddEmployeeDialog } from '@/components/employees/AddEmployeeDialog';
 import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog';
 import { DeleteEmployeeDialog } from '@/components/employees/DeleteEmployeeDialog';
 import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
+import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
+import { Button } from '@/components/ui/button';
+import { Send } from 'lucide-react';
 
 export default function Employees() {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<any[]>([]);
+  const [memoDialogOpen, setMemoDialogOpen] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
 
   const fetchEmployees = async () => {
     if (!user) return;
@@ -126,6 +131,19 @@ export default function Employees() {
                       size="sm"
                     />
                   </div>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEmployeeId(employee.id);
+                      setMemoDialogOpen(true);
+                    }}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Send Memo
+                  </Button>
                   <DeleteEmployeeDialog
                     employeeId={employee.id}
                     employeeName={employee.full_name}
@@ -137,6 +155,12 @@ export default function Employees() {
           </Card>
         ))}
       </div>
+
+      <SendMemoDialog
+        open={memoDialogOpen}
+        onOpenChange={setMemoDialogOpen}
+        preSelectedEmployeeId={selectedEmployeeId}
+      />
     </div>
   );
 }
