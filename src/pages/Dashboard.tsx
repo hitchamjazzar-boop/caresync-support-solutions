@@ -110,7 +110,7 @@ export default function Dashboard() {
         .eq('user_id', user.id)
         .in('status', ['approved', 'paid'])
         .order('period_end', { ascending: false })
-        .limit(3);
+        .limit(1);
 
       if (error) {
         console.error('Error fetching payroll:', error);
@@ -189,12 +189,9 @@ export default function Dashboard() {
             <Alert className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
               <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
               <AlertTitle className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
-                💰 Payroll Updates
+                💰 Latest Payroll Update
               </AlertTitle>
               <AlertDescription className="space-y-3">
-                <p className="text-green-700 dark:text-green-300 text-lg">
-                  You have {approvedPayroll.length} payroll record{approvedPayroll.length > 1 ? 's' : ''} available
-                </p>
                 <div className="space-y-2">
                   {approvedPayroll.map((payroll) => {
                     const isPaid = payroll.status === 'paid';
