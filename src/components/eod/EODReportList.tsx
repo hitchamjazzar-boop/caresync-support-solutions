@@ -5,10 +5,22 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Download, Calendar, User } from 'lucide-react';
+import { FileText, Download, Calendar, User, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface EODReport {
   id: string;
@@ -31,6 +43,7 @@ interface EODReport {
 export const EODReportList = () => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
+  const { toast } = useToast();
   const [reports, setReports] = useState<EODReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'today' | 'week' | 'all'>('today');
@@ -97,6 +110,31 @@ export const EODReportList = () => {
     }
   };
 
+  const handleDelete = async (reportId: string) => {
+    try {
+      const { error } = await supabase
+        .from('eod_reports')
+        .delete()
+        .eq('id', reportId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Report Deleted',
+        description: 'EOD report has been deleted successfully',
+      });
+
+      fetchReports();
+    } catch (error: any) {
+      console.error('Error deleting EOD report:', error);
+      toast({
+        title: 'Delete Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const ReportCard = ({ report }: { report: EODReport }) => {
     const attachments = Array.isArray(report.attachments) ? report.attachments : [];
     
@@ -121,16 +159,44 @@ export const EODReportList = () => {
                 <p className="text-sm text-muted-foreground">{report.profiles?.position || 'N/A'}</p>
               </div>
             </div>
-          <div className="text-right">
-            <Badge variant="secondary" className="gap-1">
-              <Calendar className="h-3 w-3" />
-              {format(new Date(report.submitted_at), 'MMM dd, yyyy')}
-            </Badge>
-            <p className="text-xs text-muted-foreground mt-1">
-              {format(new Date(report.submitted_at), 'hh:mm a')}
-            </p>
+            <div className="text-right">
+              <Badge variant="secondary" className="gap-1">
+                <Calendar className="h-3 w-3" />
+                {format(new Date(report.submitted_at), 'MMM dd, yyyy')}
+              </Badge>
+              <p className="text-xs text-muted-foreground mt-1">
+                {format(new Date(report.submitted_at), 'hh:mm a')}
+              </p>
+            </div>
+            {isAdmin && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete EOD Report?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete the EOD report from{' '}
+                      <strong>{report.profiles?.full_name}</strong> submitted on{' '}
+                      {format(new Date(report.submitted_at), 'MMM dd, yyyy')}. This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleDelete(report.id)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
-        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
