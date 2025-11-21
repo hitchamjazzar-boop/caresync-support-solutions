@@ -27,6 +27,28 @@ export default function Dashboard() {
       fetchAdminStats();
     } else if (user) {
       fetchEmployeePayroll();
+      
+      // Set up real-time subscription for payroll changes
+      const channel = supabase
+        .channel('payroll-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'payroll',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            console.log('Payroll change detected:', payload);
+            fetchEmployeePayroll();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [isAdmin, user]);
 
