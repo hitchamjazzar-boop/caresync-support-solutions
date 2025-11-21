@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { AlertTriangle, Bell, FileText, ChevronDown, Send } from 'lucide-react';
+import { AlertTriangle, Bell, FileText, ChevronDown, Send, Clock } from 'lucide-react';
 import { format } from 'date-fns';
-import { toast } from 'sonner';
 import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
+import { EscalationStatus } from '@/components/memos/EscalationStatus';
 
 interface MemoStats {
   id: string;
@@ -22,6 +22,8 @@ interface MemoStats {
     department: string | null;
   };
   is_read: boolean;
+  escalated: boolean;
+  escalate_after_hours: number | null;
   replies_count: number;
   latest_reply_at: string | null;
 }
@@ -38,7 +40,7 @@ export default function MemoAnalytics() {
   const fetchMemoStats = async () => {
     const { data: memosData } = await supabase
       .from('memos')
-      .select('id, title, type, created_at, is_read, recipient_id')
+      .select('id, title, type, created_at, is_read, escalated, escalate_after_hours, recipient_id')
       .order('created_at', { ascending: false });
 
     if (memosData) {
@@ -66,6 +68,8 @@ export default function MemoAnalytics() {
             type: memo.type,
             created_at: memo.created_at,
             is_read: memo.is_read,
+            escalated: memo.escalated,
+            escalate_after_hours: memo.escalate_after_hours,
             recipient: recipientProfile || { id: '', full_name: 'Unknown', department: null },
             replies_count: count || 0,
             latest_reply_at: repliesData && repliesData.length > 0 ? repliesData[0].created_at : null,
@@ -124,6 +128,9 @@ export default function MemoAnalytics() {
         <h1 className="text-3xl font-bold">Memo Analytics</h1>
         <p className="text-muted-foreground">Track memo engagement and send reminders</p>
       </div>
+
+      {/* Escalation Status */}
+      <EscalationStatus />
 
       {/* Summary Stats */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -213,7 +220,7 @@ export default function MemoAnalytics() {
                               <Card key={memo.id} className="bg-muted/30">
                                 <CardContent className="py-3">
                                   <div className="flex items-start justify-between gap-4">
-                                    <div className="flex items-start gap-2 flex-1">
+                              <div className="flex items-start gap-2 flex-1">
                                       {getMemoIcon(memo.type)}
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 flex-wrap">
@@ -223,12 +230,24 @@ export default function MemoAnalytics() {
                                               Unread
                                             </Badge>
                                           )}
+                                          {memo.escalated && (
+                                            <Badge variant="outline" className="text-xs">
+                                              <Clock className="h-3 w-3 mr-1" />
+                                              Escalated
+                                            </Badge>
+                                          )}
                                           <Badge variant="outline" className="text-xs capitalize">
                                             {memo.type}
                                           </Badge>
                                         </div>
                                         <div className="text-xs text-muted-foreground mt-1">
                                           Sent: {format(new Date(memo.created_at), 'PPp')}
+                                          {memo.escalate_after_hours && (
+                                            <>
+                                              {' • '}
+                                              Auto-escalate: {memo.escalate_after_hours}h
+                                            </>
+                                          )}
                                           {memo.replies_count > 0 && (
                                             <>
                                               {' • '}
