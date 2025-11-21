@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,10 +40,6 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useState(() => {
-    fetchEmployees();
-  });
-
   const fetchEmployees = async () => {
     const { data } = await supabase
       .from('profiles')
@@ -53,6 +49,10 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
 
     if (data) setEmployees(data);
   };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
 
   const calculateHours = async () => {
     if (!formData.employeeId || !formData.periodStart || !formData.periodEnd) {
