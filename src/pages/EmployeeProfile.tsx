@@ -30,7 +30,9 @@ import {
   Clock,
   TrendingUp,
   FileText,
+  Wallet,
 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
 
 interface Profile {
@@ -44,6 +46,11 @@ interface Profile {
   start_date: string;
   hourly_rate: number | null;
   monthly_salary: number | null;
+  payment_method: string | null;
+  bank_name: string | null;
+  account_holder_name: string | null;
+  account_number: string | null;
+  routing_number: string | null;
 }
 
 interface AttendanceRecord {
@@ -393,6 +400,74 @@ export default function EmployeeProfile() {
               </div>
             </CardContent>
           </Card>
+
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  <CardTitle>Payment Information</CardTitle>
+                </div>
+                <CardDescription>Bank account and payment details</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!profile.payment_method && !profile.bank_name ? (
+                  <p className="text-sm text-muted-foreground py-4">
+                    No payment information provided yet
+                  </p>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Payment Method</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {profile.payment_method === 'bank_account'
+                          ? 'Bank Account'
+                          : profile.payment_method === 'digital_bank'
+                          ? 'Digital Bank'
+                          : profile.payment_method === 'e_wallet'
+                          ? 'E-Wallet'
+                          : 'Not specified'}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        {profile.payment_method === 'e_wallet'
+                          ? 'E-Wallet Provider'
+                          : profile.payment_method === 'digital_bank'
+                          ? 'Digital Bank'
+                          : 'Bank Name'}
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {profile.bank_name || 'Not provided'}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Account Holder Name</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {profile.account_holder_name || 'Not provided'}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">
+                        {profile.payment_method === 'e_wallet' ? 'Mobile Number' : 'Account Number'}
+                      </Label>
+                      <p className="text-sm text-muted-foreground font-mono">
+                        {profile.account_number || 'Not provided'}
+                      </p>
+                    </div>
+                    {profile.payment_method === 'bank_account' && profile.routing_number && (
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Branch Code</Label>
+                        <p className="text-sm text-muted-foreground">
+                          {profile.routing_number}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Attendance Tab */}
@@ -563,8 +638,4 @@ export default function EmployeeProfile() {
       </Tabs>
     </div>
   );
-}
-
-function Label({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <label className={`text-sm font-medium leading-none ${className}`}>{children}</label>;
 }
