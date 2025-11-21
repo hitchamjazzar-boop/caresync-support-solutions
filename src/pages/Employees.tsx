@@ -66,43 +66,47 @@ export default function Employees() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {employees.map((employee) => (
-          <Card key={employee.id}>
-            <CardHeader>
+          <Card key={employee.id} className="flex flex-col">
+            <CardHeader className="pb-3">
               <div className="flex items-start gap-4">
                 {employee.photo_url ? (
                   <img
                     src={employee.photo_url}
                     alt={employee.full_name}
-                    className="h-16 w-16 rounded-full object-cover"
+                    className="h-16 w-16 rounded-full object-cover flex-shrink-0"
                   />
                 ) : (
-                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
                     <span className="text-2xl font-semibold text-muted-foreground">
                       {employee.full_name.charAt(0)}
                     </span>
                   </div>
                 )}
-                <div className="flex-1">
-                  <CardTitle className="text-lg">{employee.full_name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{employee.position || 'Staff'}</p>
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-lg truncate">{employee.full_name}</CardTitle>
+                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                    {employee.position || 'Staff'}
+                  </p>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="text-sm">
-                <span className="text-muted-foreground">Department: </span>
-                <span>{employee.department || 'Not assigned'}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-muted-foreground">Email: </span>
-                <span>{employee.contact_email}</span>
-              </div>
-              <div className="text-sm">
-                <span className="text-muted-foreground">Start Date: </span>
-                <span>{new Date(employee.start_date).toLocaleDateString()}</span>
+            <CardContent className="space-y-3 flex-1 flex flex-col">
+              <div className="space-y-2 flex-1">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Department: </span>
+                  <span className="break-words">{employee.department || 'Not assigned'}</span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Email: </span>
+                  <span className="break-all">{employee.contact_email}</span>
+                </div>
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Start Date: </span>
+                  <span>{new Date(employee.start_date).toLocaleDateString()}</span>
+                </div>
               </div>
               {isAdmin && (
-                <div className="mt-2 space-y-2">
+                <div className="space-y-2 pt-2 border-t">
                   <EditEmployeeDialog employee={employee} onSuccess={fetchEmployees} />
                   <DeleteEmployeeDialog
                     employeeId={employee.id}
