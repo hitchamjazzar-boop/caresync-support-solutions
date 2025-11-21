@@ -65,7 +65,7 @@ function NodeCard({
 }: NodeCardProps) {
   return (
     <Card
-      className={`w-full sm:w-72 lg:w-80 mb-4 transition-all ${
+      className={`w-[280px] sm:w-64 lg:w-72 mb-3 transition-all ${
         isDragging ? 'opacity-50 scale-95' : isDragOver ? 'ring-2 ring-primary shadow-lg scale-105' : 'hover:shadow-lg'
       }`}
       draggable
@@ -75,48 +75,48 @@ function NodeCard({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-start gap-2 sm:gap-3 mb-2 sm:mb-3">
-          <div className="cursor-grab active:cursor-grabbing mt-1">
-            <GripVertical className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+      <CardContent className="p-3">
+        <div className="flex items-start gap-2 mb-2">
+          <div className="cursor-grab active:cursor-grabbing mt-1 flex-shrink-0">
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
-          <Avatar className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14">
+          <Avatar className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0">
             <AvatarImage src={node.profiles.photo_url || undefined} />
             <AvatarFallback>
-              {node.profiles.full_name?.charAt(0) || <User className="h-4 w-4 sm:h-5 sm:w-5" />}
+              {node.profiles.full_name?.charAt(0) || <User className="h-4 w-4" />}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm sm:text-base truncate">{node.profiles.full_name}</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground truncate">
+            <h3 className="font-semibold text-sm truncate">{node.profiles.full_name}</h3>
+            <p className="text-xs text-muted-foreground truncate">
               {node.profiles.position || 'No position set'}
             </p>
             {node.profiles.department && (
-              <p className="text-xs text-muted-foreground truncate mt-0.5 sm:mt-1">
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5">
                 {node.profiles.department}
               </p>
             )}
           </div>
-          <div className="flex gap-0.5 sm:gap-1">
+          <div className="flex gap-0.5 flex-shrink-0">
             {hasChildren && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 sm:h-7 sm:w-7"
+                className="h-6 w-6"
                 onClick={() => onToggleCollapse(node.id)}
                 title={isCollapsed ? 'Expand' : 'Collapse'}
               >
                 {isCollapsed ? (
-                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <ChevronRight className="h-3 w-3" />
                 ) : (
-                  <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <ChevronDown className="h-3 w-3" />
                 )}
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 sm:h-7 sm:w-7"
+              className="h-6 w-6"
               onClick={() => onEdit(node)}
             >
               <Pencil className="h-3 w-3" />
@@ -124,7 +124,7 @@ function NodeCard({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 sm:h-7 sm:w-7"
+              className="h-6 w-6"
               onClick={() => onDelete(node)}
             >
               <Trash2 className="h-3 w-3" />
@@ -132,22 +132,22 @@ function NodeCard({
           </div>
         </div>
         
-        <div className="space-y-1 text-xs text-muted-foreground border-t pt-2">
+        <div className="space-y-0.5 text-[10px] sm:text-xs text-muted-foreground border-t pt-1.5">
           {node.profiles.contact_email && (
-            <div className="flex items-center gap-2 truncate">
+            <div className="flex items-center gap-1 truncate">
               <span className="font-medium hidden sm:inline">Email:</span>
               <span className="truncate">{node.profiles.contact_email}</span>
             </div>
           )}
           {node.profiles.contact_phone && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <span className="font-medium hidden sm:inline">Phone:</span>
               <span>{node.profiles.contact_phone}</span>
             </div>
           )}
           {hasChildren && (
-            <div className="flex items-center gap-1 mt-2">
-              <Badge variant="secondary" className="text-xs">
+            <div className="flex items-center gap-1 mt-1.5">
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                 {childCount} {childCount === 1 ? 'report' : 'reports'}
               </Badge>
             </div>
@@ -301,8 +301,8 @@ export function DraggableOrgChartTree({
         />
         {hasChildren && !isCollapsed && (
           <div className="relative animate-fade-in">
-            <div className="absolute left-1/2 top-0 w-0.5 h-3 sm:h-4 bg-border -translate-x-1/2" />
-            <div className="flex gap-4 sm:gap-6 lg:gap-8 pt-3 sm:pt-4">
+            <div className="absolute left-1/2 top-0 w-0.5 h-3 bg-border -translate-x-1/2" />
+            <div className="flex gap-3 sm:gap-4 lg:gap-6 pt-3">
               {children.map((child, index) => (
                 <div key={child.id} className="relative">
                   {index === 0 && children.length > 1 && (
@@ -314,7 +314,7 @@ export function DraggableOrgChartTree({
                   {index > 0 && index < children.length - 1 && (
                     <div className="absolute left-0 top-0 right-0 h-0.5 bg-border" />
                   )}
-                  <div className="absolute left-1/2 top-0 w-0.5 h-3 sm:h-4 bg-border -translate-x-1/2" />
+                  <div className="absolute left-1/2 top-0 w-0.5 h-3 bg-border -translate-x-1/2" />
                   {renderNode(child)}
                 </div>
               ))}
@@ -336,8 +336,8 @@ export function DraggableOrgChartTree({
   }
 
   return (
-    <div className="overflow-x-auto pb-4">
-      <div className="flex justify-center gap-4 sm:gap-8 lg:gap-12 min-w-max p-4 sm:p-6 lg:p-8">
+    <div className="overflow-x-auto pb-4 -mx-4 px-4">
+      <div className="flex justify-center gap-3 sm:gap-6 lg:gap-8 min-w-max py-4 sm:py-6">
         {rootNodes.map((node) => renderNode(node))}
       </div>
     </div>
