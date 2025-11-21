@@ -181,9 +181,12 @@ export default function Profile() {
         .from('profile-photos')
         .getPublicUrl(filePath);
 
+      // Add cache busting parameter to force refresh
+      const photoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ photo_url: urlData.publicUrl })
+        .update({ photo_url: photoUrl })
         .eq('id', user.id);
 
       if (updateError) throw updateError;
@@ -193,7 +196,15 @@ export default function Profile() {
         description: 'Profile photo updated successfully',
       });
 
-      fetchProfile();
+      // Refresh profile to show new photo
+      await fetchProfile();
+      
+      // Clear the file input
+      const fileInput = document.getElementById('photo-upload') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
+      // Notify Layout to refresh avatar
+      window.dispatchEvent(new CustomEvent('profile-updated'));
     } catch (error: any) {
       console.error('Error uploading photo:', error);
       toast({
@@ -230,7 +241,7 @@ export default function Profile() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex justify-center">
-              <Avatar className="h-32 w-32">
+              <Avatar className="h-32 w-32" key={profile?.photo_url}>
                 <AvatarImage src={profile?.photo_url || undefined} />
                 <AvatarFallback className="text-3xl">
                   {profile?.full_name?.charAt(0) || <User className="h-12 w-12" />}
