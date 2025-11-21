@@ -66,7 +66,7 @@ function NodeCard({
 }: NodeCardProps) {
   return (
     <Card
-      className={`w-[280px] sm:w-64 lg:w-72 mb-3 transition-all ${
+      className={`w-[240px] sm:w-56 md:w-64 lg:w-72 mb-2 sm:mb-3 transition-all ${
         isDragging ? 'opacity-50 scale-95' : isDragOver ? 'ring-2 ring-primary shadow-lg scale-105' : 'hover:shadow-lg'
       }`}
       draggable
@@ -76,24 +76,24 @@ function NodeCard({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <CardContent className="p-3">
-        <div className="flex items-start gap-2 mb-2">
+      <CardContent className="p-2 sm:p-3">
+        <div className="flex items-start gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
           <div className="cursor-grab active:cursor-grabbing mt-1 flex-shrink-0">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <GripVertical className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
           </div>
-          <Avatar className="h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0">
+          <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
             <AvatarImage src={node.profiles.photo_url || undefined} />
             <AvatarFallback>
-              {node.profiles.full_name?.charAt(0) || <User className="h-4 w-4" />}
+              {node.profiles.full_name?.charAt(0) || <User className="h-3 w-3 sm:h-4 sm:w-4" />}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm truncate">{node.profiles.full_name}</h3>
-            <p className="text-xs text-muted-foreground truncate">
+            <h3 className="font-semibold text-xs sm:text-sm truncate">{node.profiles.full_name}</h3>
+            <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
               {node.profiles.position || 'No position set'}
             </p>
             {node.profiles.department && (
-              <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5">
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate mt-0.5 hidden xs:block">
                 {node.profiles.department}
               </p>
             )}
@@ -103,37 +103,37 @@ function NodeCard({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6"
+                className="h-5 w-5 sm:h-6 sm:w-6"
                 onClick={() => onToggleCollapse(node.id)}
                 title={isCollapsed ? 'Expand' : 'Collapse'}
               >
                 {isCollapsed ? (
-                  <ChevronRight className="h-3 w-3" />
+                  <ChevronRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 ) : (
-                  <ChevronDown className="h-3 w-3" />
+                  <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                 )}
               </Button>
             )}
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-5 w-5 sm:h-6 sm:w-6"
               onClick={() => onEdit(node)}
             >
-              <Pencil className="h-3 w-3" />
+              <Pencil className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-5 w-5 sm:h-6 sm:w-6"
               onClick={() => onDelete(node)}
             >
-              <Trash2 className="h-3 w-3" />
+              <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
             </Button>
           </div>
         </div>
         
-        <div className="space-y-0.5 text-[10px] sm:text-xs text-muted-foreground border-t pt-1.5">
+        <div className="space-y-0.5 text-[10px] sm:text-xs text-muted-foreground border-t pt-1 sm:pt-1.5">
           {node.profiles.contact_email && (
             <div className="flex items-center gap-1 truncate">
               <span className="font-medium hidden sm:inline">Email:</span>
@@ -147,7 +147,7 @@ function NodeCard({
             </div>
           )}
           {hasChildren && (
-            <div className="flex items-center gap-1 mt-1.5">
+            <div className="flex items-center gap-1 mt-1 sm:mt-1.5">
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                 {childCount} {childCount === 1 ? 'report' : 'reports'}
               </Badge>
@@ -303,8 +303,8 @@ export function DraggableOrgChartTree({
         />
         {hasChildren && !isCollapsed && (
           <div className="relative animate-fade-in">
-            <div className="absolute left-1/2 top-0 w-0.5 h-3 bg-border -translate-x-1/2" />
-            <div className="flex gap-3 sm:gap-4 lg:gap-6 pt-3">
+            <div className="absolute left-1/2 top-0 w-0.5 h-2 sm:h-3 bg-border -translate-x-1/2" />
+            <div className="flex gap-2 sm:gap-3 md:gap-4 lg:gap-6 pt-2 sm:pt-3">
               {children.map((child, index) => (
                 <div key={child.id} className="relative">
                   {index === 0 && children.length > 1 && (
@@ -316,7 +316,7 @@ export function DraggableOrgChartTree({
                   {index > 0 && index < children.length - 1 && (
                     <div className="absolute left-0 top-0 right-0 h-0.5 bg-border" />
                   )}
-                  <div className="absolute left-1/2 top-0 w-0.5 h-3 bg-border -translate-x-1/2" />
+                  <div className="absolute left-1/2 top-0 w-0.5 h-2 sm:h-3 bg-border -translate-x-1/2" />
                   {renderNode(child)}
                 </div>
               ))}
@@ -338,9 +338,9 @@ export function DraggableOrgChartTree({
   }
 
   return (
-    <div className="overflow-x-auto pb-4 -mx-4 px-4">
+    <div className="overflow-x-auto pb-4">
       <div 
-        className="flex justify-center gap-3 sm:gap-6 lg:gap-8 min-w-max py-4 sm:py-6 transition-transform duration-200"
+        className="flex flex-wrap md:flex-nowrap justify-center gap-2 sm:gap-3 md:gap-4 lg:gap-6 py-3 sm:py-4 md:py-6 transition-transform duration-200"
         style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
       >
         {rootNodes.map((node) => renderNode(node))}
