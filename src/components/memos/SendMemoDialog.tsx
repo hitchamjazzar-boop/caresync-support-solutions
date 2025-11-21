@@ -30,6 +30,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 
 const memoSchema = z.object({
@@ -38,6 +39,8 @@ const memoSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
   content: z.string().min(1, 'Content is required').max(2000, 'Content must be less than 2000 characters'),
   expires_at: z.string().optional(),
+  escalate_after_hours: z.number().min(1).max(168).optional(),
+  enable_escalation: z.boolean().optional(),
 });
 
 type MemoFormData = z.infer<typeof memoSchema>;
@@ -89,6 +92,8 @@ export function SendMemoDialog({
       title: '',
       content: '',
       expires_at: '',
+      enable_escalation: false,
+      escalate_after_hours: 24,
     },
   });
 
@@ -118,6 +123,7 @@ export function SendMemoDialog({
           title: data.title.trim(),
           content: data.content.trim(),
           expires_at: data.expires_at ? new Date(data.expires_at).toISOString() : null,
+          escalate_after_hours: data.enable_escalation ? data.escalate_after_hours : null,
         }]);
 
       if (error) throw error;
@@ -253,6 +259,54 @@ export function SendMemoDialog({
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="enable_escalation"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      Enable Auto-Escalation
+                    </FormLabel>
+                    <FormDescription>
+                      Automatically send a reminder if this memo remains unread
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {form.watch('enable_escalation') && (
+              <FormField
+                control={form.control}
+                name="escalate_after_hours"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Escalate After (Hours)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="168"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value))}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Send a reminder after this many hours if unread (1-168 hours)
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="flex justify-end gap-2">
               <Button
