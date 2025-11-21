@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, Maximize2, Minimize2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Plus, Pencil, Trash2, Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AddToOrgChartDialog } from '@/components/orgchart/AddToOrgChartDialog';
 import { EditOrgChartDialog } from '@/components/orgchart/EditOrgChartDialog';
@@ -42,6 +43,7 @@ export default function OrgChart() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<OrgChartNode | null>(null);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
+  const [zoom, setZoom] = useState<number>(100);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -275,10 +277,31 @@ export default function OrgChart() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Organization Hierarchy</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Drag and drop employees to reorganize the hierarchy
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Organization Hierarchy</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Drag and drop employees to reorganize the hierarchy
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <ZoomOut className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-2">
+                  <Slider
+                    value={[zoom]}
+                    onValueChange={(value) => setZoom(value[0])}
+                    min={50}
+                    max={150}
+                    step={10}
+                    className="w-32"
+                  />
+                  <span className="text-sm font-medium text-muted-foreground min-w-[3rem]">
+                    {zoom}%
+                  </span>
+                </div>
+                <ZoomIn className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <DraggableOrgChartTree 
@@ -288,6 +311,7 @@ export default function OrgChart() {
               onDragEnd={handleDragEnd}
               collapsedNodes={collapsedNodes}
               onToggleCollapse={toggleCollapse}
+              zoom={zoom}
             />
           </CardContent>
         </Card>

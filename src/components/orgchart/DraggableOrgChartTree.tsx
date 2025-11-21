@@ -28,6 +28,7 @@ interface DraggableOrgChartTreeProps {
   onDragEnd: (nodeId: string, newParentId: string | null, newOrder: number) => void;
   collapsedNodes?: Set<string>;
   onToggleCollapse?: (nodeId: string) => void;
+  zoom?: number;
 }
 
 interface NodeCardProps {
@@ -165,6 +166,7 @@ export function DraggableOrgChartTree({
   onDragEnd,
   collapsedNodes: externalCollapsedNodes,
   onToggleCollapse: externalToggleCollapse,
+  zoom = 100,
 }: DraggableOrgChartTreeProps) {
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
@@ -337,7 +339,10 @@ export function DraggableOrgChartTree({
 
   return (
     <div className="overflow-x-auto pb-4 -mx-4 px-4">
-      <div className="flex justify-center gap-3 sm:gap-6 lg:gap-8 min-w-max py-4 sm:py-6">
+      <div 
+        className="flex justify-center gap-3 sm:gap-6 lg:gap-8 min-w-max py-4 sm:py-6 transition-transform duration-200"
+        style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
+      >
         {rootNodes.map((node) => renderNode(node))}
       </div>
     </div>
