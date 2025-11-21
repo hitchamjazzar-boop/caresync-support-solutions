@@ -5,10 +5,21 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { DollarSign, Calendar, CheckCircle, Clock, AlertCircle, Download } from 'lucide-react';
+import { DollarSign, Calendar, CheckCircle, Clock, AlertCircle, Download, Trash2 } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
 import { generatePayslipPDF } from '@/lib/payslipGenerator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface PayrollRecord {
   id: string;
@@ -159,6 +170,31 @@ export const PayrollList = ({ refresh }: { refresh: number }) => {
     }
   };
 
+  const handleDelete = async (payrollId: string) => {
+    try {
+      const { error } = await supabase
+        .from('payroll')
+        .delete()
+        .eq('id', payrollId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Payroll Deleted',
+        description: 'Payroll record has been deleted successfully',
+      });
+
+      fetchPayrolls();
+    } catch (error: any) {
+      console.error('Error deleting payroll:', error);
+      toast({
+        title: 'Delete Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-8 text-muted-foreground">Loading payroll records...</div>;
   }
@@ -275,6 +311,36 @@ export const PayrollList = ({ refresh }: { refresh: number }) => {
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Mark as Paid
                 </Button>
+              )}
+
+              {isAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="icon">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Payroll Record?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete this payroll record for{' '}
+                        <strong>{payroll.profiles?.full_name}</strong> for the period{' '}
+                        {format(new Date(payroll.period_start), 'MMM dd')} -{' '}
+                        {format(new Date(payroll.period_end), 'MMM dd, yyyy')}. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDelete(payroll.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </CardContent>
