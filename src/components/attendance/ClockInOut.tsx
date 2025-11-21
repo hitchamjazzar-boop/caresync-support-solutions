@@ -131,8 +131,29 @@ export const ClockInOut = () => {
   };
 
   const handleClockOut = async () => {
-    if (!activeAttendance) return;
+    if (!activeAttendance || !user) return;
     setLoading(true);
+
+    // Check if EOD report exists for today
+    const today = new Date().toISOString().split('T')[0];
+    const { data: eodReport, error: eodError } = await supabase
+      .from('eod_reports')
+      .select('id')
+      .eq('attendance_id', activeAttendance.id)
+      .maybeSingle();
+
+    if (eodError) {
+      console.error('Error checking EOD report:', eodError);
+    }
+
+    if (!eodReport) {
+      toast.error('Please submit your EOD report before clocking out', {
+        description: 'Go to Reports page to submit your end-of-day report',
+        duration: 5000,
+      });
+      setLoading(false);
+      return;
+    }
 
     const clockOutTime = new Date().toISOString();
     const totalHours = calculateHours(
@@ -286,9 +307,13 @@ export const ClockInOut = () => {
                 Clock Out
               </Button>
 
-              {isOnLunchBreak && (
+              {isOnLunchBreak ? (
                 <p className="text-xs text-center text-muted-foreground">
                   Please end your lunch break before clocking out
+                </p>
+              ) : (
+                <p className="text-xs text-center text-muted-foreground">
+                  💡 Remember to submit your EOD report before clocking out
                 </p>
               )}
             </div>
