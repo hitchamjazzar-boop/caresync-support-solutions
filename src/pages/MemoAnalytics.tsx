@@ -10,6 +10,7 @@ import { AlertTriangle, Bell, FileText, ChevronDown, Send, Clock } from 'lucide-
 import { format } from 'date-fns';
 import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
 import { EscalationStatus } from '@/components/memos/EscalationStatus';
+import { DeleteMemoDialog } from '@/components/memos/DeleteMemoDialog';
 
 interface MemoStats {
   id: string;
@@ -260,16 +261,23 @@ export default function MemoAnalytics() {
                                         </div>
                                       </div>
                                     </div>
-                                    {!memo.is_read && (
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => sendReminder(employee.id, memo.title)}
-                                      >
-                                        <Send className="h-3 w-3 mr-1" />
-                                        Remind
-                                      </Button>
-                                    )}
+                                    <div className="flex gap-2">
+                                      {!memo.is_read && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => sendReminder(employee.id, memo.title)}
+                                        >
+                                          <Send className="h-3 w-3 mr-1" />
+                                          Remind
+                                        </Button>
+                                      )}
+                                      <DeleteMemoDialog
+                                        memoId={memo.id}
+                                        memoTitle={memo.title}
+                                        onDeleted={fetchMemoStats}
+                                      />
+                                    </div>
                                   </div>
                                 </CardContent>
                               </Card>
