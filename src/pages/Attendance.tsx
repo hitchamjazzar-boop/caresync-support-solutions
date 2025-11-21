@@ -1,4 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ClockInOut } from '@/components/attendance/ClockInOut';
+import { AttendanceHistory } from '@/components/attendance/AttendanceHistory';
 
 export default function Attendance() {
   return (
@@ -10,17 +11,14 @@ export default function Attendance() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Attendance features coming soon</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            This section will include clock in/out functionality, break tracking, and attendance
-            history.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-1">
+          <ClockInOut />
+        </div>
+        <div className="lg:col-span-2">
+          <AttendanceHistory />
+        </div>
+      </div>
     </div>
   );
 }
