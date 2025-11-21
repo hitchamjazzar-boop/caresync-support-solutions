@@ -5,9 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { DollarSign, Calendar, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { DollarSign, Calendar, CheckCircle, Clock, AlertCircle, Download } from 'lucide-react';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
+import { generatePayslipPDF } from '@/lib/payslipGenerator';
 
 interface PayrollRecord {
   id: string;
@@ -21,9 +22,13 @@ interface PayrollRecord {
   net_amount: number;
   payment_date: string | null;
   status: string;
+  hourly_rate: number | null;
+  monthly_salary: number | null;
   profiles: {
     full_name: string;
     position: string;
+    department: string | null;
+    contact_email: string | null;
     photo_url: string | null;
   } | null;
 }
@@ -65,7 +70,7 @@ export const PayrollList = ({ refresh }: { refresh: number }) => {
       const userIds = [...new Set(payrollData.map(p => p.user_id))];
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, position, photo_url')
+        .select('id, full_name, position, department, contact_email, photo_url')
         .in('id', userIds);
 
       if (profilesError) throw profilesError;
@@ -130,6 +135,27 @@ export const PayrollList = ({ refresh }: { refresh: number }) => {
         return <Clock className="h-4 w-4" />;
       default:
         return <AlertCircle className="h-4 w-4" />;
+    }
+  };
+
+  const handleDownloadPayslip = async (payroll: PayrollRecord) => {
+    try {
+      toast({
+        title: 'Generating Payslip',
+        description: 'Your payslip PDF is being generated...',
+      });
+      await generatePayslipPDF(payroll);
+      toast({
+        title: 'Download Complete',
+        description: 'Your payslip has been downloaded successfully',
+      });
+    } catch (error: any) {
+      console.error('Error generating payslip:', error);
+      toast({
+        title: 'Download Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -231,16 +257,27 @@ export const PayrollList = ({ refresh }: { refresh: number }) => {
               </div>
             )}
 
-            {isAdmin && payroll.status === 'pending' && (
+            <div className="flex gap-2">
               <Button
-                onClick={() => markAsPaid(payroll.id)}
-                variant="default"
-                className="w-full"
+                onClick={() => handleDownloadPayslip(payroll)}
+                variant="outline"
+                className="flex-1"
               >
-                <CheckCircle className="mr-2 h-4 w-4" />
-                Mark as Paid
+                <Download className="mr-2 h-4 w-4" />
+                Download Payslip
               </Button>
-            )}
+
+              {isAdmin && payroll.status === 'pending' && (
+                <Button
+                  onClick={() => markAsPaid(payroll.id)}
+                  variant="default"
+                  className="flex-1"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Paid
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       ))}
