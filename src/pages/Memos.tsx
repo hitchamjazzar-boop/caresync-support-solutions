@@ -18,6 +18,12 @@ interface Memo {
   is_read: boolean;
   created_at: string;
   expires_at: string | null;
+  resolved: boolean | null;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  resolved_by_profile?: {
+    full_name: string;
+  };
   sender_profile?: {
     full_name: string;
   };
@@ -89,6 +95,17 @@ export default function Memos() {
             .eq('id', memo.sender_id)
             .single();
 
+          // Fetch resolved by profile if resolved
+          let resolvedByProfile = null;
+          if (memo.resolved_by) {
+            const { data: resolvedProfile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', memo.resolved_by)
+              .single();
+            resolvedByProfile = resolvedProfile;
+          }
+
           // Fetch replies
           const { data: repliesData } = await supabase
             .from('memo_replies')
@@ -115,6 +132,7 @@ export default function Memos() {
           return {
             ...memo,
             sender_profile: senderProfile,
+            resolved_by_profile: resolvedByProfile,
             replies: repliesWithProfiles,
           };
         })
@@ -256,6 +274,9 @@ export default function Memos() {
                         {!memo.is_read && (
                           <Badge variant="secondary">New</Badge>
                         )}
+                        {memo.resolved && (
+                          <Badge variant="default" className="bg-green-600">Resolved ✓</Badge>
+                        )}
                         <Badge variant="outline" className="capitalize">
                           {memo.type}
                         </Badge>
@@ -264,6 +285,11 @@ export default function Memos() {
                         From: {memo.sender_profile?.full_name} • {format(new Date(memo.created_at), 'PPpp')}
                         {memo.expires_at && (
                           <> • Expires: {format(new Date(memo.expires_at), 'PPP')}</>
+                        )}
+                        {memo.resolved && memo.resolved_at && (
+                          <div className="mt-1 text-green-600 dark:text-green-400 font-medium">
+                            Resolved by {memo.resolved_by_profile?.full_name} on {format(new Date(memo.resolved_at), 'PPp')}
+                          </div>
                         )}
                       </CardDescription>
                     </div>
