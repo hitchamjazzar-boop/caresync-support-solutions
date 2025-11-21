@@ -115,16 +115,16 @@ export default function Announcements() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Announcements</h1>
-        <Button onClick={handleCreateNew}>
+    <div className="container mx-auto px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+        <h1 className="text-2xl sm:text-3xl font-bold">Announcements</h1>
+        <Button onClick={handleCreateNew} className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Create Announcement
         </Button>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-3 sm:gap-4">
         {announcements.length === 0 ? (
           <Card>
             <CardContent className="pt-6 text-center text-muted-foreground">
@@ -134,40 +134,45 @@ export default function Announcements() {
         ) : (
           announcements.map((announcement) => (
             <Card key={announcement.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1 flex-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle>{announcement.title}</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-0">
+                  <div className="space-y-1 flex-1 w-full sm:w-auto">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <CardTitle className="text-base sm:text-lg break-words">{announcement.title}</CardTitle>
                       {getStatusBadge(announcement)}
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      Created {format(new Date(announcement.created_at), 'PPp')}
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      Created {format(new Date(announcement.created_at), 'PP')}
                       {announcement.expires_at && (
-                        <> • Expires {format(new Date(announcement.expires_at), 'PPp')}</>
+                        <span className="block sm:inline">
+                          <span className="hidden sm:inline"> • </span>
+                          Expires {format(new Date(announcement.expires_at), 'PP')}
+                        </span>
                       )}
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 w-full sm:w-auto justify-end">
                     <Button
                       variant="outline"
                       size="icon"
+                      className="h-8 w-8 sm:h-9 sm:w-9"
                       onClick={() => handleEdit(announcement)}
                     >
-                      <Pencil className="h-4 w-4" />
+                      <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                     <Button
                       variant="outline"
                       size="icon"
+                      className="h-8 w-8 sm:h-9 sm:w-9"
                       onClick={() => handleDelete(announcement)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <p className="text-foreground whitespace-pre-wrap">{announcement.content}</p>
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <p className="text-sm sm:text-base text-foreground whitespace-pre-wrap break-words">{announcement.content}</p>
               </CardContent>
             </Card>
           ))
