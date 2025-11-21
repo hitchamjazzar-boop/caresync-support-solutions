@@ -9,6 +9,7 @@ import { Layout } from "./components/Layout";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Announcements from "./pages/Announcements";
+import AnnouncementAnalytics from "./pages/AnnouncementAnalytics";
 import OrgChart from "./pages/OrgChart";
 import Employees from "./pages/Employees";
 import EmployeeProfile from "./pages/EmployeeProfile";
@@ -48,6 +49,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Announcements />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/announcement-analytics"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AnnouncementAnalytics />
                   </Layout>
                 </ProtectedRoute>
               }
