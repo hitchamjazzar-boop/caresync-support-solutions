@@ -18,6 +18,7 @@ export const AddEmployeeDialog = ({ onSuccess }: { onSuccess: () => void }) => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
+    password: '',
     position: '',
     department: '',
     contactPhone: '',
@@ -34,6 +35,15 @@ export const AddEmployeeDialog = ({ onSuccess }: { onSuccess: () => void }) => {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return password;
+  };
+
+  const handleGeneratePassword = () => {
+    const newPassword = generatePassword();
+    setFormData({ ...formData, password: newPassword });
+    toast({
+      title: 'Password Generated',
+      description: 'A secure password has been generated. You can modify it if needed.',
+    });
   };
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,12 +63,19 @@ export const AddEmployeeDialog = ({ onSuccess }: { onSuccess: () => void }) => {
     setLoading(true);
 
     try {
-      const generatedPassword = generatePassword();
+      if (!formData.password) {
+        toast({
+          title: 'Password Required',
+          description: 'Please enter a password or generate one.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: formData.email,
-        password: generatedPassword,
+        password: formData.password,
         email_confirm: true,
         user_metadata: {
           full_name: formData.fullName,
@@ -119,7 +136,7 @@ export const AddEmployeeDialog = ({ onSuccess }: { onSuccess: () => void }) => {
         body: {
           fullName: formData.fullName,
           email: formData.email,
-          password: generatedPassword,
+          password: formData.password,
           position: formData.position,
           department: formData.department,
           appUrl,
@@ -147,6 +164,7 @@ export const AddEmployeeDialog = ({ onSuccess }: { onSuccess: () => void }) => {
       setFormData({
         fullName: '',
         email: '',
+        password: '',
         position: '',
         department: '',
         contactPhone: '',
@@ -225,6 +243,28 @@ export const AddEmployeeDialog = ({ onSuccess }: { onSuccess: () => void }) => {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
+          </div>
+
+          {/* Password */}
+          <div className="space-y-2">
+            <Label htmlFor="password">Password *</Label>
+            <div className="flex gap-2">
+              <Input
+                id="password"
+                type="text"
+                required
+                placeholder="Enter password or generate one"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" onClick={handleGeneratePassword}>
+                Generate
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This password will be sent to the employee via email. They can change it after their first login.
+            </p>
           </div>
 
           {/* Position & Department */}
