@@ -26,6 +26,46 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { AnnouncementTargetingFields } from './AnnouncementTargetingFields';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const ANNOUNCEMENT_TEMPLATES = [
+  {
+    id: 'holiday',
+    name: '🎉 Holiday Announcement',
+    title: 'Holiday Notice',
+    content: 'Please be informed that our office will be closed on [DATE] in observance of [HOLIDAY NAME]. Regular operations will resume on [RETURN DATE]. For urgent matters, please contact [EMERGENCY CONTACT].',
+  },
+  {
+    id: 'meeting',
+    name: '📅 Meeting Announcement',
+    title: 'Team Meeting',
+    content: 'There will be a [TYPE] meeting scheduled for [DATE] at [TIME] in [LOCATION/PLATFORM]. Agenda: [AGENDA ITEMS]. Please confirm your attendance.',
+  },
+  {
+    id: 'policy',
+    name: '📋 Policy Update',
+    title: 'Policy Update',
+    content: 'We are updating our [POLICY NAME] effective [DATE]. Key changes include: [LIST CHANGES]. Please review the full policy document in [LOCATION]. Contact HR for questions.',
+  },
+  {
+    id: 'system',
+    name: '🔧 System Maintenance',
+    title: 'System Maintenance Notice',
+    content: 'Scheduled system maintenance on [DATE] from [START TIME] to [END TIME]. Services may be temporarily unavailable. Please save your work and log out before maintenance begins.',
+  },
+  {
+    id: 'celebration',
+    name: '🎊 Celebration/Achievement',
+    title: 'Congratulations Team!',
+    content: 'We are pleased to announce [ACHIEVEMENT/MILESTONE]. Special recognition to [NAMES/TEAMS]. Thank you for your dedication and hard work!',
+  },
+];
 
 const announcementSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
@@ -70,6 +110,7 @@ export function AnnouncementDialog({
   const isEditing = !!announcement;
   const [employees, setEmployees] = useState<{ id: string; full_name: string; department: string | null }[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
 
   useEffect(() => {
     fetchEmployeesAndDepartments();
@@ -132,6 +173,15 @@ export function AnnouncementDialog({
       });
     }
   }, [announcement, form]);
+
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplate(templateId);
+    const template = ANNOUNCEMENT_TEMPLATES.find(t => t.id === templateId);
+    if (template) {
+      form.setValue('title', template.title);
+      form.setValue('content', template.content);
+    }
+  };
 
   const onSubmit = async (data: AnnouncementFormData) => {
     try {
@@ -205,6 +255,24 @@ export function AnnouncementDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {!isEditing && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Use Template (Optional)</label>
+                <Select value={selectedTemplate} onValueChange={handleTemplateSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a template..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ANNOUNCEMENT_TEMPLATES.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="title"
