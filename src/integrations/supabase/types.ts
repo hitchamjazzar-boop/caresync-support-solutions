@@ -215,6 +215,45 @@ export type Database = {
           },
         ]
       }
+      memos: {
+        Row: {
+          content: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_read: boolean
+          recipient_id: string
+          sender_id: string
+          title: string
+          type: Database["public"]["Enums"]["memo_type"]
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          recipient_id: string
+          sender_id: string
+          title: string
+          type?: Database["public"]["Enums"]["memo_type"]
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_read?: boolean
+          recipient_id?: string
+          sender_id?: string
+          title?: string
+          type?: Database["public"]["Enums"]["memo_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       org_chart: {
         Row: {
           created_at: string
@@ -453,6 +492,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "employee"
+      memo_type: "memo" | "reminder" | "warning"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -581,6 +621,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "employee"],
+      memo_type: ["memo", "reminder", "warning"],
     },
   },
 } as const
