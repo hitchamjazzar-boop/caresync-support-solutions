@@ -81,16 +81,24 @@ export default function Dashboard() {
   const fetchEmployeePayroll = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from('payroll')
-      .select('*, profiles!inner(full_name)')
-      .eq('user_id', user.id)
-      .in('status', ['approved', 'paid'])
-      .order('period_end', { ascending: false })
-      .limit(3);
+    try {
+      const { data, error } = await supabase
+        .from('payroll')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('status', ['approved', 'paid'])
+        .order('period_end', { ascending: false })
+        .limit(3);
 
-    if (!error && data) {
-      setApprovedPayroll(data);
+      if (error) {
+        console.error('Error fetching payroll:', error);
+        return;
+      }
+
+      console.log('Fetched employee payroll:', data);
+      setApprovedPayroll(data || []);
+    } catch (err) {
+      console.error('Exception fetching payroll:', err);
     }
   };
 
@@ -198,17 +206,15 @@ export default function Dashboard() {
                             </p>
                           )}
                         </div>
-                        {payroll.payslip_url && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => window.open(payroll.payslip_url, '_blank')}
-                            className="ml-2"
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Payslip
-                          </Button>
-                        )}
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => navigate('/payroll')}
+                          className="ml-2"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          View Details
+                        </Button>
                       </div>
                     );
                   })}
