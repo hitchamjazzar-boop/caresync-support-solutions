@@ -3,8 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Eye, CheckCircle, Users, TrendingUp } from 'lucide-react';
+import { Eye, CheckCircle, Users, TrendingUp, UserCheck, UserX } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
+
+interface UserInfo {
+  id: string;
+  full_name: string;
+  department: string | null;
+}
 
 interface AnnouncementStats {
   id: string;
@@ -19,6 +29,9 @@ interface AnnouncementStats {
   total_acknowledgments: number;
   eligible_users: number;
   department_breakdown: { department: string; reads: number; acknowledgments: number; total: number }[];
+  users_who_read: UserInfo[];
+  users_who_acknowledged: UserInfo[];
+  users_not_engaged: UserInfo[];
 }
 
 export default function AnnouncementAnalytics() {
@@ -47,10 +60,10 @@ export default function AnnouncementAnalytics() {
 
       if (announcementsError) throw announcementsError;
 
-      // Get all profiles with departments
+      // Get all profiles with departments and names
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, department');
+        .select('id, full_name, department');
 
       if (profilesError) throw profilesError;
 
@@ -79,7 +92,7 @@ export default function AnnouncementAnalytics() {
       const analyticsData: AnnouncementStats[] = (announcements || []).map((announcement) => {
         // Determine eligible users based on targeting
         let eligibleUserIds: string[] = [];
-        const profileMap = new Map(profiles?.map(p => [p.id, p.department]) || []);
+        const profileMap = new Map(profiles?.map(p => [p.id, { department: p.department, full_name: p.full_name }]) || []);
 
         if (announcement.target_type === 'all') {
           eligibleUserIds = profiles?.map(p => p.id) || [];
@@ -99,11 +112,39 @@ export default function AnnouncementAnalytics() {
         const announcementReads = reads?.filter(r => r.announcement_id === announcement.id) || [];
         const announcementAcknowledgments = acknowledgments?.filter(a => a.announcement_id === announcement.id) || [];
 
+        // Get user info for those who read
+        const usersWhoRead: UserInfo[] = announcementReads
+          .map(r => {
+            const profile = profileMap.get(r.user_id);
+            return profile ? { id: r.user_id, full_name: profile.full_name, department: profile.department } : null;
+          })
+          .filter((u): u is UserInfo => u !== null);
+
+        // Get user info for those who acknowledged
+        const usersWhoAcknowledged: UserInfo[] = announcementAcknowledgments
+          .map(a => {
+            const profile = profileMap.get(a.user_id);
+            return profile ? { id: a.user_id, full_name: profile.full_name, department: profile.department } : null;
+          })
+          .filter((u): u is UserInfo => u !== null);
+
+        // Get users who haven't engaged (not read and not acknowledged)
+        const readUserIds = new Set(announcementReads.map(r => r.user_id));
+        const acknowledgedUserIds = new Set(announcementAcknowledgments.map(a => a.user_id));
+        const usersNotEngaged: UserInfo[] = eligibleUserIds
+          .filter(userId => !readUserIds.has(userId) && !acknowledgedUserIds.has(userId))
+          .map(userId => {
+            const profile = profileMap.get(userId);
+            return profile ? { id: userId, full_name: profile.full_name, department: profile.department } : null;
+          })
+          .filter((u): u is UserInfo => u !== null);
+
         // Calculate department breakdown
         const departmentStats = new Map<string, { reads: number; acknowledgments: number; total: number }>();
         
         eligibleUserIds.forEach(userId => {
-          const department = profileMap.get(userId) || 'No Department';
+          const profile = profileMap.get(userId);
+          const department = profile?.department || 'No Department';
           if (!departmentStats.has(department)) {
             departmentStats.set(department, { reads: 0, acknowledgments: 0, total: 0 });
           }
@@ -134,7 +175,10 @@ export default function AnnouncementAnalytics() {
           total_reads: announcementReads.length,
           total_acknowledgments: announcementAcknowledgments.length,
           eligible_users: eligibleUserIds.length,
-          department_breakdown
+          department_breakdown,
+          users_who_read: usersWhoRead,
+          users_who_acknowledged: usersWhoAcknowledged,
+          users_not_engaged: usersNotEngaged
         };
       });
 
@@ -336,6 +380,115 @@ export default function AnnouncementAnalytics() {
                       </div>
                     </div>
                   )}
+
+                  <Separator />
+
+                  {/* User Engagement Details */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold">User Engagement Details</h4>
+                    
+                    {/* Users Who Read */}
+                    {announcement.users_who_read.length > 0 && (
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-950/30 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <Eye className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <span className="font-medium text-sm">
+                              Users Who Read ({announcement.users_who_read.length})
+                            </span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2">
+                          <ScrollArea className="h-[200px] rounded-lg border bg-background p-3">
+                            <div className="space-y-2">
+                              {announcement.users_who_read.map((user) => (
+                                <div key={user.id} className="flex items-center justify-between text-sm p-2 rounded hover:bg-muted/50">
+                                  <div className="flex items-center gap-2">
+                                    <UserCheck className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                    <span className="font-medium">{user.full_name}</span>
+                                  </div>
+                                  {user.department && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {user.department}
+                                    </Badge>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
+                    {/* Users Who Acknowledged */}
+                    {announcement.is_pinned && announcement.users_who_acknowledged.length > 0 && (
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20 hover:bg-blue-100 dark:hover:bg-blue-950/30 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <span className="font-medium text-sm">
+                              Users Who Acknowledged ({announcement.users_who_acknowledged.length})
+                            </span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2">
+                          <ScrollArea className="h-[200px] rounded-lg border bg-background p-3">
+                            <div className="space-y-2">
+                              {announcement.users_who_acknowledged.map((user) => (
+                                <div key={user.id} className="flex items-center justify-between text-sm p-2 rounded hover:bg-muted/50">
+                                  <div className="flex items-center gap-2">
+                                    <CheckCircle className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                                    <span className="font-medium">{user.full_name}</span>
+                                  </div>
+                                  {user.department && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {user.department}
+                                    </Badge>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+
+                    {/* Users Not Engaged */}
+                    {announcement.users_not_engaged.length > 0 && (
+                      <Collapsible>
+                        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 hover:bg-amber-100 dark:hover:bg-amber-950/30 transition-colors">
+                          <div className="flex items-center gap-2">
+                            <UserX className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                            <span className="font-medium text-sm">
+                              Users Not Engaged ({announcement.users_not_engaged.length})
+                            </span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2">
+                          <ScrollArea className="h-[200px] rounded-lg border bg-background p-3">
+                            <div className="space-y-2">
+                              {announcement.users_not_engaged.map((user) => (
+                                <div key={user.id} className="flex items-center justify-between text-sm p-2 rounded hover:bg-muted/50">
+                                  <div className="flex items-center gap-2">
+                                    <UserX className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                    <span className="font-medium">{user.full_name}</span>
+                                  </div>
+                                  {user.department && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {user.department}
+                                    </Badge>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </ScrollArea>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             );
