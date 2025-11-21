@@ -34,7 +34,7 @@ interface YTDTotals {
 }
 
 const formatCurrency = (amount: number): string => {
-  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `PHP ${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const fetchYTDTotals = async (userId: string, currentYear: number): Promise<YTDTotals> => {
@@ -101,16 +101,15 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   // Company Information
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.text('CareSync Inc.', 14, 52);
+  doc.text('CareSync Support Solutions', 14, 52);
   doc.setFont('helvetica', 'normal');
-  doc.text('123 Business Street', 14, 57);
-  doc.text('City, State 12345', 14, 62);
-  doc.text('contact@caresync.com', 14, 67);
+  doc.text('support@caresyncsupportsolutions.com', 14, 57);
+  doc.text('Australia Wide', 14, 62);
 
   // Payslip Details Box
   doc.setDrawColor(128, 0, 32); // CareSync maroon
   doc.setLineWidth(0.5);
-  doc.rect(pageWidth - 80, 48, 66, 24);
+  doc.rect(pageWidth - 80, 48, 66, 20);
   
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
@@ -119,6 +118,7 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   doc.text('Period:', pageWidth - 75, 64);
   
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
   doc.text(payroll.id.slice(0, 8).toUpperCase(), pageWidth - 35, 54);
   doc.text(
     payroll.payment_date ? format(new Date(payroll.payment_date), 'MMM dd, yyyy') : 'Pending',
@@ -164,11 +164,13 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
 
   const earningsData = [];
   
+  // Add total hours at the top
+  earningsData.push(['Total Hours Worked', `${payroll.total_hours.toLocaleString('en-PH', { minimumFractionDigits: 2 })} hrs`]);
+  
   if (payroll.hourly_rate) {
     earningsData.push(['Hourly Rate', formatCurrency(payroll.hourly_rate)]);
-    earningsData.push(['Total Hours Worked', `${payroll.total_hours.toLocaleString('en-PH', { minimumFractionDigits: 2 })} hrs`]);
   } else if (payroll.monthly_salary) {
-    earningsData.push(['Monthly Salary', formatCurrency(payroll.monthly_salary)]);
+    earningsData.push(['Payroll Period Salary', formatCurrency(payroll.monthly_salary)]);
   }
   
   earningsData.push(['Gross Amount', formatCurrency(payroll.gross_amount)]);
@@ -199,55 +201,25 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   });
 
   // Net Pay Box
-  finalY = (doc as any).lastAutoTable.finalY + 8;
+  finalY = (doc as any).lastAutoTable.finalY + 10;
   
   doc.setFillColor(240, 253, 244); // Light green background
-  doc.rect(14, finalY, pageWidth - 28, 18, 'F');
+  doc.rect(14, finalY, pageWidth - 28, 20, 'F');
   doc.setDrawColor(128, 0, 32); // CareSync maroon
   doc.setLineWidth(0.8);
-  doc.rect(14, finalY, pageWidth - 28, 18);
+  doc.rect(14, finalY, pageWidth - 28, 20);
   
-  doc.setFontSize(13);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('NET PAY', 20, finalY + 7);
-  doc.setFontSize(16);
+  doc.text('NET PAY', 20, finalY + 8);
+  doc.setFontSize(18);
   doc.setTextColor(22, 163, 74); // Green color
-  doc.text(formatCurrency(payroll.net_amount), pageWidth - 20, finalY + 11, { align: 'right' });
+  doc.text(formatCurrency(payroll.net_amount), pageWidth - 20, finalY + 13, { align: 'right' });
   
   doc.setTextColor(0, 0, 0);
 
-  // YTD Totals Section
-  finalY += 25;
-  
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`Year-to-Date Totals (${year})`, 14, finalY);
-
-  autoTable(doc, {
-    startY: finalY + 3,
-    head: [['Category', 'YTD Total']],
-    body: [
-      ['Total Hours Worked', `${ytdTotals.totalHours.toLocaleString('en-PH', { minimumFractionDigits: 2 })} hrs`],
-      ['Total Gross Earnings', formatCurrency(ytdTotals.totalGross)],
-      ['Total Allowances', formatCurrency(ytdTotals.totalAllowances)],
-      ['Total Deductions', formatCurrency(ytdTotals.totalDeductions)],
-      ['Total Net Pay', formatCurrency(ytdTotals.totalNet)],
-    ],
-    theme: 'striped',
-    headStyles: {
-      fillColor: [128, 0, 32], // CareSync maroon
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-    },
-    styles: { fontSize: 9, cellPadding: 2.5 },
-    columnStyles: {
-      0: { cellWidth: 120, fontStyle: 'bold' },
-      1: { cellWidth: 'auto', halign: 'right' },
-    },
-  });
-
   // Footer
-  finalY = (doc as any).lastAutoTable.finalY + 12;
+  finalY += 35;
   
   doc.setFontSize(8);
   doc.setFont('helvetica', 'italic');
