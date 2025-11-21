@@ -25,7 +25,7 @@ interface PayrollData {
 }
 
 const formatCurrency = (amount: number): string => {
-  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `PHP ${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 export const generatePayslipPDF = async (payroll: PayrollData) => {
@@ -162,8 +162,8 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
       overflow: 'linebreak',
     },
     columnStyles: {
-      0: { cellWidth: 130 },
-      1: { cellWidth: 52, halign: 'right' },
+      0: { cellWidth: 126 },
+      1: { cellWidth: 56, halign: 'right' },
     },
     margin: { left: 14, right: 14 },
   });
