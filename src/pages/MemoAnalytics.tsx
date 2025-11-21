@@ -38,20 +38,21 @@ export default function MemoAnalytics() {
   const fetchMemoStats = async () => {
     const { data: memosData } = await supabase
       .from('memos')
-      .select(`
-        id,
-        title,
-        type,
-        created_at,
-        is_read,
-        recipient:profiles!memos_recipient_id_fkey(id, full_name, department)
-      `)
+      .select('id, title, type, created_at, is_read, recipient_id')
       .order('created_at', { ascending: false });
 
     if (memosData) {
-      // Fetch reply counts for each memo
+      // Fetch recipient profiles and reply counts for each memo
       const memosWithStats = await Promise.all(
         memosData.map(async (memo) => {
+          // Fetch recipient profile
+          const { data: recipientProfile } = await supabase
+            .from('profiles')
+            .select('id, full_name, department')
+            .eq('id', memo.recipient_id)
+            .single();
+
+          // Fetch reply counts
           const { data: repliesData, count } = await supabase
             .from('memo_replies')
             .select('created_at', { count: 'exact' })
@@ -60,7 +61,12 @@ export default function MemoAnalytics() {
             .limit(1);
 
           return {
-            ...memo,
+            id: memo.id,
+            title: memo.title,
+            type: memo.type,
+            created_at: memo.created_at,
+            is_read: memo.is_read,
+            recipient: recipientProfile || { id: '', full_name: 'Unknown', department: null },
             replies_count: count || 0,
             latest_reply_at: repliesData && repliesData.length > 0 ? repliesData[0].created_at : null,
           };
@@ -72,8 +78,11 @@ export default function MemoAnalytics() {
     setLoading(false);
   };
 
+  const [showMemoDialog, setShowMemoDialog] = useState(false);
+
   const sendReminder = async (recipientId: string, originalMemoTitle: string) => {
     setSelectedEmployee(recipientId);
+    setShowMemoDialog(true);
   };
 
   const getMemoIcon = (type: string) => {
@@ -259,17 +268,17 @@ export default function MemoAnalytics() {
       </Card>
 
       {/* Send Reminder Dialog */}
-      {selectedEmployee && (
-        <SendMemoDialog
-          preSelectedEmployeeId={selectedEmployee}
-          defaultType="reminder"
-          onClose={() => {
+      <SendMemoDialog
+        open={showMemoDialog}
+        onOpenChange={(open) => {
+          setShowMemoDialog(open);
+          if (!open) {
             setSelectedEmployee(null);
             fetchMemoStats();
-            toast.success('Reminder sent successfully');
-          }}
-        />
-      )}
+          }
+        }}
+        preSelectedEmployeeId={selectedEmployee || undefined}
+      />
     </div>
   );
 }
