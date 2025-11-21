@@ -16,6 +16,7 @@ import logo from '@/assets/logo.png';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/hooks/useAdmin';
+import { NotificationBell } from '@/components/announcements/NotificationBell';
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { signOut, user } = useAuth();
@@ -126,17 +127,19 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               <p className="text-xs text-muted-foreground">Support Solutions</p>
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-full">
-                <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-                  <AvatarImage src={profilePhoto || undefined} />
-                  <AvatarFallback>
-                    {fullName?.charAt(0) || <User className="h-4 w-4" />}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-full">
+                  <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                    <AvatarImage src={profilePhoto || undefined} />
+                    <AvatarFallback>
+                      {fullName?.charAt(0) || <User className="h-4 w-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
@@ -156,6 +159,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </header>
 

@@ -18,6 +18,7 @@ interface Announcement {
   updated_at: string;
   expires_at: string | null;
   is_active: boolean;
+  is_pinned: boolean;
 }
 
 export default function Announcements() {
@@ -88,6 +89,9 @@ export default function Announcements() {
   };
 
   const getStatusBadge = (announcement: Announcement) => {
+    if (announcement.is_pinned) {
+      return <Badge variant="default" className="bg-amber-600 hover:bg-amber-700">📌 Pinned</Badge>;
+    }
     if (!announcement.is_active) {
       return <Badge variant="secondary">Inactive</Badge>;
     }
