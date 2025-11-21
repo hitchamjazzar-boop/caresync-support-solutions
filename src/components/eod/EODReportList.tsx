@@ -5,11 +5,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, Download, Calendar, User, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { FileText, Download, Calendar, User, Trash2, CalendarIcon, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,10 +51,35 @@ export const EODReportList = () => {
   const [reports, setReports] = useState<EODReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'today' | 'week' | 'all'>('today');
+  const [employees, setEmployees] = useState<Array<{ id: string; full_name: string }>>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'name'>('newest');
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchEmployees();
+    }
+  }, [isAdmin]);
 
   useEffect(() => {
     fetchReports();
-  }, [user, isAdmin, filter]);
+  }, [user, isAdmin, filter, selectedEmployee, dateFrom, dateTo, sortOrder]);
+
+  const fetchEmployees = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .order('full_name');
+
+      if (error) throw error;
+      setEmployees(data || []);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
 
   const fetchReports = async () => {
     if (!user) return;
@@ -59,12 +88,16 @@ export const EODReportList = () => {
     try {
       let query = supabase
         .from('eod_reports')
-        .select('*')
-        .order('submitted_at', { ascending: false });
+        .select('*');
 
       // Apply date filter
       const now = new Date();
-      if (filter === 'today') {
+      if (dateFrom && dateTo) {
+        // Custom date range
+        query = query
+          .gte('submitted_at', dateFrom.toISOString())
+          .lte('submitted_at', new Date(dateTo.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
+      } else if (filter === 'today') {
         const today = now.toISOString().split('T')[0];
         query = query.gte('submitted_at', `${today}T00:00:00`).lte('submitted_at', `${today}T23:59:59`);
       } else if (filter === 'week') {
@@ -75,6 +108,8 @@ export const EODReportList = () => {
       // Non-admins can only see their own reports
       if (!isAdmin) {
         query = query.eq('user_id', user.id);
+      } else if (selectedEmployee !== 'all') {
+        query = query.eq('user_id', selectedEmployee);
       }
 
       const { data: reportsData, error: reportsError } = await query;
@@ -97,12 +132,26 @@ export const EODReportList = () => {
 
       // Merge profiles with reports
       const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
-      const mergedReports = reportsData.map(report => ({
+      let mergedReports = reportsData.map(report => ({
         ...report,
         profiles: profilesMap.get(report.user_id) || null,
-      }));
+      })) as EODReport[];
 
-      setReports(mergedReports as EODReport[]);
+      // Apply sorting
+      mergedReports.sort((a, b) => {
+        if (sortOrder === 'newest') {
+          return new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime();
+        } else if (sortOrder === 'oldest') {
+          return new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime();
+        } else if (sortOrder === 'name') {
+          const nameA = a.profiles?.full_name || '';
+          const nameB = b.profiles?.full_name || '';
+          return nameA.localeCompare(nameB);
+        }
+        return 0;
+      });
+
+      setReports(mergedReports);
     } catch (error) {
       console.error('Error fetching EOD reports:', error);
     } finally {
@@ -269,15 +318,158 @@ export const EODReportList = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">EOD Reports</h2>
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
-          <TabsList>
-            <TabsTrigger value="today">Today</TabsTrigger>
-            <TabsTrigger value="week">This Week</TabsTrigger>
-            <TabsTrigger value="all">All</TabsTrigger>
-          </TabsList>
-        </Tabs>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">EOD Reports</h2>
+          <Tabs value={filter} onValueChange={(v) => {
+            setFilter(v as any);
+            setDateFrom(undefined);
+            setDateTo(undefined);
+          }}>
+            <TabsList>
+              <TabsTrigger value="today">Today</TabsTrigger>
+              <TabsTrigger value="week">This Week</TabsTrigger>
+              <TabsTrigger value="all">All</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Filters */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {/* Employee Filter (Admin only) */}
+              {isAdmin && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Employee</label>
+                  <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="All employees" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Employees</SelectItem>
+                      {employees.map((emp) => (
+                        <SelectItem key={emp.id} value={emp.id}>
+                          {emp.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Date From */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">From Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !dateFrom && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFrom ? format(dateFrom, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={(date) => {
+                        setDateFrom(date);
+                        setFilter('all');
+                      }}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Date To */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">To Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !dateTo && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateTo ? format(dateTo, 'PPP') : 'Pick a date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={(date) => {
+                        setDateTo(date);
+                        setFilter('all');
+                      }}
+                      disabled={(date) => dateFrom ? date < dateFrom : false}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Sort Order */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Sort By</label>
+                <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as any)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">
+                      <div className="flex items-center gap-2">
+                        <ArrowUpDown className="h-4 w-4" />
+                        Newest First
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="oldest">
+                      <div className="flex items-center gap-2">
+                        <ArrowUpDown className="h-4 w-4" />
+                        Oldest First
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="name">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        By Name (A-Z)
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Clear Filters Button */}
+            {(selectedEmployee !== 'all' || dateFrom || dateTo) && (
+              <div className="mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedEmployee('all');
+                    setDateFrom(undefined);
+                    setDateTo(undefined);
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {loading ? (
