@@ -83,7 +83,7 @@ export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, loading: adminLoading } = useAdmin();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -94,6 +94,9 @@ export default function EmployeeProfile() {
 
   useEffect(() => {
     if (!id) return;
+
+    // Wait for admin status to load before checking permissions
+    if (adminLoading) return;
 
     // Check permissions
     if (!isAdmin && user?.id !== id) {
@@ -107,7 +110,7 @@ export default function EmployeeProfile() {
     }
 
     fetchEmployeeData();
-  }, [id, user, isAdmin]);
+  }, [id, user, isAdmin, adminLoading]);
 
   const fetchEmployeeData = async () => {
     if (!id) return;
