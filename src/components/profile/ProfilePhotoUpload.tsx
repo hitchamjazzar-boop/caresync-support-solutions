@@ -57,16 +57,17 @@ export const ProfilePhotoUpload = ({
       };
       reader.readAsDataURL(file);
 
-      // Upload to Supabase Storage
+      // Upload to Supabase Storage with user folder structure
       const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
 
       // Delete old photo if exists
       if (currentPhotoUrl) {
-        const oldFileName = currentPhotoUrl.split('/').pop();
-        if (oldFileName) {
-          await supabase.storage.from('profile-photos').remove([oldFileName]);
+        const urlParts = currentPhotoUrl.split('/profile-photos/');
+        if (urlParts.length > 1) {
+          const oldFilePath = urlParts[1];
+          await supabase.storage.from('profile-photos').remove([oldFilePath]);
         }
       }
 
