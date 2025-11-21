@@ -124,7 +124,7 @@ export function AddToOrgChartDialog({
         .from('org_chart')
         .insert([{
           user_id: data.user_id,
-          parent_id: data.parent_id || null,
+          parent_id: data.parent_id && data.parent_id !== 'none' ? data.parent_id : null,
           hierarchy_level: hierarchyLevel,
           position_order: data.position_order,
         }]);
