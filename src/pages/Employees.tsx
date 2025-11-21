@@ -6,6 +6,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'sonner';
 import { AddEmployeeDialog } from '@/components/employees/AddEmployeeDialog';
 import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog';
+import { DeleteEmployeeDialog } from '@/components/employees/DeleteEmployeeDialog';
 
 export default function Employees() {
   const { user } = useAuth();
@@ -101,8 +102,13 @@ export default function Employees() {
                 <span>{new Date(employee.start_date).toLocaleDateString()}</span>
               </div>
               {isAdmin && (
-                <div className="mt-2">
+                <div className="mt-2 space-y-2">
                   <EditEmployeeDialog employee={employee} onSuccess={fetchEmployees} />
+                  <DeleteEmployeeDialog
+                    employeeId={employee.id}
+                    employeeName={employee.full_name}
+                    onSuccess={fetchEmployees}
+                  />
                 </div>
               )}
             </CardContent>
