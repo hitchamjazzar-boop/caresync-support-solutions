@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
 import { EscalationStatus } from '@/components/memos/EscalationStatus';
 import { DeleteMemoDialog } from '@/components/memos/DeleteMemoDialog';
+import { MemoReplyDialog } from '@/components/memos/MemoReplyDialog';
 
 interface MemoStats {
   id: string;
@@ -27,6 +28,15 @@ interface MemoStats {
   escalate_after_hours: number | null;
   replies_count: number;
   latest_reply_at: string | null;
+  replies?: {
+    id: string;
+    content: string;
+    created_at: string;
+    user_id: string;
+    user_profile?: {
+      full_name: string;
+    };
+  }[];
 }
 
 export default function MemoAnalytics() {
@@ -55,13 +65,28 @@ export default function MemoAnalytics() {
             .eq('id', memo.recipient_id)
             .single();
 
-          // Fetch reply counts
-          const { data: repliesData, count } = await supabase
+          // Fetch replies with user profiles
+          const { data: repliesData } = await supabase
             .from('memo_replies')
-            .select('created_at', { count: 'exact' })
+            .select('*')
             .eq('memo_id', memo.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
+            .order('created_at', { ascending: true });
+
+          // Fetch reply user profiles
+          const repliesWithProfiles = repliesData ? await Promise.all(
+            repliesData.map(async (reply) => {
+              const { data: userProfile } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', reply.user_id)
+                .single();
+              
+              return {
+                ...reply,
+                user_profile: userProfile,
+              };
+            })
+          ) : [];
 
           return {
             id: memo.id,
@@ -72,8 +97,9 @@ export default function MemoAnalytics() {
             escalated: memo.escalated,
             escalate_after_hours: memo.escalate_after_hours,
             recipient: recipientProfile || { id: '', full_name: 'Unknown', department: null },
-            replies_count: count || 0,
-            latest_reply_at: repliesData && repliesData.length > 0 ? repliesData[0].created_at : null,
+            replies_count: repliesWithProfiles.length,
+            latest_reply_at: repliesWithProfiles.length > 0 ? repliesWithProfiles[repliesWithProfiles.length - 1].created_at : null,
+            replies: repliesWithProfiles,
           };
         })
       );
@@ -219,67 +245,103 @@ export default function MemoAnalytics() {
                           <div className="space-y-3">
                             {employeeMemos.map((memo) => (
                               <Card key={memo.id} className="bg-muted/30">
-                                <CardContent className="py-3">
-                                  <div className="flex items-start justify-between gap-4">
-                              <div className="flex items-start gap-2 flex-1">
-                                      {getMemoIcon(memo.type)}
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                          <span className="font-medium truncate">{memo.title}</span>
-                                          {!memo.is_read && (
-                                            <Badge variant="secondary" className="text-xs">
-                                              Unread
-                                            </Badge>
-                                          )}
-                                          {memo.escalated && (
-                                            <Badge variant="outline" className="text-xs">
-                                              <Clock className="h-3 w-3 mr-1" />
-                                              Escalated
-                                            </Badge>
-                                          )}
-                                          <Badge variant="outline" className="text-xs capitalize">
-                                            {memo.type}
-                                          </Badge>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground mt-1">
-                                          Sent: {format(new Date(memo.created_at), 'PPp')}
-                                          {memo.escalate_after_hours && (
-                                            <>
-                                              {' • '}
-                                              Auto-escalate: {memo.escalate_after_hours}h
-                                            </>
-                                          )}
-                                          {memo.replies_count > 0 && (
-                                            <>
-                                              {' • '}
-                                              {memo.replies_count} {memo.replies_count === 1 ? 'reply' : 'replies'}
-                                              {memo.latest_reply_at && (
-                                                <> • Last reply: {format(new Date(memo.latest_reply_at), 'PPp')}</>
-                                              )}
-                                            </>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      {!memo.is_read && (
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          onClick={() => sendReminder(employee.id, memo.title)}
-                                        >
-                                          <Send className="h-3 w-3 mr-1" />
-                                          Remind
-                                        </Button>
-                                      )}
-                                      <DeleteMemoDialog
-                                        memoId={memo.id}
-                                        memoTitle={memo.title}
-                                        onDeleted={fetchMemoStats}
-                                      />
-                                    </div>
-                                  </div>
-                                </CardContent>
+                                 <CardContent className="py-3 space-y-4">
+                                   <div className="flex items-start justify-between gap-4">
+                                     <div className="flex items-start gap-2 flex-1">
+                                       {getMemoIcon(memo.type)}
+                                       <div className="flex-1 min-w-0">
+                                         <div className="flex items-center gap-2 flex-wrap">
+                                           <span className="font-medium truncate">{memo.title}</span>
+                                           {!memo.is_read && (
+                                             <Badge variant="secondary" className="text-xs">
+                                               Unread
+                                             </Badge>
+                                           )}
+                                           {memo.escalated && (
+                                             <Badge variant="outline" className="text-xs">
+                                               <Clock className="h-3 w-3 mr-1" />
+                                               Escalated
+                                             </Badge>
+                                           )}
+                                           <Badge variant="outline" className="text-xs capitalize">
+                                             {memo.type}
+                                           </Badge>
+                                         </div>
+                                         <div className="text-xs text-muted-foreground mt-1">
+                                           Sent: {format(new Date(memo.created_at), 'PPp')}
+                                           {memo.escalate_after_hours && (
+                                             <>
+                                               {' • '}
+                                               Auto-escalate: {memo.escalate_after_hours}h
+                                             </>
+                                           )}
+                                           {memo.replies_count > 0 && (
+                                             <>
+                                               {' • '}
+                                               {memo.replies_count} {memo.replies_count === 1 ? 'reply' : 'replies'}
+                                               {memo.latest_reply_at && (
+                                                 <> • Last reply: {format(new Date(memo.latest_reply_at), 'PPp')}</>
+                                               )}
+                                             </>
+                                           )}
+                                         </div>
+                                       </div>
+                                     </div>
+                                     <div className="flex gap-2">
+                                       {!memo.is_read && (
+                                         <Button
+                                           size="sm"
+                                           variant="outline"
+                                           onClick={() => sendReminder(employee.id, memo.title)}
+                                         >
+                                           <Send className="h-3 w-3 mr-1" />
+                                           Remind
+                                         </Button>
+                                       )}
+                                       <DeleteMemoDialog
+                                         memoId={memo.id}
+                                         memoTitle={memo.title}
+                                         onDeleted={fetchMemoStats}
+                                       />
+                                     </div>
+                                   </div>
+
+                                   {/* Replies Section */}
+                                   {memo.replies && memo.replies.length > 0 && (
+                                     <div className="space-y-3 pt-3 border-t">
+                                       <h4 className="font-semibold text-sm">Conversation ({memo.replies.length})</h4>
+                                       <ScrollArea className="h-[200px]">
+                                         <div className="space-y-2 pr-4">
+                                           {memo.replies.map((reply) => (
+                                             <Card key={reply.id} className="bg-background">
+                                               <CardContent className="py-2 px-3">
+                                                 <div className="flex justify-between items-start mb-1">
+                                                   <span className="font-medium text-sm">
+                                                     {reply.user_profile?.full_name || 'Unknown'}
+                                                   </span>
+                                                   <span className="text-xs text-muted-foreground">
+                                                     {format(new Date(reply.created_at), 'PPp')}
+                                                   </span>
+                                                 </div>
+                                                 <p className="text-sm whitespace-pre-wrap">{reply.content}</p>
+                                               </CardContent>
+                                             </Card>
+                                           ))}
+                                         </div>
+                                       </ScrollArea>
+                                     </div>
+                                   )}
+
+                                   {/* Reply Button */}
+                                   <div className="pt-2 border-t">
+                                     <MemoReplyDialog
+                                       memoId={memo.id}
+                                       memoTitle={memo.title}
+                                       onReply={fetchMemoStats}
+                                       buttonText="Reply as Admin"
+                                     />
+                                   </div>
+                                 </CardContent>
                               </Card>
                             ))}
                           </div>
