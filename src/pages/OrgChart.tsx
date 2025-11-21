@@ -28,6 +28,9 @@ interface OrgChartNode {
     full_name: string;
     position: string | null;
     photo_url: string | null;
+    department: string | null;
+    contact_email: string | null;
+    contact_phone: string | null;
   };
 }
 
@@ -79,7 +82,10 @@ export default function OrgChart() {
           profiles!inner (
             full_name,
             position,
-            photo_url
+            photo_url,
+            department,
+            contact_email,
+            contact_phone
           )
         `)
         .order('hierarchy_level', { ascending: true })

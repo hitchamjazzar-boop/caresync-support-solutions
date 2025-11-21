@@ -15,6 +15,9 @@ interface OrgChartNode {
     full_name: string;
     position: string | null;
     photo_url: string | null;
+    department: string | null;
+    contact_email: string | null;
+    contact_phone: string | null;
   };
 }
 
@@ -62,7 +65,7 @@ function NodeCard({
 }: NodeCardProps) {
   return (
     <Card
-      className={`w-64 mb-4 transition-all ${
+      className={`w-80 mb-4 transition-all ${
         isDragging ? 'opacity-50 scale-95' : isDragOver ? 'ring-2 ring-primary shadow-lg scale-105' : 'hover:shadow-lg'
       }`}
       draggable
@@ -73,27 +76,25 @@ function NodeCard({
       onDrop={onDrop}
     >
       <CardContent className="p-4">
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-3 mb-3">
           <div className="cursor-grab active:cursor-grabbing mt-1">
             <GripVertical className="h-5 w-5 text-muted-foreground" />
           </div>
-          <Avatar className="h-12 w-12">
+          <Avatar className="h-14 w-14">
             <AvatarImage src={node.profiles.photo_url || undefined} />
             <AvatarFallback>
               {node.profiles.full_name?.charAt(0) || <User className="h-5 w-5" />}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm truncate">{node.profiles.full_name}</h3>
-            <p className="text-xs text-muted-foreground truncate">
+            <h3 className="font-semibold text-base truncate">{node.profiles.full_name}</h3>
+            <p className="text-sm text-muted-foreground truncate">
               {node.profiles.position || 'No position set'}
             </p>
-            {hasChildren && (
-              <div className="flex items-center gap-1 mt-1">
-                <Badge variant="secondary" className="text-xs">
-                  {childCount} {childCount === 1 ? 'report' : 'reports'}
-                </Badge>
-              </div>
+            {node.profiles.department && (
+              <p className="text-xs text-muted-foreground truncate mt-1">
+                {node.profiles.department}
+              </p>
             )}
           </div>
           <div className="flex gap-1">
@@ -129,6 +130,28 @@ function NodeCard({
               <Trash2 className="h-3 w-3" />
             </Button>
           </div>
+        </div>
+        
+        <div className="space-y-1 text-xs text-muted-foreground border-t pt-2">
+          {node.profiles.contact_email && (
+            <div className="flex items-center gap-2 truncate">
+              <span className="font-medium">Email:</span>
+              <span className="truncate">{node.profiles.contact_email}</span>
+            </div>
+          )}
+          {node.profiles.contact_phone && (
+            <div className="flex items-center gap-2">
+              <span className="font-medium">Phone:</span>
+              <span>{node.profiles.contact_phone}</span>
+            </div>
+          )}
+          {hasChildren && (
+            <div className="flex items-center gap-1 mt-2">
+              <Badge variant="secondary" className="text-xs">
+                {childCount} {childCount === 1 ? 'report' : 'reports'}
+              </Badge>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
