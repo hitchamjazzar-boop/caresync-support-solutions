@@ -2,47 +2,46 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'sonner';
+import { AddEmployeeDialog } from '@/components/employees/AddEmployeeDialog';
 
 export default function Employees() {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const [employees, setEmployees] = useState<any[]>([]);
 
-  useEffect(() => {
+  const fetchEmployees = async () => {
     if (!user) return;
 
-    const fetchEmployees = async () => {
-      if (isAdmin) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .order('full_name');
+    if (isAdmin) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('full_name');
 
-        if (error) {
-          toast.error('Failed to load employees');
-        } else {
-          setEmployees(data || []);
-        }
+      if (error) {
+        toast.error('Failed to load employees');
       } else {
-        // Non-admin users can only see their own profile
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          toast.error('Failed to load your profile');
-        } else {
-          setEmployees([data]);
-        }
+        setEmployees(data || []);
       }
-    };
+    } else {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
+      if (error) {
+        toast.error('Failed to load your profile');
+      } else {
+        setEmployees([data]);
+      }
+    }
+  };
+
+  useEffect(() => {
     fetchEmployees();
   }, [user, isAdmin]);
 
@@ -60,10 +59,7 @@ export default function Employees() {
           </p>
         </div>
         {isAdmin && (
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Employee
-          </Button>
+          <AddEmployeeDialog onSuccess={fetchEmployees} />
         )}
       </div>
 
