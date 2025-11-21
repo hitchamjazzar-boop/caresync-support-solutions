@@ -4,27 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'sonner';
 
 export default function Employees() {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [employees, setEmployees] = useState<any[]>([]);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
-    const checkAdminAndFetchEmployees = async () => {
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      setIsAdmin(!!roleData);
-
-      if (roleData) {
+    const fetchEmployees = async () => {
+      if (isAdmin) {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -51,8 +43,8 @@ export default function Employees() {
       }
     };
 
-    checkAdminAndFetchEmployees();
-  }, [user]);
+    fetchEmployees();
+  }, [user, isAdmin]);
 
   return (
     <div className="space-y-6">
