@@ -26,6 +26,17 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     if (user) {
       fetchUserProfile();
     }
+
+    // Listen for profile updates
+    const handleProfileUpdate = () => {
+      fetchUserProfile();
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('profile-updated', handleProfileUpdate);
+    };
   }, [user]);
 
   const fetchUserProfile = async () => {
@@ -38,7 +49,9 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
       .single();
 
     if (data) {
-      setProfilePhoto(data.photo_url);
+      // Add cache busting parameter to force refresh
+      const photoUrl = data.photo_url ? `${data.photo_url.split('?')[0]}?t=${Date.now()}` : null;
+      setProfilePhoto(photoUrl);
       setFullName(data.full_name);
     }
   };
