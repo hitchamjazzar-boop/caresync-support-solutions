@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { ClockInOut } from '@/components/attendance/ClockInOut';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
+import { OrgChartDisplay } from '@/components/orgchart/OrgChartDisplay';
 import { format } from 'date-fns';
 
 export default function Dashboard() {
@@ -314,6 +315,8 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <OrgChartDisplay />
     </div>
   );
 }

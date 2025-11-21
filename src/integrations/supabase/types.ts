@@ -172,6 +172,13 @@ export type Database = {
             referencedRelation: "org_chart"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "org_chart_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       payroll: {
