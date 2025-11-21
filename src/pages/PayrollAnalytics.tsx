@@ -258,9 +258,9 @@ export default function PayrollAnalytics() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totals.totalNet.toFixed(2)}</div>
+                <div className="text-2xl font-bold">₱{totals.totalNet.toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground">
-                  Gross: ${totals.totalGross.toFixed(2)}
+                  Gross: ₱{totals.totalGross.toFixed(2)}
                 </p>
               </CardContent>
             </Card>
@@ -271,7 +271,7 @@ export default function PayrollAnalytics() {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totals.totalDeductions.toFixed(2)}</div>
+                <div className="text-2xl font-bold">₱{totals.totalDeductions.toFixed(2)}</div>
                 <p className="text-xs text-muted-foreground">
                   {((totals.totalDeductions / totals.totalGross) * 100).toFixed(1)}% of gross
                 </p>
@@ -298,7 +298,7 @@ export default function PayrollAnalytics() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  ${(totals.totalNet / totals.totalRecords).toFixed(2)}
+                  ₱{(totals.totalNet / totals.totalRecords).toFixed(2)}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Per payroll record
@@ -450,9 +450,9 @@ export default function PayrollAnalytics() {
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                            <div className="text-2xl font-bold">${dept.total.toFixed(2)}</div>
+                            <div className="text-2xl font-bold">₱{dept.total.toFixed(2)}</div>
                             <div className="text-sm text-muted-foreground">
-                              Avg: ${(dept.total / dept.count).toFixed(2)}
+                              Avg: ₱{(dept.total / dept.count).toFixed(2)}
                             </div>
                           </div>
                         </div>
@@ -507,7 +507,7 @@ export default function PayrollAnalytics() {
                               {status.count} {status.count === 1 ? 'payment' : 'payments'}
                             </span>
                           </div>
-                          <div className="text-2xl font-bold">${status.amount.toFixed(2)}</div>
+                          <div className="text-2xl font-bold">₱{status.amount.toFixed(2)}</div>
                         </div>
                       ))}
                     </div>

@@ -34,7 +34,7 @@ interface YTDTotals {
 }
 
 const formatCurrency = (amount: number): string => {
-  return `PHP ${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
 const fetchYTDTotals = async (userId: string, currentYear: number): Promise<YTDTotals> => {
