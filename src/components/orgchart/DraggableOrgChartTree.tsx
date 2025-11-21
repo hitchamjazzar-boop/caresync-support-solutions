@@ -1,7 +1,8 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Pencil, Trash2, User, GripVertical } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Pencil, Trash2, User, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   DndContext,
   DragOverlay,
@@ -40,6 +41,10 @@ interface DraggableOrgChartTreeProps {
   onEdit: (node: OrgChartNode) => void;
   onDelete: (node: OrgChartNode) => void;
   onDragEnd: (nodeId: string, newParentId: string | null, newOrder: number) => void;
+  collapsedNodes?: Set<string>;
+  onToggleCollapse?: (nodeId: string) => void;
+  onExpandAll?: () => void;
+  onCollapseAll?: () => void;
 }
 
 interface SortableNodeProps {
@@ -47,9 +52,22 @@ interface SortableNodeProps {
   onEdit: (node: OrgChartNode) => void;
   onDelete: (node: OrgChartNode) => void;
   children?: React.ReactNode;
+  hasChildren: boolean;
+  isCollapsed: boolean;
+  onToggleCollapse: (nodeId: string) => void;
+  childCount?: number;
 }
 
-function SortableNode({ node, onEdit, onDelete, children }: SortableNodeProps) {
+function SortableNode({ 
+  node, 
+  onEdit, 
+  onDelete, 
+  children, 
+  hasChildren, 
+  isCollapsed, 
+  onToggleCollapse,
+  childCount = 0 
+}: SortableNodeProps) {
   const {
     attributes,
     listeners,
@@ -88,8 +106,30 @@ function SortableNode({ node, onEdit, onDelete, children }: SortableNodeProps) {
               <p className="text-xs text-muted-foreground truncate">
                 {node.profiles.position || 'No position set'}
               </p>
+              {hasChildren && (
+                <div className="flex items-center gap-1 mt-1">
+                  <Badge variant="secondary" className="text-xs">
+                    {childCount} {childCount === 1 ? 'report' : 'reports'}
+                  </Badge>
+                </div>
+              )}
             </div>
             <div className="flex gap-1">
+              {hasChildren && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => onToggleCollapse(node.id)}
+                  title={isCollapsed ? 'Expand' : 'Collapse'}
+                >
+                  {isCollapsed ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="icon"
@@ -110,7 +150,7 @@ function SortableNode({ node, onEdit, onDelete, children }: SortableNodeProps) {
           </div>
         </CardContent>
       </Card>
-      {children}
+      {!isCollapsed && children}
     </div>
   );
 }
@@ -146,9 +186,26 @@ export function DraggableOrgChartTree({
   onEdit,
   onDelete,
   onDragEnd,
+  collapsedNodes: externalCollapsedNodes,
+  onToggleCollapse: externalToggleCollapse,
 }: DraggableOrgChartTreeProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+  const [internalCollapsedNodes, setInternalCollapsedNodes] = useState<Set<string>>(new Set());
+
+  // Use external state if provided, otherwise use internal state
+  const collapsedNodes = externalCollapsedNodes || internalCollapsedNodes;
+  const toggleCollapse = externalToggleCollapse || ((nodeId: string) => {
+    setInternalCollapsedNodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -165,6 +222,13 @@ export function DraggableOrgChartTree({
     return nodes
       .filter(node => node.parent_id === parentId)
       .sort((a, b) => a.position_order - b.position_order);
+  };
+
+  const countAllDescendants = (nodeId: string): number => {
+    const children = buildTree(nodeId);
+    return children.reduce((count, child) => {
+      return count + 1 + countAllDescendants(child.id);
+    }, 0);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -218,6 +282,8 @@ export function DraggableOrgChartTree({
   const renderNode = (node: OrgChartNode, level: number = 0): JSX.Element => {
     const children = buildTree(node.id);
     const hasChildren = children.length > 0;
+    const isCollapsed = collapsedNodes.has(node.id);
+    const childCount = countAllDescendants(node.id);
 
     return (
       <SortableNode
@@ -225,9 +291,13 @@ export function DraggableOrgChartTree({
         node={node}
         onEdit={onEdit}
         onDelete={onDelete}
+        hasChildren={hasChildren}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={toggleCollapse}
+        childCount={childCount}
       >
-        {hasChildren && (
-          <div className="relative">
+        {hasChildren && !isCollapsed && (
+          <div className="relative animate-fade-in">
             <div className="absolute left-1/2 top-0 w-0.5 h-4 bg-border -translate-x-1/2" />
             <SortableContext
               items={children.map(c => c.id)}
