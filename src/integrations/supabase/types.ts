@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcement_acknowledgments: {
+        Row: {
+          acknowledged_at: string
+          announcement_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string
+          announcement_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string
+          announcement_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_acknowledgments_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcements: {
         Row: {
           content: string
@@ -22,6 +54,7 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean
+          is_pinned: boolean
           title: string
           updated_at: string
         }
@@ -32,6 +65,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_pinned?: boolean
           title: string
           updated_at?: string
         }
@@ -42,6 +76,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_pinned?: boolean
           title?: string
           updated_at?: string
         }

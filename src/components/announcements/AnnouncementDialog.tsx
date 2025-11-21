@@ -31,6 +31,7 @@ const announcementSchema = z.object({
   content: z.string().min(1, 'Content is required').max(5000, 'Content must be less than 5000 characters'),
   expires_at: z.string().optional(),
   is_active: z.boolean().default(true),
+  is_pinned: z.boolean().default(false),
 });
 
 type AnnouncementFormData = z.infer<typeof announcementSchema>;
@@ -44,6 +45,7 @@ interface AnnouncementDialogProps {
     content: string;
     expires_at: string | null;
     is_active: boolean;
+    is_pinned: boolean;
   } | null;
   onSuccess: () => void;
 }
@@ -65,6 +67,7 @@ export function AnnouncementDialog({
       content: '',
       expires_at: '',
       is_active: true,
+      is_pinned: false,
     },
   });
 
@@ -77,6 +80,7 @@ export function AnnouncementDialog({
           ? new Date(announcement.expires_at).toISOString().slice(0, 16) 
           : '',
         is_active: announcement.is_active,
+        is_pinned: announcement.is_pinned,
       });
     } else {
       form.reset({
@@ -84,6 +88,7 @@ export function AnnouncementDialog({
         content: '',
         expires_at: '',
         is_active: true,
+        is_pinned: false,
       });
     }
   }, [announcement, form]);
@@ -98,6 +103,7 @@ export function AnnouncementDialog({
             content: data.content.trim(),
             expires_at: data.expires_at ? new Date(data.expires_at).toISOString() : null,
             is_active: data.is_active,
+            is_pinned: data.is_pinned,
           })
           .eq('id', announcement.id);
 
@@ -119,6 +125,7 @@ export function AnnouncementDialog({
             content: data.content.trim(),
             expires_at: data.expires_at ? new Date(data.expires_at).toISOString() : null,
             is_active: data.is_active,
+            is_pinned: data.is_pinned,
             created_by: user.id,
           }]);
 
@@ -217,6 +224,27 @@ export function AnnouncementDialog({
                     <FormLabel className="text-base">Active</FormLabel>
                     <FormDescription>
                       Inactive announcements won't be displayed
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="is_pinned"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">📌 Pin Announcement</FormLabel>
+                    <FormDescription>
+                      Pinned announcements stay at top and require acknowledgment
                     </FormDescription>
                   </div>
                   <FormControl>
