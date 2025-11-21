@@ -74,34 +74,53 @@ export default function Memos() {
 
     const { data: memosData } = await supabase
       .from('memos')
-      .select(`
-        *,
-        sender_profile:profiles!memos_sender_id_fkey(full_name)
-      `)
+      .select('*')
       .eq('recipient_id', user.id)
       .order('created_at', { ascending: false });
 
     if (memosData) {
-      // Fetch replies for each memo
-      const memosWithReplies = await Promise.all(
+      // Fetch sender profiles and replies for each memo
+      const memosWithDetails = await Promise.all(
         memosData.map(async (memo) => {
+          // Fetch sender profile
+          const { data: senderProfile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', memo.sender_id)
+            .single();
+
+          // Fetch replies
           const { data: repliesData } = await supabase
             .from('memo_replies')
-            .select(`
-              *,
-              user_profile:profiles!memo_replies_user_id_fkey(full_name)
-            `)
+            .select('*')
             .eq('memo_id', memo.id)
             .order('created_at', { ascending: true });
 
+          // Fetch reply user profiles
+          const repliesWithProfiles = repliesData ? await Promise.all(
+            repliesData.map(async (reply) => {
+              const { data: userProfile } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', reply.user_id)
+                .single();
+              
+              return {
+                ...reply,
+                user_profile: userProfile,
+              };
+            })
+          ) : [];
+
           return {
             ...memo,
-            replies: repliesData || [],
+            sender_profile: senderProfile,
+            replies: repliesWithProfiles,
           };
         })
       );
 
-      setMemos(memosWithReplies);
+      setMemos(memosWithDetails);
     }
     setLoading(false);
   };
