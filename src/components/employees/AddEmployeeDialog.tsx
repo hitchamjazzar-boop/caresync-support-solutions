@@ -69,32 +69,26 @@ export const AddEmployeeDialog = ({ onSuccess }: { onSuccess: () => void }) => {
           description: 'Please enter a password or generate one.',
           variant: 'destructive',
         });
+        setLoading(false);
         return;
       }
 
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        email_confirm: true,
-        user_metadata: {
-          full_name: formData.fullName,
-        },
-      });
-
-      if (authError) throw authError;
-
-      const userId = authData.user.id;
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        throw new Error('Not authenticated');
+      }
 
       // Upload photo if provided
       let photoUrl = null;
       if (photoFile) {
+        // Generate a temporary unique filename
+        const tempId = crypto.randomUUID();
         const fileExt = photoFile.name.split('.').pop();
-        const filePath = `${userId}.${fileExt}`;
+        const filePath = `temp-${tempId}.${fileExt}`;
 
         const { error: uploadError } = await supabase.storage
           .from('profile-photos')
-          .upload(filePath, photoFile, { upsert: true });
+          .upload(filePath, photoFile);
 
         if (uploadError) throw uploadError;
 
@@ -105,57 +99,30 @@ export const AddEmployeeDialog = ({ onSuccess }: { onSuccess: () => void }) => {
         photoUrl = urlData.publicUrl;
       }
 
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          full_name: formData.fullName,
-          position: formData.position,
-          department: formData.department,
-          contact_email: formData.email,
-          contact_phone: formData.contactPhone,
-          photo_url: photoUrl,
-          hourly_rate: formData.employmentType === 'hourly' ? parseFloat(formData.hourlyRate) : null,
-          monthly_salary: formData.employmentType === 'salaried' ? parseFloat(formData.monthlySalary) : null,
-          start_date: formData.startDate,
-        })
-        .eq('id', userId);
-
-      if (profileError) throw profileError;
-
-      // Assign employee role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({ user_id: userId, role: 'employee' });
-
-      if (roleError) throw roleError;
-
-      // Send welcome email
-      const appUrl = window.location.origin;
-      const { error: emailError } = await supabase.functions.invoke('send-welcome-email', {
+      // Call edge function to create employee
+      const { data, error: createError } = await supabase.functions.invoke('create-employee', {
         body: {
-          fullName: formData.fullName,
           email: formData.email,
           password: formData.password,
+          fullName: formData.fullName,
           position: formData.position,
           department: formData.department,
-          appUrl,
+          contactPhone: formData.contactPhone,
+          startDate: formData.startDate,
+          employmentType: formData.employmentType,
+          hourlyRate: formData.employmentType === 'hourly' ? parseFloat(formData.hourlyRate) : null,
+          monthlySalary: formData.employmentType === 'salaried' ? parseFloat(formData.monthlySalary) : null,
+          photoUrl: photoUrl,
+          adminId: user.user.id,
         },
       });
 
-      if (emailError) {
-        console.error('Email sending failed:', emailError);
-        toast({
-          title: 'Employee added, but email failed',
-          description: 'Employee was created successfully, but the welcome email could not be sent.',
-          variant: 'destructive',
-        });
-      } else {
-        toast({
-          title: 'Employee added successfully',
-          description: `Welcome email sent to ${formData.email}`,
-        });
-      }
+      if (createError) throw createError;
+
+      toast({
+        title: 'Employee Added Successfully',
+        description: `${formData.fullName} has been added and will receive a welcome email.`,
+      });
 
       setOpen(false);
       onSuccess();
