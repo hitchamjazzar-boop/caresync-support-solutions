@@ -48,8 +48,14 @@ export function OrgChartDisplay() {
       const { data, error } = await supabase
         .from('org_chart')
         .select(`
-          *,
-          profiles (
+          id,
+          user_id,
+          parent_id,
+          hierarchy_level,
+          position_order,
+          created_at,
+          updated_at,
+          profiles!inner (
             full_name,
             position,
             photo_url
@@ -59,8 +65,8 @@ export function OrgChartDisplay() {
         .order('position_order', { ascending: true });
 
       if (error) throw error;
-      setNodes(data || []);
-    } catch (error) {
+      setNodes(data as any || []);
+    } catch (error: any) {
       console.error('Error fetching org chart:', error);
     } finally {
       setLoading(false);
