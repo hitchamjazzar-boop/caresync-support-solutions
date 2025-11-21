@@ -85,7 +85,7 @@ export default function Dashboard() {
       .from('payroll')
       .select('*, profiles!inner(full_name)')
       .eq('user_id', user.id)
-      .eq('status', 'approved')
+      .in('status', ['approved', 'paid'])
       .order('period_end', { ascending: false })
       .limit(3);
 
@@ -159,38 +159,59 @@ export default function Dashboard() {
             <Alert className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
               <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
               <AlertTitle className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
-                🎉 Payroll Available!
+                💰 Payroll Updates
               </AlertTitle>
               <AlertDescription className="space-y-3">
                 <p className="text-green-700 dark:text-green-300 text-lg">
-                  You have {approvedPayroll.length} approved payroll{approvedPayroll.length > 1 ? 's' : ''} ready for review!
+                  You have {approvedPayroll.length} payroll record{approvedPayroll.length > 1 ? 's' : ''} available
                 </p>
                 <div className="space-y-2">
-                  {approvedPayroll.map((payroll) => (
-                    <div key={payroll.id} className="flex items-center justify-between bg-white dark:bg-gray-900 rounded-lg p-3 border border-green-200 dark:border-green-800">
-                      <div>
-                        <p className="font-semibold text-green-900 dark:text-green-100">
-                          ₱{payroll.net_amount?.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                        <p className="text-sm text-green-700 dark:text-green-400">
-                          Period: {format(new Date(payroll.period_start), 'MMM dd')} - {format(new Date(payroll.period_end), 'MMM dd, yyyy')}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Payment Date: {format(new Date(payroll.payment_date), 'MMM dd, yyyy')}
-                        </p>
+                  {approvedPayroll.map((payroll) => {
+                    const isPaid = payroll.payment_date && new Date(payroll.payment_date) <= new Date();
+                    return (
+                      <div key={payroll.id} className={`flex items-center justify-between rounded-lg p-3 border ${
+                        isPaid 
+                          ? 'bg-white dark:bg-gray-900 border-green-200 dark:border-green-800' 
+                          : 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
+                      }`}>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-semibold text-green-900 dark:text-green-100">
+                              PHP {payroll.net_amount?.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                            {isPaid ? (
+                              <span className="text-xs font-semibold px-2 py-0.5 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-full">
+                                ✓ PAID
+                              </span>
+                            ) : (
+                              <span className="text-xs font-semibold px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-full">
+                                PENDING PAYMENT
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-green-700 dark:text-green-400">
+                            Period: {format(new Date(payroll.period_start), 'MMM dd')} - {format(new Date(payroll.period_end), 'MMM dd, yyyy')}
+                          </p>
+                          {payroll.payment_date && (
+                            <p className="text-xs text-muted-foreground">
+                              {isPaid ? 'Paid on:' : 'Payment date:'} {format(new Date(payroll.payment_date), 'MMM dd, yyyy')}
+                            </p>
+                          )}
+                        </div>
+                        {payroll.payslip_url && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => window.open(payroll.payslip_url, '_blank')}
+                            className="ml-2"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Payslip
+                          </Button>
+                        )}
                       </div>
-                      {payroll.payslip_url && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => window.open(payroll.payslip_url, '_blank')}
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Payslip
-                        </Button>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <Button onClick={() => navigate('/payroll')} className="w-full bg-green-600 hover:bg-green-700">
                   View All Payroll
