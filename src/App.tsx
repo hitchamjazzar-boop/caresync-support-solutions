@@ -13,6 +13,7 @@ import Attendance from "./pages/Attendance";
 import Schedules from "./pages/Schedules";
 import Reports from "./pages/Reports";
 import Payroll from "./pages/Payroll";
+import PayrollAnalytics from "./pages/PayrollAnalytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,6 +83,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Payroll />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payroll/analytics"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PayrollAnalytics />
                   </Layout>
                 </ProtectedRoute>
               }
