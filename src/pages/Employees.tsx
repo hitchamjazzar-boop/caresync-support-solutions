@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { toast } from 'sonner';
 import { AddEmployeeDialog } from '@/components/employees/AddEmployeeDialog';
+import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog';
 
 export default function Employees() {
   const { user } = useAuth();
@@ -101,9 +101,9 @@ export default function Employees() {
                 <span>{new Date(employee.start_date).toLocaleDateString()}</span>
               </div>
               {isAdmin && (
-                <Button variant="outline" size="sm" className="w-full mt-2">
-                  Edit Details
-                </Button>
+                <div className="mt-2">
+                  <EditEmployeeDialog employee={employee} onSuccess={fetchEmployees} />
+                </div>
               )}
             </CardContent>
           </Card>
