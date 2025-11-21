@@ -254,8 +254,8 @@ export const PaymentMethodForm = () => {
               </Label>
               <Input
                 id="accountNumber"
-                type="password"
-                placeholder={formData.paymentMethod === 'e_wallet' ? '+63 ••• ••• ••••' : '••••••••••••'}
+                type="text"
+                placeholder={formData.paymentMethod === 'e_wallet' ? '+63 XXX XXX XXXX' : 'Account number'}
                 value={formData.accountNumber}
                 onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
               />
