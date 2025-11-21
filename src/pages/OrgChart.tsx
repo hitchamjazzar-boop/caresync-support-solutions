@@ -43,8 +43,26 @@ export default function OrgChart() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<OrgChartNode | null>(null);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
-  const [zoom, setZoom] = useState<number>(100);
+  
+  const getDefaultZoom = () => {
+    if (typeof window === 'undefined') return 100;
+    const width = window.innerWidth;
+    if (width < 640) return 60;
+    if (width < 1024) return 80;
+    return 100;
+  };
+  
+  const [zoom, setZoom] = useState<number>(getDefaultZoom());
   const { toast } = useToast();
+
+  useEffect(() => {
+    const handleResize = () => {
+      setZoom(getDefaultZoom());
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     fetchOrgChart();
@@ -284,7 +302,7 @@ export default function OrgChart() {
                   Drag and drop employees to reorganize the hierarchy
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-3">
                 <ZoomOut className="h-4 w-4 text-muted-foreground" />
                 <div className="flex items-center gap-2">
                   <Slider
@@ -293,7 +311,7 @@ export default function OrgChart() {
                     min={50}
                     max={150}
                     step={10}
-                    className="w-32"
+                    className="w-24 md:w-32"
                   />
                   <span className="text-sm font-medium text-muted-foreground min-w-[3rem]">
                     {zoom}%
