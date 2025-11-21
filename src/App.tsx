@@ -14,6 +14,7 @@ import Schedules from "./pages/Schedules";
 import Reports from "./pages/Reports";
 import Payroll from "./pages/Payroll";
 import PayrollAnalytics from "./pages/PayrollAnalytics";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -93,6 +94,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <PayrollAnalytics />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Profile />
                   </Layout>
                 </ProtectedRoute>
               }
