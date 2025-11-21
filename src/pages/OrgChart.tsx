@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Maximize2, Minimize2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AddToOrgChartDialog } from '@/components/orgchart/AddToOrgChartDialog';
 import { EditOrgChartDialog } from '@/components/orgchart/EditOrgChartDialog';
@@ -38,6 +38,7 @@ export default function OrgChart() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<OrgChartNode | null>(null);
+  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -105,6 +106,41 @@ export default function OrgChart() {
   const handleDelete = (node: OrgChartNode) => {
     setSelectedNode(node);
     setDeleteDialogOpen(true);
+  };
+
+  const toggleCollapse = (nodeId: string) => {
+    setCollapsedNodes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+  };
+
+  const expandAll = () => {
+    setCollapsedNodes(new Set());
+    toast({
+      title: 'Expanded',
+      description: 'All branches expanded',
+    });
+  };
+
+  const collapseAll = () => {
+    const allNodeIds = nodes
+      .filter(node => {
+        // Only collapse nodes that have children
+        const hasChildren = nodes.some(n => n.parent_id === node.id);
+        return hasChildren;
+      })
+      .map(n => n.id);
+    setCollapsedNodes(new Set(allNodeIds));
+    toast({
+      title: 'Collapsed',
+      description: 'All branches collapsed',
+    });
   };
 
   const confirmDelete = async () => {
@@ -208,10 +244,20 @@ export default function OrgChart() {
           <h1 className="text-3xl font-bold">Organizational Chart</h1>
           <p className="text-muted-foreground">Manage your organization's hierarchy</p>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add to Org Chart
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={expandAll}>
+            <Maximize2 className="h-4 w-4 mr-2" />
+            Expand All
+          </Button>
+          <Button variant="outline" onClick={collapseAll}>
+            <Minimize2 className="h-4 w-4 mr-2" />
+            Collapse All
+          </Button>
+          <Button onClick={() => setAddDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add to Org Chart
+          </Button>
+        </div>
       </div>
 
       {nodes.length === 0 ? (
@@ -234,6 +280,8 @@ export default function OrgChart() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               onDragEnd={handleDragEnd}
+              collapsedNodes={collapsedNodes}
+              onToggleCollapse={toggleCollapse}
             />
           </CardContent>
         </Card>
