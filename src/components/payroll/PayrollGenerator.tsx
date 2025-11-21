@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calculator } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 
 const payrollSchema = z.object({
@@ -14,7 +14,6 @@ const payrollSchema = z.object({
   periodStart: z.string().min(1, 'Start date is required'),
   periodEnd: z.string().min(1, 'End date is required'),
   deductions: z.string().regex(/^\d*\.?\d*$/, 'Must be a valid number'),
-  allowances: z.string().regex(/^\d*\.?\d*$/, 'Must be a valid number'),
 });
 
 interface Employee {
@@ -27,16 +26,13 @@ interface Employee {
 export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [calculating, setCalculating] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  const [calculatedHours, setCalculatedHours] = useState<number>(0);
   const [formData, setFormData] = useState({
     employeeId: '',
     periodStart: '',
     periodEnd: '',
     deductions: '0',
-    allowances: '0',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -54,44 +50,22 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
     fetchEmployees();
   }, []);
 
-  const calculateHours = async () => {
-    if (!formData.employeeId || !formData.periodStart || !formData.periodEnd) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please select employee and date range',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setCalculating(true);
+  const calculateHours = async (employeeId: string, periodStart: string, periodEnd: string): Promise<number> => {
     try {
       const { data, error } = await supabase
         .from('attendance')
         .select('total_hours')
-        .eq('user_id', formData.employeeId)
-        .gte('clock_in', `${formData.periodStart}T00:00:00`)
-        .lte('clock_in', `${formData.periodEnd}T23:59:59`)
+        .eq('user_id', employeeId)
+        .gte('clock_in', `${periodStart}T00:00:00`)
+        .lte('clock_in', `${periodEnd}T23:59:59`)
         .eq('status', 'completed');
 
       if (error) throw error;
 
-      const totalHours = data?.reduce((sum, record) => sum + (record.total_hours || 0), 0) || 0;
-      setCalculatedHours(totalHours);
-
-      toast({
-        title: 'Hours Calculated',
-        description: `Total hours: ${totalHours.toFixed(2)}`,
-      });
-    } catch (error: any) {
+      return data?.reduce((sum, record) => sum + (record.total_hours || 0), 0) || 0;
+    } catch (error) {
       console.error('Error calculating hours:', error);
-      toast({
-        title: 'Calculation Failed',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setCalculating(false);
+      return 0;
     }
   };
 
@@ -161,16 +135,18 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
 
     try {
       let grossAmount = 0;
+      let totalHours = 0;
 
+      // Calculate hours for hourly employees
       if (selectedEmployee.hourly_rate) {
-        grossAmount = calculatedHours * selectedEmployee.hourly_rate;
+        totalHours = await calculateHours(formData.employeeId, formData.periodStart, formData.periodEnd);
+        grossAmount = totalHours * selectedEmployee.hourly_rate;
       } else if (selectedEmployee.monthly_salary) {
         grossAmount = selectedEmployee.monthly_salary;
       }
 
       const deductions = parseFloat(formData.deductions) || 0;
-      const allowances = parseFloat(formData.allowances) || 0;
-      const netAmount = grossAmount + allowances - deductions;
+      const netAmount = grossAmount - deductions;
 
       const paymentDate = getNextPaymentDate();
 
@@ -178,12 +154,12 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
         user_id: formData.employeeId,
         period_start: formData.periodStart,
         period_end: formData.periodEnd,
-        total_hours: calculatedHours,
+        total_hours: totalHours,
         hourly_rate: selectedEmployee.hourly_rate,
         monthly_salary: selectedEmployee.monthly_salary,
         gross_amount: grossAmount,
         deductions,
-        allowances,
+        allowances: 0,
         net_amount: netAmount,
         payment_date: paymentDate,
         status: 'pending',
@@ -202,9 +178,7 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
         periodStart: '',
         periodEnd: '',
         deductions: '0',
-        allowances: '0',
       });
-      setCalculatedHours(0);
       setSelectedEmployee(null);
     } catch (error: any) {
       console.error('Error generating payroll:', error);
@@ -229,14 +203,13 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
       <CardHeader>
         <CardTitle>Generate Payroll</CardTitle>
         <CardDescription>
-          Calculate and generate payroll for employees. Payment schedule: 1st and 16th of each month
-          (adjusted to Monday if falls on weekend)
+          Select employee and period to generate payroll. Hours are calculated automatically for hourly employees.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="employee">Employee *</Label>
+            <Label htmlFor="employee">Employee</Label>
             <Select value={formData.employeeId} onValueChange={handleEmployeeChange}>
               <SelectTrigger className={errors.employeeId ? 'border-destructive' : ''}>
                 <SelectValue placeholder="Select employee" />
@@ -244,7 +217,7 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
               <SelectContent>
                 {employees.map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
-                    {emp.full_name} - {emp.hourly_rate ? `$${emp.hourly_rate}/hr` : `$${emp.monthly_salary}/mo`}
+                    {emp.full_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -256,7 +229,7 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="periodStart">Period Start *</Label>
+              <Label htmlFor="periodStart">Period Start</Label>
               <Input
                 id="periodStart"
                 type="date"
@@ -270,7 +243,7 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="periodEnd">Period End *</Label>
+              <Label htmlFor="periodEnd">Period End</Label>
               <Input
                 id="periodEnd"
                 type="date"
@@ -285,68 +258,38 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
             </div>
           </div>
 
-          {selectedEmployee?.hourly_rate && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Hours Worked</Label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={calculateHours}
-                  disabled={calculating}
-                >
-                  {calculating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Calculating...
-                    </>
-                  ) : (
-                    <>
-                      <Calculator className="mr-2 h-4 w-4" />
-                      Calculate Hours
-                    </>
-                  )}
-                </Button>
+          {selectedEmployee && (
+            <div className="p-4 bg-muted rounded-lg space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Current Salary</span>
+                <span className="text-lg font-bold">
+                  {selectedEmployee.hourly_rate 
+                    ? `$${selectedEmployee.hourly_rate}/hr` 
+                    : `$${selectedEmployee.monthly_salary}/mo`}
+                </span>
               </div>
-              <div className="p-3 bg-muted rounded-lg">
-                <p className="text-2xl font-bold">{calculatedHours.toFixed(2)} hours</p>
-                <p className="text-sm text-muted-foreground">
-                  Gross: ${(calculatedHours * selectedEmployee.hourly_rate).toFixed(2)}
+              {selectedEmployee.hourly_rate && (
+                <p className="text-xs text-muted-foreground">
+                  Hours will be calculated automatically from attendance records
                 </p>
-              </div>
+              )}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="deductions">Deductions ($)</Label>
-              <Input
-                id="deductions"
-                type="number"
-                step="0.01"
-                value={formData.deductions}
-                onChange={(e) => setFormData({ ...formData, deductions: e.target.value })}
-                className={errors.deductions ? 'border-destructive' : ''}
-              />
-              {errors.deductions && (
-                <p className="text-sm text-destructive">{errors.deductions}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="allowances">Allowances ($)</Label>
-              <Input
-                id="allowances"
-                type="number"
-                step="0.01"
-                value={formData.allowances}
-                onChange={(e) => setFormData({ ...formData, allowances: e.target.value })}
-                className={errors.allowances ? 'border-destructive' : ''}
-              />
-              {errors.allowances && (
-                <p className="text-sm text-destructive">{errors.allowances}</p>
-              )}
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="deductions">Deductions</Label>
+            <Input
+              id="deductions"
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              value={formData.deductions}
+              onChange={(e) => setFormData({ ...formData, deductions: e.target.value })}
+              className={errors.deductions ? 'border-destructive' : ''}
+            />
+            {errors.deductions && (
+              <p className="text-sm text-destructive">{errors.deductions}</p>
+            )}
           </div>
 
           <Button type="submit" disabled={loading} className="w-full">
