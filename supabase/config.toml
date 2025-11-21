@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.reset-employee-password]
 verify_jwt = true
+
+[functions.create-employee]
+verify_jwt = true
