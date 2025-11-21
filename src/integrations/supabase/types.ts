@@ -251,6 +251,10 @@ export type Database = {
         Row: {
           content: string
           created_at: string
+          escalate_after_hours: number | null
+          escalated: boolean | null
+          escalated_at: string | null
+          escalation_memo_id: string | null
           expires_at: string | null
           id: string
           is_read: boolean
@@ -263,6 +267,10 @@ export type Database = {
         Insert: {
           content: string
           created_at?: string
+          escalate_after_hours?: number | null
+          escalated?: boolean | null
+          escalated_at?: string | null
+          escalation_memo_id?: string | null
           expires_at?: string | null
           id?: string
           is_read?: boolean
@@ -275,6 +283,10 @@ export type Database = {
         Update: {
           content?: string
           created_at?: string
+          escalate_after_hours?: number | null
+          escalated?: boolean | null
+          escalated_at?: string | null
+          escalation_memo_id?: string | null
           expires_at?: string | null
           id?: string
           is_read?: boolean
@@ -284,7 +296,15 @@ export type Database = {
           type?: Database["public"]["Enums"]["memo_type"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "memos_escalation_memo_id_fkey"
+            columns: ["escalation_memo_id"]
+            isOneToOne: false
+            referencedRelation: "memos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       org_chart: {
         Row: {
