@@ -264,7 +264,7 @@ export default function WeeklySummary() {
                       {payment.status}
                     </Badge>
                     <p className="text-lg font-bold">
-                      ${parseFloat(payment.net_amount.toString()).toFixed(2)}
+                      ₱{parseFloat(payment.net_amount.toString()).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
