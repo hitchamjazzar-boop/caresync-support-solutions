@@ -86,9 +86,6 @@ export const generatePayslipPDF = async (payroll: PayrollData) => {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text('CareSync', 48, 20);
-  
-  doc.setFontSize(18);
   doc.text('PAYSLIP', pageWidth / 2, 22, { align: 'center' });
   
   doc.setFontSize(9);
