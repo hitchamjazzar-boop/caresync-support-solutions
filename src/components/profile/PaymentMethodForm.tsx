@@ -4,10 +4,49 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Wallet } from 'lucide-react';
+import { Loader2, Wallet, Smartphone, Building2, Landmark } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+
+const PHILIPPINE_BANKS = {
+  traditional: [
+    'BDO (Banco de Oro)',
+    'BPI (Bank of the Philippine Islands)',
+    'Metrobank',
+    'UnionBank',
+    'Landbank',
+    'PNB (Philippine National Bank)',
+    'Security Bank',
+    'RCBC (Rizal Commercial Banking Corporation)',
+    'Chinabank',
+    'EastWest Bank',
+    'PSBank',
+    'AUB (Asia United Bank)',
+    'Maybank',
+    'UCPB (United Coconut Planters Bank)',
+    'BankCom (Bank of Commerce)',
+    'PBCom (Philippine Bank of Communications)',
+    'Robinsons Bank',
+    'Sterling Bank',
+  ],
+  digital: [
+    'CIMB Bank',
+    'ING Bank',
+    'Tonik Digital Bank',
+    'GoTyme Bank',
+    'UNO Digital Bank',
+    'Maya Bank',
+    'Seabank',
+  ],
+  ewallet: [
+    'GCash',
+    'Maya (PayMaya)',
+    'GrabPay',
+    'ShopeePay',
+    'PayPal',
+  ],
+};
 
 export const PaymentMethodForm = () => {
   const [loading, setLoading] = useState(false);
@@ -22,6 +61,17 @@ export const PaymentMethodForm = () => {
     accountNumber: '',
     routingNumber: '',
   });
+
+  const getPaymentTypeIcon = (type: string) => {
+    switch (type) {
+      case 'e_wallet':
+        return <Smartphone className="h-4 w-4" />;
+      case 'digital_bank':
+        return <Building2 className="h-4 w-4" />;
+      default:
+        return <Landmark className="h-4 w-4" />;
+    }
+  };
 
   useEffect(() => {
     fetchPaymentInfo();
@@ -108,34 +158,83 @@ export const PaymentMethodForm = () => {
           <CardTitle>Payment Method</CardTitle>
         </div>
         <CardDescription>
-          Add your bank account details to receive salary payments
+          Add your payment details to receive salary payments via bank transfer, digital bank, or e-wallet
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="paymentMethod">Payment Method</Label>
+            <Label htmlFor="paymentMethod">Payment Type</Label>
             <Select
               value={formData.paymentMethod}
-              onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
+              onValueChange={(value) => setFormData({ ...formData, paymentMethod: value, bankName: '' })}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="bank_account">Bank Account</SelectItem>
+                <SelectItem value="bank_account">
+                  <div className="flex items-center gap-2">
+                    <Landmark className="h-4 w-4" />
+                    Traditional Bank Account
+                  </div>
+                </SelectItem>
+                <SelectItem value="digital_bank">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Digital Bank
+                  </div>
+                </SelectItem>
+                <SelectItem value="e_wallet">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" />
+                    E-Wallet
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bankName">Bank Name</Label>
-            <Input
-              id="bankName"
-              placeholder="Enter your bank name"
+            <Label htmlFor="bankName">
+              {formData.paymentMethod === 'e_wallet' ? 'E-Wallet Provider' : 
+               formData.paymentMethod === 'digital_bank' ? 'Digital Bank' : 'Bank Name'}
+            </Label>
+            <Select
               value={formData.bankName}
-              onChange={(e) => setFormData({ ...formData, bankName: e.target.value })}
-            />
+              onValueChange={(value) => setFormData({ ...formData, bankName: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={
+                  formData.paymentMethod === 'e_wallet' ? 'Select e-wallet' :
+                  formData.paymentMethod === 'digital_bank' ? 'Select digital bank' :
+                  'Select bank'
+                } />
+              </SelectTrigger>
+              <SelectContent>
+                {formData.paymentMethod === 'e_wallet' && 
+                  PHILIPPINE_BANKS.ewallet.map((wallet) => (
+                    <SelectItem key={wallet} value={wallet}>
+                      {wallet}
+                    </SelectItem>
+                  ))
+                }
+                {formData.paymentMethod === 'digital_bank' && 
+                  PHILIPPINE_BANKS.digital.map((bank) => (
+                    <SelectItem key={bank} value={bank}>
+                      {bank}
+                    </SelectItem>
+                  ))
+                }
+                {formData.paymentMethod === 'bank_account' && 
+                  PHILIPPINE_BANKS.traditional.map((bank) => (
+                    <SelectItem key={bank} value={bank}>
+                      {bank}
+                    </SelectItem>
+                  ))
+                }
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -150,26 +249,51 @@ export const PaymentMethodForm = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="accountNumber">Account Number</Label>
+              <Label htmlFor="accountNumber">
+                {formData.paymentMethod === 'e_wallet' ? 'Mobile Number' : 'Account Number'}
+              </Label>
               <Input
                 id="accountNumber"
                 type="password"
-                placeholder="••••••••"
+                placeholder={formData.paymentMethod === 'e_wallet' ? '+63 ••• ••• ••••' : '••••••••••••'}
                 value={formData.accountNumber}
                 onChange={(e) => setFormData({ ...formData, accountNumber: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="routingNumber">Routing Number</Label>
-              <Input
-                id="routingNumber"
-                placeholder="9 digits"
-                maxLength={9}
-                value={formData.routingNumber}
-                onChange={(e) => setFormData({ ...formData, routingNumber: e.target.value })}
-              />
-            </div>
+            {formData.paymentMethod === 'bank_account' && (
+              <div className="space-y-2">
+                <Label htmlFor="routingNumber">Branch Code (Optional)</Label>
+                <Input
+                  id="routingNumber"
+                  placeholder="Branch code"
+                  value={formData.routingNumber}
+                  onChange={(e) => setFormData({ ...formData, routingNumber: e.target.value })}
+                />
+              </div>
+            )}
           </div>
+
+          {formData.paymentMethod === 'e_wallet' && (
+            <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+              <p className="font-medium mb-1">For E-Wallet payments:</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>Enter your registered mobile number</li>
+                <li>Ensure your account is verified and active</li>
+                <li>For GCash/Maya, use the format: +639XXXXXXXXX</li>
+              </ul>
+            </div>
+          )}
+
+          {formData.paymentMethod === 'digital_bank' && (
+            <div className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+              <p className="font-medium mb-1">For Digital Bank payments:</p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>Your account number may differ from traditional banks</li>
+                <li>Check your digital bank app for the correct account number</li>
+                <li>Ensure your account is fully verified</li>
+              </ul>
+            </div>
+          )}
 
           <div className="pt-2">
             <Button type="submit" disabled={saving}>
