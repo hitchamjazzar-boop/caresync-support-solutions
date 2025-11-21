@@ -163,7 +163,7 @@ export default function Dashboard() {
       ) : (
         <div className="space-y-6">
           {/* Payroll Available Banner */}
-          {approvedPayroll.length > 0 && (
+          {approvedPayroll.length > 0 ? (
             <Alert className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
               <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
               <AlertTitle className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
@@ -175,7 +175,7 @@ export default function Dashboard() {
                 </p>
                 <div className="space-y-2">
                   {approvedPayroll.map((payroll) => {
-                    const isPaid = payroll.payment_date && new Date(payroll.payment_date) <= new Date();
+                    const isPaid = payroll.status === 'paid';
                     return (
                       <div key={payroll.id} className={`flex items-center justify-between rounded-lg p-3 border ${
                         isPaid 
@@ -222,6 +222,17 @@ export default function Dashboard() {
                 <Button onClick={() => navigate('/payroll')} className="w-full bg-green-600 hover:bg-green-700">
                   View All Payroll
                 </Button>
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900 dark:to-slate-900 border-gray-200 dark:border-gray-700">
+              <DollarSign className="h-6 w-6 text-gray-600 dark:text-gray-400" />
+              <AlertTitle className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">
+                No Payroll Available Yet
+              </AlertTitle>
+              <AlertDescription className="text-gray-700 dark:text-gray-300">
+                <p className="mb-2">You don't have any approved or paid payroll records at the moment.</p>
+                <p className="text-sm text-muted-foreground">Your payroll information will appear here once it has been processed by the admin.</p>
               </AlertDescription>
             </Alert>
           )}
