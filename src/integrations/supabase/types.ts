@@ -215,6 +215,38 @@ export type Database = {
           },
         ]
       }
+      memo_replies: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          memo_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          memo_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          memo_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memo_replies_memo_id_fkey"
+            columns: ["memo_id"]
+            isOneToOne: false
+            referencedRelation: "memos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memos: {
         Row: {
           content: string
