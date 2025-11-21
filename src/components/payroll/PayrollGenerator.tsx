@@ -13,6 +13,7 @@ const payrollSchema = z.object({
   employeeId: z.string().min(1, 'Please select an employee'),
   periodStart: z.string().min(1, 'Start date is required'),
   periodEnd: z.string().min(1, 'End date is required'),
+  salary: z.string().min(1, 'Salary is required').regex(/^\d+\.?\d*$/, 'Must be a valid number'),
   deductions: z.string().regex(/^\d*\.?\d*$/, 'Must be a valid number'),
 });
 
@@ -32,6 +33,7 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
     employeeId: '',
     periodStart: '',
     periodEnd: '',
+    salary: '',
     deductions: '0',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -134,15 +136,16 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
     setLoading(true);
 
     try {
+      const salary = parseFloat(formData.salary) || 0;
       let grossAmount = 0;
       let totalHours = 0;
 
       // Calculate hours for hourly employees
       if (selectedEmployee.hourly_rate) {
         totalHours = await calculateHours(formData.employeeId, formData.periodStart, formData.periodEnd);
-        grossAmount = totalHours * selectedEmployee.hourly_rate;
-      } else if (selectedEmployee.monthly_salary) {
-        grossAmount = selectedEmployee.monthly_salary;
+        grossAmount = totalHours * salary;
+      } else {
+        grossAmount = salary;
       }
 
       const deductions = parseFloat(formData.deductions) || 0;
@@ -155,8 +158,8 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
         period_start: formData.periodStart,
         period_end: formData.periodEnd,
         total_hours: totalHours,
-        hourly_rate: selectedEmployee.hourly_rate,
-        monthly_salary: selectedEmployee.monthly_salary,
+        hourly_rate: selectedEmployee.hourly_rate ? salary : null,
+        monthly_salary: selectedEmployee.monthly_salary ? salary : null,
         gross_amount: grossAmount,
         deductions,
         allowances: 0,
@@ -177,6 +180,7 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
         employeeId: '',
         periodStart: '',
         periodEnd: '',
+        salary: '',
         deductions: '0',
       });
       setSelectedEmployee(null);
@@ -195,7 +199,10 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
   const handleEmployeeChange = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
     setSelectedEmployee(employee || null);
-    setFormData({ ...formData, employeeId });
+    
+    // Pre-fill salary with current rate/salary
+    const defaultSalary = employee?.hourly_rate || employee?.monthly_salary || '';
+    setFormData({ ...formData, employeeId, salary: defaultSalary.toString() });
   };
 
   return (
@@ -258,23 +265,28 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
             </div>
           </div>
 
-          {selectedEmployee && (
-            <div className="p-4 bg-muted rounded-lg space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Current Salary</span>
-                <span className="text-lg font-bold">
-                  {selectedEmployee.hourly_rate 
-                    ? `$${selectedEmployee.hourly_rate}/hr` 
-                    : `$${selectedEmployee.monthly_salary}/mo`}
-                </span>
-              </div>
-              {selectedEmployee.hourly_rate && (
-                <p className="text-xs text-muted-foreground">
-                  Hours will be calculated automatically from attendance records
-                </p>
-              )}
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="salary">
+              Salary {selectedEmployee?.hourly_rate ? '(Hourly Rate)' : '(Monthly)'}
+            </Label>
+            <Input
+              id="salary"
+              type="number"
+              step="0.01"
+              placeholder={selectedEmployee?.hourly_rate ? "Hourly rate" : "Monthly salary"}
+              value={formData.salary}
+              onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
+              className={errors.salary ? 'border-destructive' : ''}
+            />
+            {errors.salary && (
+              <p className="text-sm text-destructive">{errors.salary}</p>
+            )}
+            {selectedEmployee?.hourly_rate && (
+              <p className="text-xs text-muted-foreground">
+                Hours will be calculated automatically from attendance records
+              </p>
+            )}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="deductions">Deductions</Label>
