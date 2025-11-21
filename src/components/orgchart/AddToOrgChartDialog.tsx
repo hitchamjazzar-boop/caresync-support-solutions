@@ -48,6 +48,7 @@ interface OrgChartNode {
   id: string;
   user_id: string;
   parent_id: string | null;
+  hierarchy_level: number;
   profiles: {
     full_name: string;
   };

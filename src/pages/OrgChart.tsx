@@ -69,7 +69,7 @@ export default function OrgChart() {
         .from('org_chart')
         .select(`
           *,
-          profiles!org_chart_user_id_fkey (
+          profiles (
             full_name,
             position,
             photo_url
