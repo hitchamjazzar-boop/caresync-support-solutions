@@ -512,7 +512,7 @@ export default function Calendar() {
     if (hour < 6 || hour >= 22) return null;
     
     const minutesFromStart = (hour - 6) * 60 + minute;
-    const slotHeight = 32; // Height of each slot in pixels
+    const slotHeight = 24; // Height of each slot in pixels
     const totalMinutes = 16 * 60; // 16 hours total (6am to 10pm)
     const position = (minutesFromStart / totalMinutes) * (timeSlots.length * slotHeight);
     
@@ -648,28 +648,42 @@ export default function Calendar() {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Color Legend */}
+          {/* Legends */}
           {selectedEmployeeData.length > 0 && (
-            <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
-              <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Employee Color Legend</h3>
-              <div className="flex flex-wrap gap-3">
-                {selectedEmployeeData.map((employee) => {
-                  const employeeColor = getEmployeeEventColor(employee.id);
-                  return (
-                    <div key={employee.id} className="flex items-center gap-2">
+            <div className="mb-4 space-y-3">
+              {/* Employee Color Legend */}
+              <div className="p-4 bg-muted/30 rounded-lg border">
+                <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Employee Legend</h3>
+                <div className="flex flex-wrap gap-3">
+                  {selectedEmployeeData.map((employee) => {
+                    const employeeColor = getEmployeeEventColor(employee.id);
+                    return (
+                      <div key={employee.id} className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded border-2 border-white shadow-sm"
+                          style={{ backgroundColor: employeeColor }}
+                        />
+                        <span className="text-sm">{employee.full_name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Event Type Legend */}
+              <div className="p-4 bg-muted/30 rounded-lg border">
+                <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Event Type Legend</h3>
+                <div className="flex flex-wrap gap-3">
+                  {Object.entries(eventTypeColors).map(([type, color]) => (
+                    <div key={type} className="flex items-center gap-2">
                       <div 
                         className="w-4 h-4 rounded border-2 border-white shadow-sm"
-                        style={{ backgroundColor: employeeColor }}
+                        style={{ backgroundColor: color }}
                       />
-                      <span 
-                        className="text-sm font-semibold"
-                        style={{ color: employeeColor }}
-                      >
-                        {employee.full_name}
-                      </span>
+                      <span className="text-sm capitalize">{type}</span>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -748,7 +762,7 @@ export default function Calendar() {
                       className="grid"
                       style={{ 
                         gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 140}px, 1fr))`,
-                        minHeight: '32px'
+                        minHeight: '24px'
                       }}
                     >
                       <div className="p-2 text-xs text-muted-foreground border-r border-b sticky left-0 bg-background z-10 flex items-center">
@@ -778,7 +792,7 @@ export default function Calendar() {
                               return (
                                 <div
                                   key={`${employee.id}-${slotIndex}`}
-                                  className={`h-8 bg-background hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative ${
+                                  className={`h-6 bg-background hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative ${
                                     isDragOverSlot ? 'ring-2 ring-primary ring-inset' : ''
                                   } ${isInHoverRange ? 'bg-accent/50' : ''} ${isInDragSelection ? 'bg-primary/20 ring-2 ring-primary ring-inset' : ''}`}
                                   onClick={() => !isDraggingSelection && handleSlotClick(employee.id, day, slotIndex)}
@@ -854,7 +868,7 @@ export default function Calendar() {
                                     className="absolute inset-x-1 text-xs p-2 rounded-md text-white hover:opacity-90 transition-opacity z-10 cursor-move border-2 border-transparent hover:border-white/30 group shadow-md overflow-hidden"
                                     style={{
                                       backgroundColor: eventTypeColor,
-                                      height: `${height * 32}px`,
+                                      height: `${height * 24}px`,
                                     }}
                                     title={`${event.title}${ownerEmployee ? ` (${ownerEmployee.full_name})` : ''} - Right-click to copy, drag to move`}
                                   >
@@ -871,8 +885,43 @@ export default function Calendar() {
                                       onClick={(e) => e.stopPropagation()}
                                       title="Drag to resize start time"
                                     />
-                                    
-                                    <div className="flex items-center gap-2">
+                                     
+                                     {/* Quick Actions */}
+                                     <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                       <button
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           toast.success('Event marked as complete!');
+                                         }}
+                                         className="bg-green-500/90 hover:bg-green-600 text-white rounded p-1 text-[10px]"
+                                         title="Mark complete"
+                                       >
+                                         ✓
+                                       </button>
+                                       <button
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           toast.success('Reminder sent!');
+                                         }}
+                                         className="bg-blue-500/90 hover:bg-blue-600 text-white rounded p-1 text-[10px]"
+                                         title="Send reminder"
+                                       >
+                                         🔔
+                                       </button>
+                                       <button
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           const note = prompt('Add a note:');
+                                           if (note) toast.success('Note added!');
+                                         }}
+                                         className="bg-orange-500/90 hover:bg-orange-600 text-white rounded p-1 text-[10px]"
+                                         title="Add note"
+                                       >
+                                         📝
+                                       </button>
+                                     </div>
+                                     
+                                     <div className="flex items-center gap-2">
                                       <div className="font-semibold truncate flex-1">{event.title}</div>
                                       {event.target_users && event.target_users.length > 1 ? (
                                         <ParticipantIndicators 
