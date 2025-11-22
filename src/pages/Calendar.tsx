@@ -42,6 +42,7 @@ interface CalendarEvent {
   target_users: string[];
   is_recurring: boolean;
   recurrence_pattern: string;
+  recurrence_end_date: string | null;
 }
 
 type ViewMode = 'day' | 'week';
@@ -145,6 +146,91 @@ export default function Calendar() {
     }
   };
 
+  // Helper function to expand recurring events into individual instances
+  const expandRecurringEvents = (events: CalendarEvent[], startDate: Date, endDate: Date): CalendarEvent[] => {
+    const expanded: CalendarEvent[] = [];
+
+    events.forEach(event => {
+      if (!event.is_recurring || !event.recurrence_pattern) {
+        // Non-recurring event, add as-is
+        expanded.push(event);
+        return;
+      }
+
+      const eventStart = new Date(event.start_time);
+      const eventEnd = new Date(event.end_time);
+      const duration = eventEnd.getTime() - eventStart.getTime();
+      const recurrenceEndDate = event.recurrence_end_date 
+        ? new Date(event.recurrence_end_date) 
+        : new Date(endDate.getTime() + 365 * 24 * 60 * 60 * 1000); // 1 year from end if no end date
+
+      // Parse recurrence pattern
+      const [pattern, daysStr] = event.recurrence_pattern.split(':');
+      const selectedDays = daysStr ? daysStr.split(',') : [];
+
+      let currentDate = new Date(eventStart);
+      const dayMap: Record<string, number> = {
+        sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
+        thursday: 4, friday: 5, saturday: 6
+      };
+
+      const endDateTimestamp = Math.min(recurrenceEndDate.getTime(), endDate.getTime());
+      const startDateTimestamp = startDate.getTime();
+
+      // Generate instances
+      while (currentDate.getTime() <= endDateTimestamp) {
+        if (currentDate.getTime() >= startDateTimestamp) {
+          const instanceStart = new Date(currentDate);
+          const instanceEnd = new Date(currentDate.getTime() + duration);
+
+          // For weekly pattern with specific days, check if current day matches
+          if (pattern === 'weekly' && selectedDays.length > 0) {
+            const dayName = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][instanceStart.getDay()];
+            if (selectedDays.includes(dayName)) {
+              expanded.push({
+                ...event,
+                id: `${event.id}_${instanceStart.getTime()}`, // Unique ID for each instance
+                start_time: instanceStart.toISOString(),
+                end_time: instanceEnd.toISOString(),
+              });
+            }
+          } else {
+            // Add instance for other patterns
+            expanded.push({
+              ...event,
+              id: `${event.id}_${instanceStart.getTime()}`,
+              start_time: instanceStart.toISOString(),
+              end_time: instanceEnd.toISOString(),
+            });
+          }
+        }
+
+        // Increment based on pattern
+        switch (pattern) {
+          case 'daily':
+            currentDate = addDays(currentDate, 1);
+            break;
+          case 'weekly':
+            currentDate = addDays(currentDate, selectedDays.length > 0 ? 1 : 7);
+            break;
+          case 'biweekly':
+            currentDate = addDays(currentDate, 14);
+            break;
+          case 'monthly':
+            currentDate = new Date(currentDate.setMonth(currentDate.getMonth() + 1));
+            break;
+          case 'yearly':
+            currentDate = new Date(currentDate.setFullYear(currentDate.getFullYear() + 1));
+            break;
+          default:
+            currentDate = addDays(currentDate, 1);
+        }
+      }
+    });
+
+    return expanded;
+  };
+
   const fetchEvents = async () => {
     try {
       setLoading(true);
@@ -161,14 +247,21 @@ export default function Calendar() {
 
       if (error) throw error;
 
+      // Show all events to all employees (shared visibility)
+      // Filter by selected employees only
       const filteredEvents = (data || []).filter(event => {
-        if (event.is_public) return true;
-        if (user && event.created_by === user.id) return true;
-        if (!event.target_users) return false;
-        return selectedEmployees.some(empId => event.target_users.includes(empId));
+        // If event has target_users, only show if one of selected employees is targeted
+        if (event.target_users && event.target_users.length > 0) {
+          return selectedEmployees.some(empId => event.target_users.includes(empId));
+        }
+        // Public events with no specific targets are shown to everyone
+        return true;
       });
 
-      setEvents(filteredEvents);
+      // Expand recurring events into individual instances
+      const expandedEvents = expandRecurringEvents(filteredEvents, startDate, endDate);
+
+      setEvents(expandedEvents);
     } catch (error: any) {
       console.error('Error fetching events:', error);
       toast.error('Failed to load calendar events');

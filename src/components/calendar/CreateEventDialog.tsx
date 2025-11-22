@@ -113,8 +113,6 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
       
       if (prefilledData?.employeeId) {
         setSelectedAttendees([prefilledData.employeeId]);
-        // When creating event for specific person, default to private
-        updates.is_public = false;
         hasUpdates = true;
       }
       
@@ -193,8 +191,8 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
         ...formData,
         start_time: toUtcIso(formData.start_time)!,
         end_time: toUtcIso(formData.end_time)!,
-        // If there are explicit attendees, make event private by default
-        is_public: attendees.length === 0 ? formData.is_public : false,
+        // Make all events public by default for shared visibility
+        is_public: true,
         recurrence_pattern: formData.is_recurring ? recurrencePatternStr : null,
         recurrence_end_date:
           formData.is_recurring && formData.recurrence_end_date
