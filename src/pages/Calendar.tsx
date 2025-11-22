@@ -579,14 +579,14 @@ export default function Calendar() {
     : `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="flex flex-col h-full gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-3 shrink-0">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <CalendarIcon className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <CalendarIcon className="h-6 w-6 text-primary" />
             Team Calendar
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-sm text-muted-foreground mt-1">
             Schedule and view team availability
           </p>
         </div>
@@ -615,9 +615,9 @@ export default function Calendar() {
       </div>
 
       {selectedEmployees.length > 3 && viewMode === 'week' && (
-        <Card className="bg-warning/10 border-warning">
-          <CardContent className="p-4">
-            <p className="text-sm text-warning-foreground">
+        <Card className="bg-warning/10 border-warning shrink-0">
+          <CardContent className="p-3">
+            <p className="text-xs text-warning-foreground">
               ⚠️ Week view is limited to 3 employees. Please select fewer employees or switch to Day view.
             </p>
           </CardContent>
@@ -625,12 +625,16 @@ export default function Calendar() {
       )}
 
       {/* Upcoming Reminders & Events */}
-      <UpcomingReminders />
+      <div className="shrink-0">
+        <UpcomingReminders />
+      </div>
       
       {/* Birthday & Company Events Banner */}
-      <CalendarBanner />
+      <div className="shrink-0">
+        <CalendarBanner />
+      </div>
 
-      <Card>
+      <Card className="flex-1 flex flex-col min-h-0">
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
@@ -647,14 +651,14 @@ export default function Calendar() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex flex-col p-4 min-h-0">
           {/* Legends */}
           {selectedEmployeeData.length > 0 && (
-            <div className="mb-4 space-y-3">
+            <div className="mb-3 space-y-2 shrink-0">
               {/* Employee Color Legend */}
-              <div className="p-4 bg-muted/30 rounded-lg border">
-                <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Employee Legend</h3>
-                <div className="flex flex-wrap gap-3">
+              <div className="p-3 bg-muted/30 rounded-lg border">
+                <h3 className="text-xs font-semibold mb-2 text-muted-foreground">Employee Legend</h3>
+                <div className="flex flex-wrap gap-2">
                   {selectedEmployeeData.map((employee) => {
                     const employeeColor = getEmployeeEventColor(employee.id);
                     return (
@@ -671,9 +675,9 @@ export default function Calendar() {
               </div>
               
               {/* Event Type Legend */}
-              <div className="p-4 bg-muted/30 rounded-lg border">
-                <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Event Type Legend</h3>
-                <div className="flex flex-wrap gap-3">
+              <div className="p-3 bg-muted/30 rounded-lg border">
+                <h3 className="text-xs font-semibold mb-2 text-muted-foreground">Event Type Legend</h3>
+                <div className="flex flex-wrap gap-2">
                   {Object.entries(eventTypeColors).map(([type, color]) => (
                     <div key={type} className="flex items-center gap-2">
                       <div 
@@ -689,12 +693,12 @@ export default function Calendar() {
           )}
 
           {selectedEmployeeData.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
               Select employees to view their calendars
             </div>
           ) : (
             <div 
-              className="border rounded-lg overflow-auto"
+              className="border rounded-lg overflow-auto flex-1"
               onMouseLeave={() => {
                 if (isDraggingSelection) {
                   handleSelectionEnd();
@@ -741,7 +745,7 @@ export default function Calendar() {
                 </div>
 
                 {/* Time Grid */}
-                <div className="max-h-[600px] overflow-y-auto relative" ref={scrollContainerRef}>
+                <div className="flex-1 overflow-y-auto relative" ref={scrollContainerRef}>
                   {/* Current Time Indicator */}
                   {getCurrentTimePosition() !== null && (
                     <div
@@ -967,7 +971,7 @@ export default function Calendar() {
 
           {/* Tips */}
           {selectedEmployeeData.length > 0 && (
-            <div className="mt-4">
+            <div className="mt-2 shrink-0">
               <p className="text-xs text-muted-foreground">
                 💡 Click and drag to select time block (6 AM - 10 PM) • Right-click events to copy • Drag events to move • Drag edges to resize
               </p>
