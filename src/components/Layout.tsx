@@ -65,7 +65,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Dashboard', href: '/', icon: BarChart3 },
     { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
     { name: 'Memo Analytics', href: '/memo-analytics', icon: Mail, adminOnly: true },
-    { name: 'Org Chart', href: '/org-chart', icon: Network, adminOnly: true },
+    { name: 'Org Chart', href: '/org-chart', icon: Network },
     { name: 'Employees', href: '/employees', icon: Users, adminOnly: true },
     { name: 'My Memos', href: '/memos', icon: Mail },
     { name: 'Attendance', href: '/attendance', icon: Clock },
