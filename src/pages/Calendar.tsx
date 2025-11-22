@@ -13,6 +13,7 @@ import { EventContextMenu } from '@/components/calendar/EventContextMenu';
 import { MoveConfirmDialog } from '@/components/calendar/MoveConfirmDialog';
 import { ParticipantIndicators } from '@/components/calendar/ParticipantIndicators';
 import { UpcomingReminders } from '@/components/calendar/UpcomingReminders';
+import { CalendarBanner } from '@/components/calendar/CalendarBanner';
 import {
   Select,
   SelectContent,
@@ -435,6 +436,20 @@ export default function Calendar() {
     '#06B6D4', '#F97316', '#EC4899', '#14B8A6', '#6366F1', '#84CC16',
   ];
 
+  const eventTypeColors: Record<string, string> = {
+    appointment: '#3b82f6',
+    project: '#8b5cf6',
+    event: '#3b82f6',
+    reminder: '#f59e0b',
+    birthday: '#ec4899',
+    holiday: '#dc2626',
+    meeting: '#10b981',
+  };
+
+  const getEventTypeColor = (eventType: string) => {
+    return eventTypeColors[eventType] || '#3b82f6';
+  };
+
   // Compute selected employee data
   const selectedEmployeeData = employees.filter(e => selectedEmployees.includes(e.id));
   
@@ -497,7 +512,7 @@ export default function Calendar() {
     if (hour < 6 || hour >= 22) return null;
     
     const minutesFromStart = (hour - 6) * 60 + minute;
-    const slotHeight = 48; // Height of each slot in pixels
+    const slotHeight = 32; // Height of each slot in pixels
     const totalMinutes = 16 * 60; // 16 hours total (6am to 10pm)
     const position = (minutesFromStart / totalMinutes) * (timeSlots.length * slotHeight);
     
@@ -611,6 +626,9 @@ export default function Calendar() {
 
       {/* Upcoming Reminders & Events */}
       <UpcomingReminders />
+      
+      {/* Birthday & Company Events Banner */}
+      <CalendarBanner />
 
       <Card>
         <CardHeader>
@@ -730,7 +748,7 @@ export default function Calendar() {
                       className="grid"
                       style={{ 
                         gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 140}px, 1fr))`,
-                        minHeight: '48px'
+                        minHeight: '32px'
                       }}
                     >
                       <div className="p-2 text-xs text-muted-foreground border-r border-b sticky left-0 bg-background z-10 flex items-center">
@@ -760,7 +778,7 @@ export default function Calendar() {
                               return (
                                 <div
                                   key={`${employee.id}-${slotIndex}`}
-                                  className={`h-12 bg-background hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative ${
+                                  className={`h-8 bg-background hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative ${
                                     isDragOverSlot ? 'ring-2 ring-primary ring-inset' : ''
                                   } ${isInHoverRange ? 'bg-accent/50' : ''} ${isInDragSelection ? 'bg-primary/20 ring-2 ring-primary ring-inset' : ''}`}
                                   onClick={() => !isDraggingSelection && handleSlotClick(employee.id, day, slotIndex)}
@@ -814,7 +832,8 @@ export default function Calendar() {
                             return dayEvents.filter(isFirstSlotForEvent).map(event => {
                               const height = calculateEventHeight(event);
                               const ownerEmployee = getEventOwnerEmployee(event);
-                              const employeeColor = ownerEmployee ? getEmployeeEventColor(ownerEmployee.id) : event.color;
+                              const employeeColor = ownerEmployee ? getEmployeeEventColor(ownerEmployee.id) : '#4F46E5';
+                              const eventTypeColor = getEventTypeColor(event.event_type);
                               
                               return (
                                 <EventContextMenu
@@ -832,16 +851,22 @@ export default function Calendar() {
                                       setSelectedEvent(event);
                                       setDetailsDialogOpen(true);
                                     }}
-                                    className="absolute inset-x-1 text-xs p-2 rounded-md text-white hover:opacity-90 transition-opacity z-10 cursor-move border-2 border-transparent hover:border-white/30 group shadow-md"
+                                    className="absolute inset-x-1 text-xs p-2 rounded-md text-white hover:opacity-90 transition-opacity z-10 cursor-move border-2 border-transparent hover:border-white/30 group shadow-md overflow-hidden"
                                     style={{
-                                      backgroundColor: employeeColor,
-                                      height: `${height * 48}px`,
+                                      backgroundColor: eventTypeColor,
+                                      height: `${height * 32}px`,
                                     }}
                                     title={`${event.title}${ownerEmployee ? ` (${ownerEmployee.full_name})` : ''} - Right-click to copy, drag to move`}
                                   >
+                                    {/* Employee Color Indicator at Top */}
+                                    <div 
+                                      className="absolute top-0 left-0 right-0 h-1"
+                                      style={{ backgroundColor: employeeColor }}
+                                    />
+                                    
                                     {/* Resize Handle Top */}
                                     <div
-                                      className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                       onMouseDown={(e) => handleResizeStart(e, event, 'top')}
                                       onClick={(e) => e.stopPropagation()}
                                       title="Drag to resize start time"
