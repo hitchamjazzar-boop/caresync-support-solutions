@@ -56,7 +56,7 @@ export function FeaturedAnnouncements() {
 
   const fetchData = async () => {
     try {
-      // Fetch featured announcements (Employee of the Month)
+      // Fetch featured announcements (Employee of the Month & Birthdays)
       const { data: announcementData, error: announcementError } = await supabase
         .from('announcements')
         .select('*')
@@ -64,7 +64,7 @@ export function FeaturedAnnouncements() {
         .eq('is_pinned', true)
         .not('featured_user_id', 'is', null)
         .order('created_at', { ascending: false })
-        .limit(3);
+        .limit(5);
 
       if (announcementError) throw announcementError;
 
@@ -88,26 +88,6 @@ export function FeaturedAnnouncements() {
           }
         }
       }
-
-      // Fetch employees with birthdays today
-      const today = new Date();
-      const currentMonth = today.getMonth() + 1;
-      const currentDay = today.getDate();
-
-      const { data: allProfiles } = await supabase
-        .from('profiles')
-        .select('id, full_name, photo_url, position, department, birthday')
-        .not('birthday', 'is', null);
-
-      if (allProfiles) {
-        const birthdayToday = allProfiles.filter(profile => {
-          if (!profile.birthday) return false;
-          const birthday = new Date(profile.birthday);
-          return birthday.getMonth() + 1 === currentMonth && birthday.getDate() === currentDay;
-        });
-
-        setBirthdayEmployees(birthdayToday as (Profile & { id: string })[]);
-      }
     } catch (error) {
       console.error('Error fetching featured data:', error);
     } finally {
@@ -123,70 +103,38 @@ export function FeaturedAnnouncements() {
     );
   }
 
-  if (announcements.length === 0 && birthdayEmployees.length === 0) {
+  if (announcements.length === 0) {
     return null;
   }
 
   return (
     <div className="space-y-6">
-      {/* Birthday Announcements */}
-      {birthdayEmployees.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Cake className="h-5 w-5" />
-            Birthday Today! 🎉
-          </h2>
-          <div className="grid gap-4 md:grid-cols-2">
-            {birthdayEmployees.map((employee) => (
-              <Card key={employee.id} className="overflow-hidden">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-16 w-16">
-                      <AvatarImage src={employee.photo_url || undefined} />
-                      <AvatarFallback className="text-2xl">
-                        {employee.full_name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <CardTitle className="text-lg">{employee.full_name}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        {employee.position || 'N/A'} • {employee.department || 'N/A'}
-                      </p>
-                      <Badge variant="secondary" className="mt-1">
-                        <Cake className="mr-1 h-3 w-3" />
-                        Happy Birthday!
-                      </Badge>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Let's celebrate {employee.full_name.split(' ')[0]}'s special day! 🎂
-                  </p>
-                  <AnnouncementComments announcementId={`birthday-${employee.id}`} />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+      <h2 className="text-xl font-semibold flex items-center gap-2">
+        <Award className="h-5 w-5" />
+        Featured Announcements
+      </h2>
 
-      {/* Employee of the Month */}
       {announcements.map((announcement) => {
         const profile = announcement.featured_user_id 
           ? profiles.get(announcement.featured_user_id) 
           : null;
+
+        const isBirthday = announcement.title.toLowerCase().includes('birthday');
 
         return (
           <Card key={announcement.id} className="overflow-hidden">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <Award className="h-5 w-5 text-yellow-500" />
+                  {isBirthday ? (
+                    <Cake className="h-5 w-5 text-pink-500" />
+                  ) : (
+                    <Award className="h-5 w-5 text-yellow-500" />
+                  )}
                   {announcement.title}
                 </CardTitle>
                 <Badge variant="secondary">
-                  {format(new Date(announcement.created_at), 'MMM yyyy')}
+                  {format(new Date(announcement.created_at), 'MMM dd, yyyy')}
                 </Badge>
               </div>
             </CardHeader>
@@ -214,7 +162,7 @@ export function FeaturedAnnouncements() {
                   <div className="md:w-2/3">
                     <img
                       src={announcement.image_url}
-                      alt="Employee of the Month"
+                      alt={announcement.title}
                       className="w-full h-48 object-cover rounded-lg"
                     />
                   </div>
