@@ -56,6 +56,8 @@ export default function Calendar() {
   const [hoverSlot, setHoverSlot] = useState<{ employeeId: string; day: Date; slotIndex: number; startIndex: number } | null>(null);
   const [prefilledData, setPrefilledData] = useState<any>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [dragSelection, setDragSelection] = useState<{ employeeId: string; day: Date; startIndex: number; endIndex: number } | null>(null);
+  const [isDraggingSelection, setIsDraggingSelection] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -426,6 +428,42 @@ export default function Calendar() {
     }
   };
 
+  const handleSelectionStart = (employeeId: string, day: Date, slotIndex: number) => {
+    setIsDraggingSelection(true);
+    setDragSelection({ employeeId, day, startIndex: slotIndex, endIndex: slotIndex });
+  };
+
+  const handleSelectionMove = (employeeId: string, day: Date, slotIndex: number) => {
+    if (isDraggingSelection && dragSelection && dragSelection.employeeId === employeeId && isSameDay(dragSelection.day, day)) {
+      setDragSelection(prev => prev ? { ...prev, endIndex: slotIndex } : null);
+    }
+  };
+
+  const handleSelectionEnd = () => {
+    if (isDraggingSelection && dragSelection) {
+      const startSlotIndex = Math.min(dragSelection.startIndex, dragSelection.endIndex);
+      const endSlotIndex = Math.max(dragSelection.startIndex, dragSelection.endIndex);
+      
+      const startSlot = timeSlots[startSlotIndex];
+      const endSlot = timeSlots[endSlotIndex];
+      
+      const startTime = setMinutes(setHours(new Date(dragSelection.day), startSlot.hour), startSlot.minute);
+      const endTime = setMinutes(setHours(new Date(dragSelection.day), endSlot.hour), endSlot.minute);
+      endTime.setMinutes(endTime.getMinutes() + 15); // Add 15 minutes to include the end slot
+      
+      setPrefilledData({
+        employeeId: dragSelection.employeeId,
+        startTime: startTime.toISOString().slice(0, 16),
+        endTime: endTime.toISOString().slice(0, 16),
+      });
+      
+      setCreateDialogOpen(true);
+    }
+    
+    setIsDraggingSelection(false);
+    setDragSelection(null);
+  };
+
   if (loading && selectedEmployees.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -503,12 +541,37 @@ export default function Calendar() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Color Legend */}
+          {selectedEmployeeData.length > 0 && (
+            <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
+              <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Employee Color Legend</h3>
+              <div className="flex flex-wrap gap-3">
+                {selectedEmployeeData.map((employee, idx) => (
+                  <div key={employee.id} className="flex items-center gap-2">
+                    <div 
+                      className="w-4 h-4 rounded border-2 border-white shadow-sm"
+                      style={{ backgroundColor: getEmployeeEventColor(employee.id) }}
+                    />
+                    <span className="text-sm font-medium">{employee.full_name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {selectedEmployeeData.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               Select employees to view their calendars
             </div>
           ) : (
-            <div className="border rounded-lg overflow-auto">
+            <div 
+              className="border rounded-lg overflow-auto"
+              onMouseLeave={() => {
+                if (isDraggingSelection) {
+                  handleSelectionEnd();
+                }
+              }}
+            >
               <div className="min-w-max">
                 {/* Header with Days and Employees */}
                 <div className="sticky top-0 z-20 bg-background border-b">
@@ -591,31 +654,48 @@ export default function Calendar() {
                                                      slotIndex >= Math.min(hoverSlot.startIndex, hoverSlot.slotIndex) &&
                                                      slotIndex <= Math.max(hoverSlot.startIndex, hoverSlot.slotIndex);
 
+                              const isInDragSelection = dragSelection?.employeeId === employee.id &&
+                                                        isSameDay(dragSelection.day, day) &&
+                                                        slotIndex >= Math.min(dragSelection.startIndex, dragSelection.endIndex) &&
+                                                        slotIndex <= Math.max(dragSelection.startIndex, dragSelection.endIndex);
+
                               return (
                                 <div
                                   key={`${employee.id}-${slotIndex}`}
                                   className={`h-12 ${getEmployeeColor(empIdx)} hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative ${
                                     isDragOverSlot ? 'ring-2 ring-primary ring-inset' : ''
-                                  } ${isInHoverRange ? 'bg-accent/50' : ''}`}
-                                  onClick={() => handleSlotClick(employee.id, day, slotIndex)}
+                                  } ${isInHoverRange ? 'bg-accent/50' : ''} ${isInDragSelection ? 'bg-primary/20 ring-2 ring-primary ring-inset' : ''}`}
+                                  onClick={() => !isDraggingSelection && handleSlotClick(employee.id, day, slotIndex)}
                                   onDragOver={(e) => handleDragOver(e, employee.id, day, slotIndex)}
                                   onDragLeave={handleDragLeave}
                                   onDrop={(e) => handleDrop(e, employee.id, day, slotIndex)}
-                                  onMouseDown={() => handleSlotHover(employee.id, day, slotIndex)}
-                                  onMouseEnter={() => hoverSlot && handleSlotHover(employee.id, day, slotIndex, hoverSlot.startIndex)}
-                                  onMouseLeave={() => setHoverSlot(null)}
+                                  onMouseDown={(e) => {
+                                    if (e.button === 0 && !resizingEvent) {
+                                      handleSelectionStart(employee.id, day, slotIndex);
+                                    }
+                                  }}
+                                  onMouseEnter={() => {
+                                    if (isDraggingSelection) {
+                                      handleSelectionMove(employee.id, day, slotIndex);
+                                    } else if (hoverSlot) {
+                                      handleSlotHover(employee.id, day, slotIndex, hoverSlot.startIndex);
+                                    }
+                                  }}
+                                  onMouseLeave={() => !isDraggingSelection && setHoverSlot(null)}
                                   onMouseMove={(e) => resizingEvent && handleResizeMove(e, employee.id, day, slotIndex)}
                                   onMouseUp={() => {
                                     if (resizingEvent) {
                                       handleResizeEnd(employee.id, day, slotIndex);
+                                    } else if (isDraggingSelection) {
+                                      handleSelectionEnd();
                                     }
                                     setHoverSlot(null);
                                   }}
                                 >
-                                  {isHoverSlot && hoverSlot && (
+                                  {isInDragSelection && dragSelection && slotIndex === Math.min(dragSelection.startIndex, dragSelection.endIndex) && (
                                     <div className="absolute inset-0 flex items-center justify-center z-[5] pointer-events-none">
-                                      <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded text-xs font-medium shadow-lg whitespace-nowrap">
-                                        {getTimeRangeForHover(hoverSlot.startIndex, slotIndex)}
+                                      <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded text-xs font-semibold shadow-lg whitespace-nowrap">
+                                        {getTimeRangeForHover(Math.min(dragSelection.startIndex, dragSelection.endIndex), Math.max(dragSelection.startIndex, dragSelection.endIndex))}
                                       </div>
                                     </div>
                                   )}
@@ -706,23 +786,11 @@ export default function Calendar() {
             </div>
           )}
 
-          {/* Legend */}
+          {/* Tips */}
           {selectedEmployeeData.length > 0 && (
             <div className="mt-4">
-              <div className="flex flex-wrap gap-3 items-center">
-                <span className="text-sm font-medium text-muted-foreground">Employees:</span>
-                {selectedEmployeeData.map((employee, idx) => (
-                  <Badge
-                    key={employee.id}
-                    variant="outline"
-                    className={`${getEmployeeColor(idx)}`}
-                  >
-                    {employee.full_name}
-                  </Badge>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                💡 Click and drag across time slots to see time ranges • Right-click events to copy • Drag events to move • Drag edges to resize
+              <p className="text-xs text-muted-foreground">
+                💡 Click and drag to select time block for new appointment • Right-click events to copy • Drag events to move • Drag edges to resize
               </p>
             </div>
           )}
