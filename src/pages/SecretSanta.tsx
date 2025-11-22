@@ -2,13 +2,10 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Gift } from 'lucide-react';
-import { EventCard } from '@/components/secret-santa/EventCard';
+import { Loader2 } from 'lucide-react';
 import { WishlistManager } from '@/components/secret-santa/WishlistManager';
 import { AssignmentReveal } from '@/components/secret-santa/AssignmentReveal';
 import { AdminControls } from '@/components/secret-santa/AdminControls';
-import { ParticipantsList } from '@/components/secret-santa/ParticipantsList';
 
 export default function SecretSanta() {
   const { user } = useAuth();
@@ -86,75 +83,45 @@ export default function SecretSanta() {
     );
   }
 
-  if (!activeEvent) {
+  if (!activeEvent || !participation) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Secret Santa</h1>
-          <p className="text-muted-foreground">
-            Join the fun of Secret Santa gift exchange!
+        <div className="text-center py-12">
+          <h1 className="text-3xl font-bold mb-4">Secret Santa</h1>
+          <p className="text-muted-foreground mb-8">
+            {!activeEvent ? 'No active Secret Santa event at the moment.' : 'You need to join the event to participate.'}
           </p>
+          {isAdmin && <AdminControls onEventCreated={loadActiveEvent} />}
         </div>
-
-        {isAdmin ? (
-          <AdminControls onEventCreated={loadActiveEvent} />
-        ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gift className="h-5 w-5" />
-                No Active Event
-              </CardTitle>
-              <CardDescription>
-                There is no active Secret Santa event at the moment. Check back later!
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Secret Santa</h1>
-        <p className="text-muted-foreground">
-          Join the fun of Secret Santa gift exchange!
-        </p>
-      </div>
-
-      <EventCard 
-        event={activeEvent} 
-        participation={participation}
-        onUpdate={loadActiveEvent}
-      />
-
-      {participation && (
-        <>
-          <WishlistManager 
-            eventId={activeEvent.id}
-            userId={user?.id || ''}
-          />
-
-          {assignment && activeEvent.reveal_enabled && (
-            <AssignmentReveal 
-              assignment={assignment}
-              eventId={activeEvent.id}
-            />
-          )}
-        </>
-      )}
-
-      {isAdmin && (
-        <>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Secret Santa</h1>
+        {isAdmin && (
           <AdminControls 
             event={activeEvent}
             onEventUpdated={loadActiveEvent}
           />
-          <ParticipantsList eventId={activeEvent.id} />
-        </>
-      )}
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <WishlistManager 
+          eventId={activeEvent.id}
+          userId={user?.id || ''}
+        />
+
+        {assignment && activeEvent.reveal_enabled && (
+          <AssignmentReveal 
+            assignment={assignment}
+            eventId={activeEvent.id}
+          />
+        )}
+      </div>
     </div>
   );
 }
