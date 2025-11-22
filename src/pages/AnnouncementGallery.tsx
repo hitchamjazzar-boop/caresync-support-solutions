@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Award, Cake, Calendar, Loader2, ArrowLeft } from 'lucide-react';
+import { Award, Cake, Calendar, Loader2, ArrowLeft, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnnouncementReactions } from '@/components/announcements/AnnouncementReactions';
@@ -34,6 +34,7 @@ export default function AnnouncementGallery() {
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
   const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightedRef = useRef<HTMLDivElement>(null);
@@ -143,6 +144,45 @@ export default function AnnouncementGallery() {
     }
   };
 
+  const markAllAsRead = async () => {
+    if (!user || announcements.length === 0) return;
+
+    setMarkingAllRead(true);
+    try {
+      // Get all unread announcement IDs
+      const unreadIds = announcements
+        .map(a => a.id)
+        .filter(id => !readAnnouncementIds.has(id));
+
+      if (unreadIds.length === 0) {
+        setMarkingAllRead(false);
+        return;
+      }
+
+      // Insert read records for all unread announcements
+      const readRecords = unreadIds.map(announcementId => ({
+        user_id: user.id,
+        announcement_id: announcementId,
+        read_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase
+        .from('announcement_reads')
+        .upsert(readRecords, {
+          onConflict: 'user_id,announcement_id',
+        });
+
+      if (error) throw error;
+
+      // Update local state
+      setReadAnnouncementIds(new Set([...readAnnouncementIds, ...unreadIds]));
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    } finally {
+      setMarkingAllRead(false);
+    }
+  };
+
   // Group announcements by month/year
   const groupedAnnouncements = announcements.reduce((acc, announcement) => {
     const monthYear = format(new Date(announcement.created_at), 'MMMM yyyy');
@@ -174,14 +214,37 @@ export default function AnnouncementGallery() {
         </Button>
       </div>
 
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Calendar className="h-8 w-8" />
-          Announcement Timeline
-        </h1>
-        <p className="text-muted-foreground">
-          Browse all Employee of the Month and Birthday celebrations
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Calendar className="h-8 w-8" />
+            Announcement Timeline
+          </h1>
+          <p className="text-muted-foreground">
+            Browse all Employee of the Month and Birthday celebrations
+          </p>
+        </div>
+        {user && announcements.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={markAllAsRead}
+            disabled={markingAllRead || announcements.every(a => readAnnouncementIds.has(a.id))}
+            className="gap-2"
+          >
+            {markingAllRead ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Marking...
+              </>
+            ) : (
+              <>
+                <CheckCheck className="h-4 w-4" />
+                Mark All Read
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       {Object.keys(groupedAnnouncements).length === 0 ? (
