@@ -238,12 +238,11 @@ export default function Calendar() {
       const startDate = viewMode === 'day' ? startOfDay(currentDate) : weekStart;
       const endDate = viewMode === 'day' ? addDays(startDate, 1) : weekEnd;
 
-      const { data, error } = await supabase
-        .from('calendar_events')
-        .select('*')
-        .gte('start_time', startDate.toISOString())
-        .lte('end_time', endDate.toISOString())
-        .order('start_time', { ascending: true });
+    const { data, error } = await supabase
+      .from('calendar_events')
+      .select('*')
+      .or(`and(is_recurring.eq.false,start_time.gte.${startDate.toISOString()},end_time.lte.${endDate.toISOString()}),and(is_recurring.eq.true,start_time.lte.${endDate.toISOString()},or(recurrence_end_date.is.null,recurrence_end_date.gte.${startDate.toISOString()}))`)
+      .order('start_time', { ascending: true });
 
       if (error) throw error;
 
@@ -274,18 +273,10 @@ export default function Calendar() {
   };
 
   const handleEmployeeSelectionChange = (employeeIds: string[]) => {
-    if (viewMode === 'week' && employeeIds.length > 3) {
-      toast.error('Week view is limited to 3 employees. Switch to Day view for more.');
-      return;
-    }
     setSelectedEmployees(employeeIds);
   };
 
   const handleViewModeChange = (mode: ViewMode) => {
-    if (mode === 'week' && selectedEmployees.length > 3) {
-      toast.error('Week view is limited to 3 employees. Please select fewer employees.');
-      return;
-    }
     setViewMode(mode);
   };
 
@@ -744,16 +735,6 @@ export default function Calendar() {
         </div>
       </div>
 
-      {selectedEmployees.length > 3 && viewMode === 'week' && (
-        <Card className="bg-warning/10 border-warning shrink-0">
-          <CardContent className="p-3 sm:p-4">
-            <p className="text-xs sm:text-sm text-warning-foreground">
-              ⚠️ Week view limited to 3 employees. Select fewer or switch to Day view.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <CardHeader className="shrink-0 pb-3 px-3 sm:px-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -858,7 +839,7 @@ export default function Calendar() {
                 {/* Header with Days and Employees */}
                 <div className="sticky top-0 z-20 bg-background border-b shrink-0">
                   <div className="grid" style={{ 
-                    gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 140}px, 1fr))` 
+                    gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 120}px, 1fr))` 
                   }}>
                     <div className="p-2 text-xs font-medium text-muted-foreground border-r bg-muted/50">
                       Time
@@ -914,7 +895,7 @@ export default function Calendar() {
                       key={slotIndex}
                       className="grid"
                       style={{ 
-                        gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 140}px, 1fr))`,
+                        gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 120}px, 1fr))`,
                         minHeight: '24px'
                       }}
                     >
