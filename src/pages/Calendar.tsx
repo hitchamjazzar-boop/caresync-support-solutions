@@ -12,6 +12,7 @@ import { EmployeeSelector } from '@/components/calendar/EmployeeSelector';
 import { EventContextMenu } from '@/components/calendar/EventContextMenu';
 import { MoveConfirmDialog } from '@/components/calendar/MoveConfirmDialog';
 import { ParticipantIndicators } from '@/components/calendar/ParticipantIndicators';
+import { UpcomingReminders } from '@/components/calendar/UpcomingReminders';
 import {
   Select,
   SelectContent,
@@ -70,8 +71,8 @@ export default function Calendar() {
     ? [startOfDay(currentDate)]
     : eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  // 15-minute slots from 6am to 6pm
-  const timeSlots = Array.from({ length: 48 }, (_, i) => {
+  // 15-minute slots from 6am to 10pm (16 hours = 64 slots)
+  const timeSlots = Array.from({ length: 64 }, (_, i) => {
     const hour = Math.floor(i / 4) + 6;
     const minute = (i % 4) * 15;
     return { 
@@ -476,11 +477,11 @@ export default function Calendar() {
     const minute = getMinutes(now);
     
     // Calendar starts at 6am (hour 6) and each slot is 15 minutes
-    if (hour < 6 || hour >= 18) return null;
+    if (hour < 6 || hour >= 22) return null;
     
     const minutesFromStart = (hour - 6) * 60 + minute;
     const slotHeight = 48; // Height of each slot in pixels
-    const totalMinutes = 12 * 60; // 12 hours total (6am to 6pm)
+    const totalMinutes = 16 * 60; // 16 hours total (6am to 10pm)
     const position = (minutesFromStart / totalMinutes) * (timeSlots.length * slotHeight);
     
     return position;
@@ -592,6 +593,9 @@ export default function Calendar() {
         </Card>
       )}
 
+      {/* Upcoming Reminders & Events */}
+      <UpcomingReminders />
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -615,15 +619,23 @@ export default function Calendar() {
             <div className="mb-4 p-4 bg-muted/30 rounded-lg border">
               <h3 className="text-sm font-semibold mb-3 text-muted-foreground">Employee Color Legend</h3>
               <div className="flex flex-wrap gap-3">
-                {selectedEmployeeData.map((employee, idx) => (
-                  <div key={employee.id} className="flex items-center gap-2">
-                    <div 
-                      className="w-4 h-4 rounded border-2 border-white shadow-sm"
-                      style={{ backgroundColor: getEmployeeEventColor(employee.id) }}
-                    />
-                    <span className="text-sm font-medium">{employee.full_name}</span>
-                  </div>
-                ))}
+                {selectedEmployeeData.map((employee) => {
+                  const employeeColor = getEmployeeEventColor(employee.id);
+                  return (
+                    <div key={employee.id} className="flex items-center gap-2">
+                      <div 
+                        className="w-4 h-4 rounded border-2 border-white shadow-sm"
+                        style={{ backgroundColor: employeeColor }}
+                      />
+                      <span 
+                        className="text-sm font-semibold"
+                        style={{ color: employeeColor }}
+                      >
+                        {employee.full_name}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -862,7 +874,7 @@ export default function Calendar() {
           {selectedEmployeeData.length > 0 && (
             <div className="mt-4">
               <p className="text-xs text-muted-foreground">
-                💡 Click and drag to select time block for new appointment • Right-click events to copy • Drag events to move • Drag edges to resize
+                💡 Click and drag to select time block (6 AM - 10 PM) • Right-click events to copy • Drag events to move • Drag edges to resize
               </p>
             </div>
           )}
