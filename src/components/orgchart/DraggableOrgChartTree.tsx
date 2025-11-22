@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Pencil, Trash2, User, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface OrgChartNode {
   id: string;
@@ -86,12 +87,12 @@ function NodeCard({
               <GripVertical className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
             </div>
           )}
-          <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
-            <AvatarImage src={node.profiles.photo_url || undefined} />
-            <AvatarFallback>
-              {node.profiles.full_name?.charAt(0) || <User className="h-3 w-3 sm:h-4 sm:w-4" />}
-            </AvatarFallback>
-          </Avatar>
+          <ProfileAvatarWithBadges
+            userId={node.user_id}
+            photoUrl={node.profiles.photo_url}
+            fullName={node.profiles.full_name}
+            className="h-8 w-8 sm:h-10 sm:w-10"
+          />
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-xs sm:text-sm truncate">{node.profiles.full_name}</h3>
             <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
