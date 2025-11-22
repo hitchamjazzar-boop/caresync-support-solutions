@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Award, Cake, Calendar, Loader2, ArrowLeft } from 'lucide-react';
@@ -9,6 +8,7 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { AnnouncementReactions } from '@/components/announcements/AnnouncementReactions';
 import { AnnouncementComments } from '@/components/announcements/AnnouncementComments';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface Announcement {
   id: string;
@@ -168,10 +168,12 @@ export default function AnnouncementGallery() {
                         <div className="flex gap-3">
                           {profile && (
                             <div className="flex items-center gap-2">
-                              <Avatar className="h-12 w-12">
-                                <AvatarImage src={profile.photo_url || undefined} />
-                                <AvatarFallback>{profile.full_name.charAt(0)}</AvatarFallback>
-                              </Avatar>
+                              <ProfileAvatarWithBadges
+                                userId={profile.id}
+                                photoUrl={profile.photo_url}
+                                fullName={profile.full_name}
+                                className="h-12 w-12"
+                              />
                               <div>
                                 <p className="font-medium text-sm">{profile.full_name}</p>
                                 <p className="text-xs text-muted-foreground">{profile.position || 'N/A'}</p>
