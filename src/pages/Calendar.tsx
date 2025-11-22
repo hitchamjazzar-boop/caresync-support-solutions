@@ -314,7 +314,7 @@ export default function Calendar() {
     }
   };
 
-  const getEventsForEmployeeSlot = (employeeId: string, day: Date, slotIndex: number) => {
+  const getEventsForDaySlot = (day: Date, slotIndex: number) => {
     const slot = timeSlots[slotIndex];
     const slotStart = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
     const slotEnd = new Date(slotStart);
@@ -324,14 +324,23 @@ export default function Calendar() {
       const eventStart = new Date(event.start_time);
       const eventEnd = new Date(event.end_time);
       
-      const isForEmployee = event.is_public || event.target_users?.includes(employeeId);
+      const isForSelectedEmployee = selectedEmployees.some(empId => 
+        event.is_public || event.target_users?.includes(empId)
+      );
       
-      return isForEmployee && (
+      return isForSelectedEmployee && (
         (eventStart >= slotStart && eventStart < slotEnd) ||
         (eventEnd > slotStart && eventEnd <= slotEnd) ||
         (eventStart <= slotStart && eventEnd >= slotEnd)
       );
     });
+  };
+
+  const getEventOwnerEmployee = (event: CalendarEvent) => {
+    if (event.target_users && event.target_users.length > 0) {
+      return selectedEmployeeData.find(e => event.target_users.includes(e.id));
+    }
+    return null;
   };
 
   const calculateEventHeight = (event: CalendarEvent) => {
@@ -351,6 +360,18 @@ export default function Calendar() {
       'bg-accent/50 border-border',
       'bg-muted/70 border-border',
       'bg-accent/60 border-border',
+    ];
+    return colors[index % colors.length];
+  };
+
+  const getEmployeeEventColor = (employeeId: string) => {
+    const index = selectedEmployeeData.findIndex(e => e.id === employeeId);
+    const colors = [
+      'hsl(var(--chart-1))',
+      'hsl(var(--chart-2))',
+      'hsl(var(--chart-3))',
+      'hsl(var(--chart-4))',
+      'hsl(var(--chart-5))',
     ];
     return colors[index % colors.length];
   };
@@ -555,15 +576,9 @@ export default function Calendar() {
                         {slot.label}
                       </div>
                       {displayDays.map(day => (
-                        <div key={`${day.toISOString()}-${slotIndex}`} className="border-r border-b last:border-r-0">
+                        <div key={`${day.toISOString()}-${slotIndex}`} className="border-r border-b last:border-r-0 relative">
                           <div className="grid h-full" style={{ gridTemplateColumns: `repeat(${selectedEmployeeData.length}, 1fr)` }}>
                             {selectedEmployeeData.map((employee, empIdx) => {
-                              const slotEvents = getEventsForEmployeeSlot(employee.id, day, slotIndex);
-                              const isFirstSlotForEvent = (event: CalendarEvent) => {
-                                const eventStart = new Date(event.start_time);
-                                const slotStart = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
-                                return Math.abs(eventStart.getTime() - slotStart.getTime()) < 15 * 60 * 1000;
-                              };
                               const isDragOverSlot = dragOver?.employeeId === employee.id && 
                                                       isSameDay(dragOver.day, day) && 
                                                       dragOver.slotIndex === slotIndex;
@@ -579,7 +594,7 @@ export default function Calendar() {
                               return (
                                 <div
                                   key={`${employee.id}-${slotIndex}`}
-                                  className={`h-12 ${getEmployeeColor(empIdx)} hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative group ${
+                                  className={`h-12 ${getEmployeeColor(empIdx)} hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative ${
                                     isDragOverSlot ? 'ring-2 ring-primary ring-inset' : ''
                                   } ${isInHoverRange ? 'bg-accent/50' : ''}`}
                                   onClick={() => handleSlotClick(employee.id, day, slotIndex)}
@@ -604,59 +619,84 @@ export default function Calendar() {
                                       </div>
                                     </div>
                                   )}
-                                  {slotEvents.filter(isFirstSlotForEvent).map(event => {
-                                    const height = calculateEventHeight(event);
-                                    return (
-                                      <EventContextMenu
-                                        key={event.id}
-                                        event={event}
-                                        employees={employees}
-                                        currentDate={currentDate}
-                                        onEventCopied={fetchEvents}
-                                      >
-                                        <div
-                                          draggable
-                                          onDragStart={(e) => handleDragStart(e, event)}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedEvent(event);
-                                            setDetailsDialogOpen(true);
-                                          }}
-                                          className="absolute inset-x-0 text-xs p-2 rounded text-white hover:opacity-90 transition-opacity z-10 cursor-move border-2 border-transparent hover:border-white/30"
-                                          style={{
-                                            backgroundColor: event.color,
-                                            height: `${height * 48}px`,
-                                          }}
-                                          title={`${event.title} - Right-click to copy, drag to move`}
-                                        >
-                                          {/* Resize Handle Top */}
-                                          <div
-                                            className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onMouseDown={(e) => handleResizeStart(e, event, 'top')}
-                                            onClick={(e) => e.stopPropagation()}
-                                            title="Drag to resize start time"
-                                          />
-                                          
-                                          <div className="font-medium truncate">{event.title}</div>
-                                          {event.location && height > 1 && (
-                                            <div className="text-[10px] opacity-90 truncate">{event.location}</div>
-                                          )}
-                                          
-                                          {/* Resize Handle Bottom */}
-                                          <div
-                                            className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onMouseDown={(e) => handleResizeStart(e, event, 'bottom')}
-                                            onClick={(e) => e.stopPropagation()}
-                                            title="Drag to resize end time"
-                                          />
-                                        </div>
-                                      </EventContextMenu>
-                                    );
-                                  })}
                                 </div>
                               );
                             })}
                           </div>
+                          {/* Events spanning full width */}
+                          {(() => {
+                            const dayEvents = getEventsForDaySlot(day, slotIndex);
+                            const isFirstSlotForEvent = (event: CalendarEvent) => {
+                              const eventStart = new Date(event.start_time);
+                              const slotStart = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
+                              return Math.abs(eventStart.getTime() - slotStart.getTime()) < 15 * 60 * 1000;
+                            };
+
+                            return dayEvents.filter(isFirstSlotForEvent).map(event => {
+                              const height = calculateEventHeight(event);
+                              const ownerEmployee = getEventOwnerEmployee(event);
+                              const employeeColor = ownerEmployee ? getEmployeeEventColor(ownerEmployee.id) : event.color;
+                              
+                              return (
+                                <EventContextMenu
+                                  key={event.id}
+                                  event={event}
+                                  employees={employees}
+                                  currentDate={currentDate}
+                                  onEventCopied={fetchEvents}
+                                >
+                                  <div
+                                    draggable
+                                    onDragStart={(e) => handleDragStart(e, event)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedEvent(event);
+                                      setDetailsDialogOpen(true);
+                                    }}
+                                    className="absolute inset-x-1 text-xs p-2 rounded-md text-white hover:opacity-90 transition-opacity z-10 cursor-move border-2 border-transparent hover:border-white/30 group shadow-md"
+                                    style={{
+                                      backgroundColor: employeeColor,
+                                      height: `${height * 48}px`,
+                                    }}
+                                    title={`${event.title}${ownerEmployee ? ` (${ownerEmployee.full_name})` : ''} - Right-click to copy, drag to move`}
+                                  >
+                                    {/* Resize Handle Top */}
+                                    <div
+                                      className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onMouseDown={(e) => handleResizeStart(e, event, 'top')}
+                                      onClick={(e) => e.stopPropagation()}
+                                      title="Drag to resize start time"
+                                    />
+                                    
+                                    <div className="flex items-center gap-2">
+                                      <div className="font-semibold truncate flex-1">{event.title}</div>
+                                      {ownerEmployee && (
+                                        <div className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded whitespace-nowrap">
+                                          {ownerEmployee.full_name.split(' ')[0]}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {event.location && height > 1 && (
+                                      <div className="text-[10px] opacity-90 truncate mt-0.5">{event.location}</div>
+                                    )}
+                                    {height > 2 && (
+                                      <div className="text-[10px] opacity-80 mt-0.5">
+                                        {format(new Date(event.start_time), 'h:mm a')} - {format(new Date(event.end_time), 'h:mm a')}
+                                      </div>
+                                    )}
+                                    
+                                    {/* Resize Handle Bottom */}
+                                    <div
+                                      className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onMouseDown={(e) => handleResizeStart(e, event, 'bottom')}
+                                      onClick={(e) => e.stopPropagation()}
+                                      title="Drag to resize end time"
+                                    />
+                                  </div>
+                                </EventContextMenu>
+                              );
+                            });
+                          })()}
                         </div>
                       ))}
                     </div>
