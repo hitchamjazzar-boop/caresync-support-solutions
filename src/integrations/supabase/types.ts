@@ -16,29 +16,35 @@ export type Database = {
     Tables: {
       achievement_types: {
         Row: {
+          category: string
           color: string
           created_at: string
           description: string
           icon: string
           id: string
+          is_active: boolean
           name: string
           points: number
         }
         Insert: {
+          category?: string
           color: string
           created_at?: string
           description: string
           icon: string
           id?: string
+          is_active?: boolean
           name: string
           points?: number
         }
         Update: {
+          category?: string
           color?: string
           created_at?: string
           description?: string
           icon?: string
           id?: string
+          is_active?: boolean
           name?: string
           points?: number
         }
@@ -273,27 +279,36 @@ export type Database = {
           achievement_type_id: string
           awarded_at: string
           awarded_by: string
+          awarded_date: string
           created_at: string
           id: string
+          is_visible: boolean
           notes: string | null
+          reason: string | null
           user_id: string
         }
         Insert: {
           achievement_type_id: string
           awarded_at?: string
           awarded_by: string
+          awarded_date?: string
           created_at?: string
           id?: string
+          is_visible?: boolean
           notes?: string | null
+          reason?: string | null
           user_id: string
         }
         Update: {
           achievement_type_id?: string
           awarded_at?: string
           awarded_by?: string
+          awarded_date?: string
           created_at?: string
           id?: string
+          is_visible?: boolean
           notes?: string | null
+          reason?: string | null
           user_id?: string
         }
         Relationships: [
