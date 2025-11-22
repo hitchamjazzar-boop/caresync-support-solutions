@@ -976,27 +976,31 @@ export default function Calendar() {
         </CardContent>
       </Card>
 
-      <CreateEventDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        onSuccess={() => {
-          fetchEvents();
-          setCreateDialogOpen(false);
-          setPrefilledData(null);
-        }}
-        prefilledData={prefilledData}
-      />
+      {createDialogOpen && (
+        <CreateEventDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          onSuccess={() => {
+            fetchEvents();
+            setCreateDialogOpen(false);
+            setPrefilledData(null);
+          }}
+          prefilledData={prefilledData}
+        />
+      )}
 
-      <EventDetailsDialog
-        open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
-        event={selectedEvent}
-        onUpdate={fetchEvents}
-        onDelete={() => {
-          fetchEvents();
-          setDetailsDialogOpen(false);
-        }}
-      />
+      {detailsDialogOpen && selectedEvent && (
+        <EventDetailsDialog
+          open={detailsDialogOpen}
+          onOpenChange={setDetailsDialogOpen}
+          event={selectedEvent}
+          onUpdate={fetchEvents}
+          onDelete={() => {
+            fetchEvents();
+            setDetailsDialogOpen(false);
+          }}
+        />
+      )}
 
       {pendingMove && (
         <MoveConfirmDialog
