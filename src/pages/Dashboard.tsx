@@ -203,10 +203,10 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-1">
           {isAdmin ? 'Admin overview of Care Sync operations' : 'Welcome to Care Sync'}
         </p>
       </div>
@@ -220,7 +220,7 @@ export default function Dashboard() {
       <FeaturedAnnouncements />
 
       {isAdmin ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((stat) => {
             const Icon = stat.icon;
             return (
@@ -230,7 +230,7 @@ export default function Dashboard() {
                   <Icon className={`h-4 w-4 ${stat.color}`} />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <div className="text-xl sm:text-2xl font-bold">{stat.value}</div>
                   <p className="text-xs text-muted-foreground">{stat.description}</p>
                 </CardContent>
               </Card>
@@ -238,15 +238,15 @@ export default function Dashboard() {
           })}
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Secret Santa Assignment */}
           <SecretSantaAssignment />
 
           {/* Payroll Available Banner */}
           {approvedPayroll.length > 0 ? (
             <Alert className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800">
-              <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
-              <AlertTitle className="text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
+              <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" />
+              <AlertTitle className="text-xl sm:text-2xl font-bold text-green-800 dark:text-green-200 mb-2">
                 💰 Latest Payroll Update
               </AlertTitle>
               <AlertDescription className="space-y-3">
@@ -254,14 +254,14 @@ export default function Dashboard() {
                   {approvedPayroll.map((payroll) => {
                     const isPaid = payroll.status === 'paid';
                     return (
-                      <div key={payroll.id} className={`flex items-center justify-between rounded-lg p-3 border ${
+                      <div key={payroll.id} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-lg p-3 border ${
                         isPaid 
                           ? 'bg-white dark:bg-gray-900 border-green-200 dark:border-green-800' 
                           : 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800'
                       }`}>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-semibold text-green-900 dark:text-green-100">
+                        <div className="flex-1 w-full">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <p className="font-semibold text-base sm:text-lg text-green-900 dark:text-green-100">
                               ₱{payroll.net_amount?.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                             {isPaid ? (
@@ -274,7 +274,7 @@ export default function Dashboard() {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-green-700 dark:text-green-400">
+                          <p className="text-xs sm:text-sm text-green-700 dark:text-green-400">
                             Period: {format(new Date(payroll.period_start), 'MMM dd')} - {format(new Date(payroll.period_end), 'MMM dd, yyyy')}
                           </p>
                           {payroll.payment_date && (
@@ -287,7 +287,7 @@ export default function Dashboard() {
                           size="sm" 
                           variant="outline"
                           onClick={() => navigate('/payroll')}
-                          className="ml-2"
+                          className="w-full sm:w-auto"
                         >
                           <Download className="h-4 w-4 mr-2" />
                           View Details

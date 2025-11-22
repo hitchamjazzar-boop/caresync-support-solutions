@@ -56,13 +56,13 @@ export default function Employees() {
   }, [user, isAdmin]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             {isAdmin ? 'Employee Management' : 'My Profile'}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
             {isAdmin
               ? 'Manage your team members and their information'
               : 'View your profile information'}
@@ -73,7 +73,7 @@ export default function Employees() {
         )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {employees.map((employee) => (
           <Card
             key={employee.id}
@@ -81,16 +81,16 @@ export default function Employees() {
             onClick={() => navigate(`/employees/${employee.id}`)}
           >
             <CardHeader className="pb-3">
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-3 sm:gap-4">
                 <ProfileAvatarWithBadges
                   userId={employee.id}
                   photoUrl={employee.photo_url}
                   fullName={employee.full_name}
-                  className="h-16 w-16"
+                  className="h-12 w-12 sm:h-16 sm:w-16 shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <CardTitle className="text-lg truncate">{employee.full_name}</CardTitle>
-                  <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                  <CardTitle className="text-base sm:text-lg truncate">{employee.full_name}</CardTitle>
+                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mt-1">
                     {employee.position || 'Staff'}
                   </p>
                 </div>

@@ -701,8 +701,8 @@ export default function Calendar() {
     : `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
 
   return (
-    <div className="flex flex-col h-full p-4 sm:p-6 gap-3">
-      <div className="flex items-center justify-between flex-wrap gap-3 shrink-0">
+    <div className="flex flex-col h-full gap-3 sm:gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
             <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
@@ -712,9 +712,9 @@ export default function Calendar() {
             Schedule and view team availability
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap w-full sm:w-auto">
           <Select value={viewMode} onValueChange={(v) => handleViewModeChange(v as ViewMode)}>
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-[120px] sm:w-32">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -730,17 +730,18 @@ export default function Calendar() {
             console.log('🟢 Plus Button Click - Opening Create Dialog (no prefill)');
             setPrefilledData(null);
             setCreateDialogOpen(true);
-          }}>
+          }} className="flex-1 sm:flex-initial">
             <Plus className="h-4 w-4 mr-2" />
-            Add Event
+            <span className="hidden sm:inline">Add Event</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>
 
       {selectedEmployees.length > 3 && viewMode === 'week' && (
         <Card className="bg-warning/10 border-warning shrink-0">
-          <CardContent className="p-2">
-            <p className="text-xs text-warning-foreground">
+          <CardContent className="p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-warning-foreground">
               ⚠️ Week view limited to 3 employees. Select fewer or switch to Day view.
             </p>
           </CardContent>
@@ -748,9 +749,9 @@ export default function Calendar() {
       )}
 
       <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <CardHeader className="shrink-0 pb-3">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-3 sm:gap-4">
+        <CardHeader className="shrink-0 pb-3 px-3 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto overflow-x-auto">
               <Button variant="outline" size="sm" onClick={() => handleNavigate('prev')}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -758,12 +759,13 @@ export default function Calendar() {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
+                    size="sm"
                     className={cn(
-                      "min-w-[200px] justify-start text-left font-semibold",
+                      "min-w-[180px] sm:min-w-[200px] justify-start text-left font-semibold text-xs sm:text-sm",
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateRangeText}
+                    <CalendarIcon className="mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="truncate">{dateRangeText}</span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -787,7 +789,7 @@ export default function Calendar() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-3 min-h-0 overflow-hidden">
+        <CardContent className="flex-1 flex flex-col p-2 sm:p-3 min-h-0 overflow-hidden">
           {/* Legends - Collapsible */}
           {selectedEmployeeData.length > 0 && (
             <details className="mb-2 shrink-0" open>
