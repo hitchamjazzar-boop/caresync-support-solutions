@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { ClockInOut } from '@/components/attendance/ClockInOut';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 import { MemoAlert } from '@/components/memos/MemoAlert';
+import { FeaturedAnnouncements } from '@/components/dashboard/FeaturedAnnouncements';
 import { format } from 'date-fns';
 
 export default function Dashboard() {
@@ -169,6 +170,8 @@ export default function Dashboard() {
       <AnnouncementBanner />
 
       <MemoAlert />
+
+      <FeaturedAnnouncements />
 
       {isAdmin ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

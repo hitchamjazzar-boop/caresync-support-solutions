@@ -15,6 +15,9 @@ const profileSchema = z.object({
   full_name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
   contact_email: z.string().trim().email('Invalid email').max(255, 'Email must be less than 255 characters').optional().or(z.literal('')),
   contact_phone: z.string().trim().max(20, 'Phone must be less than 20 characters').optional().or(z.literal('')),
+  address: z.string().trim().max(200, 'Address must be less than 200 characters').optional().or(z.literal('')),
+  birthday: z.string().optional().or(z.literal('')),
+  zodiac_sign: z.string().trim().max(20, 'Zodiac sign must be less than 20 characters').optional().or(z.literal('')),
 });
 
 const passwordSchema = z.object({
@@ -32,6 +35,9 @@ interface ProfileData {
   department: string | null;
   contact_email: string | null;
   contact_phone: string | null;
+  address: string | null;
+  birthday: string | null;
+  zodiac_sign: string | null;
 }
 
 export default function Profile() {
@@ -46,6 +52,9 @@ export default function Profile() {
     full_name: '',
     contact_email: '',
     contact_phone: '',
+    address: '',
+    birthday: '',
+    zodiac_sign: '',
   });
   const [passwordData, setPasswordData] = useState({
     newPassword: '',
@@ -78,6 +87,9 @@ export default function Profile() {
           full_name: data.full_name || '',
           contact_email: data.contact_email || '',
           contact_phone: data.contact_phone || '',
+          address: data.address || '',
+          birthday: data.birthday || '',
+          zodiac_sign: data.zodiac_sign || '',
         });
       }
     } catch (error: any) {
@@ -132,6 +144,9 @@ export default function Profile() {
           full_name: formData.full_name,
           contact_email: formData.contact_email || null,
           contact_phone: formData.contact_phone || null,
+          address: formData.address || null,
+          birthday: formData.birthday || null,
+          zodiac_sign: formData.zodiac_sign || null,
         })
         .eq('id', user?.id);
 
@@ -435,6 +450,54 @@ export default function Profile() {
                   />
                   {errors.contact_phone && (
                     <p className="text-sm text-destructive">{errors.contact_phone}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) =>
+                      setFormData({ ...formData, address: e.target.value })
+                    }
+                    placeholder="Enter your full address"
+                    className={errors.address ? 'border-destructive' : ''}
+                  />
+                  {errors.address && (
+                    <p className="text-sm text-destructive">{errors.address}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="birthday">Birthday</Label>
+                  <Input
+                    id="birthday"
+                    type="date"
+                    value={formData.birthday}
+                    onChange={(e) =>
+                      setFormData({ ...formData, birthday: e.target.value })
+                    }
+                    className={errors.birthday ? 'border-destructive' : ''}
+                  />
+                  {errors.birthday && (
+                    <p className="text-sm text-destructive">{errors.birthday}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="zodiac_sign">Zodiac Sign</Label>
+                  <Input
+                    id="zodiac_sign"
+                    value={formData.zodiac_sign}
+                    onChange={(e) =>
+                      setFormData({ ...formData, zodiac_sign: e.target.value })
+                    }
+                    placeholder="e.g., Aries, Taurus, etc."
+                    className={errors.zodiac_sign ? 'border-destructive' : ''}
+                  />
+                  {errors.zodiac_sign && (
+                    <p className="text-sm text-destructive">{errors.zodiac_sign}</p>
                   )}
                 </div>
               </div>
