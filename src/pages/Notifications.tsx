@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAnnouncementVisibility } from '@/hooks/useAnnouncementVisibility';
 import { triggerBirthdayConfetti, triggerAchievementConfetti } from '@/lib/confetti';
-import { playBirthdaySound, playCelebrationSound } from '@/lib/sounds';
+import { playBirthdaySound, playCelebrationSound, playNotificationSound } from '@/lib/sounds';
 
 interface AchievementType {
   name: string;
@@ -61,6 +61,8 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [markingAllRead, setMarkingAllRead] = useState(false);
   const navigate = useNavigate();
+  const previousNotificationCountRef = useRef<number>(0);
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     if (user) {
@@ -226,6 +228,19 @@ export default function Notifications() {
       );
 
       setNotifications(allNotifications);
+
+      // Play notification sound for new notifications (not on initial load)
+      if (!isInitialLoadRef.current) {
+        const currentUnreadCount = allNotifications.filter(n => !n.is_read).length;
+        if (currentUnreadCount > previousNotificationCountRef.current) {
+          playNotificationSound();
+        }
+        previousNotificationCountRef.current = currentUnreadCount;
+      } else {
+        // After initial load, track the count
+        previousNotificationCountRef.current = allNotifications.filter(n => !n.is_read).length;
+        isInitialLoadRef.current = false;
+      }
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {

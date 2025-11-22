@@ -67,3 +67,29 @@ export const playBirthdaySound = () => {
     console.error('Error playing birthday sound:', error);
   }
 };
+
+export const playNotificationSound = () => {
+  try {
+    const ctx = createAudioContext();
+    const now = ctx.currentTime;
+    
+    // Simple two-tone notification sound
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.setValueAtTime(1000, now + 0.1);
+    
+    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+    
+    osc.start(now);
+    osc.stop(now + 0.2);
+  } catch (error) {
+    console.error('Error playing notification sound:', error);
+  }
+};
