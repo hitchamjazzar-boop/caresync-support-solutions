@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Award, Cake, Calendar, Loader2, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnnouncementReactions } from '@/components/announcements/AnnouncementReactions';
 import { AnnouncementComments } from '@/components/announcements/AnnouncementComments';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
@@ -32,10 +32,29 @@ export default function AnnouncementGallery() {
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightedRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchAnnouncements();
   }, []);
+
+  // Handle highlighted announcement from notifications
+  useEffect(() => {
+    const highlightId = searchParams.get('highlight');
+    if (highlightId && announcements.length > 0) {
+      // Scroll to highlighted announcement after a short delay to ensure rendering
+      setTimeout(() => {
+        highlightedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Remove highlight param after scrolling and showing
+        setTimeout(() => {
+          searchParams.delete('highlight');
+          setSearchParams(searchParams, { replace: true });
+        }, 3000);
+      }, 300);
+    }
+  }, [searchParams, announcements, setSearchParams]);
 
   const fetchAnnouncements = async () => {
     try {
@@ -139,9 +158,16 @@ export default function AnnouncementGallery() {
                     : null;
 
                   const isBirthday = announcement.title.toLowerCase().includes('birthday');
+                  const isHighlighted = searchParams.get('highlight') === announcement.id;
 
                   return (
-                    <Card key={announcement.id} className="overflow-hidden">
+                    <Card 
+                      key={announcement.id} 
+                      className={`overflow-hidden transition-all duration-300 ${
+                        isHighlighted ? 'ring-2 ring-primary shadow-lg animate-pulse' : ''
+                      }`}
+                      ref={isHighlighted ? highlightedRef : null}
+                    >
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between mb-2">
                           <Badge variant="outline" className="gap-1">

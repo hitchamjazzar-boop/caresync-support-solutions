@@ -144,7 +144,7 @@ export function NotificationBell() {
 
   const handleViewAll = () => {
     setOpen(false);
-    navigate('/');
+    navigate('/announcement-gallery');
   };
 
   const markAsRead = async (announcementId: string) => {
@@ -170,7 +170,8 @@ export function NotificationBell() {
 
   const handleAnnouncementClick = async (announcementId: string) => {
     await markAsRead(announcementId);
-    handleViewAll();
+    setOpen(false);
+    navigate(`/announcement-gallery?highlight=${announcementId}`);
   };
 
   return (
