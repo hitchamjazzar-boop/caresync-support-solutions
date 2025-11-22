@@ -151,18 +151,25 @@ export function NotificationBell() {
     if (!user) return;
 
     try {
-      await supabase
+      // Insert or update read status
+      const { error } = await supabase
         .from('announcement_reads')
         .upsert({
           user_id: user.id,
           announcement_id: announcementId,
+          read_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id,announcement_id',
-          ignoreDuplicates: true,
         });
+
+      if (error) {
+        console.error('Error marking announcement as read:', error);
+        return;
+      }
       
       // Refresh counts after marking as read
-      fetchUnreadCount();
+      await fetchUnreadCount();
+      await fetchRecentAnnouncements();
     } catch (error) {
       console.error('Error marking as read:', error);
     }
