@@ -94,12 +94,16 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
   });
 
   useEffect(() => {
+    console.log('🟡 CreateEventDialog useEffect triggered', { open, hasPrefilledData: !!prefilledData });
     if (open) {
+      console.log('🟡 CreateEventDialog fetching employees');
       fetchEmployees();
       if (prefilledData?.employeeId) {
+        console.log('🟡 CreateEventDialog setting prefilled attendee');
         setSelectedAttendees([prefilledData.employeeId]);
       }
       if (prefilledData?.startTime) {
+        console.log('🟡 CreateEventDialog setting prefilled times');
         const startDateTime = new Date(prefilledData.startTime);
         const endDateTime = prefilledData.endTime ? new Date(prefilledData.endTime) : startDateTime;
         

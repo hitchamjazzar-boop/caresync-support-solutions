@@ -52,6 +52,16 @@ export default function Calendar() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🔵 Calendar State Change:', {
+      createDialogOpen,
+      detailsDialogOpen,
+      hasSelectedEvent: !!selectedEvent,
+      selectedEventId: selectedEvent?.id,
+    });
+  }, [createDialogOpen, detailsDialogOpen, selectedEvent]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
@@ -189,6 +199,7 @@ export default function Calendar() {
   };
 
   const handleSlotClick = (employeeId: string, day: Date, slotIndex: number) => {
+    console.log('🟢 Slot Click - Opening Create Dialog');
     const slot = timeSlots[slotIndex];
     const startTime = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
     const endTime = new Date(startTime);
@@ -543,6 +554,7 @@ export default function Calendar() {
 
   const handleSelectionEnd = () => {
     if (isDraggingSelection && dragSelection) {
+      console.log('🟢 Drag Selection End - Opening Create Dialog');
       const startSlotIndex = Math.min(dragSelection.startIndex, dragSelection.endIndex);
       const endSlotIndex = Math.max(dragSelection.startIndex, dragSelection.endIndex);
       
@@ -605,6 +617,7 @@ export default function Calendar() {
             onSelectionChange={handleEmployeeSelectionChange}
           />
           <Button onClick={() => {
+            console.log('🟢 Plus Button Click - Opening Create Dialog (no prefill)');
             setPrefilledData(null);
             setCreateDialogOpen(true);
           }}>
@@ -856,10 +869,11 @@ export default function Calendar() {
                                   currentDate={currentDate}
                                   onEventCopied={fetchEvents}
                                 >
-                                  <div
+                                   <div
                                     draggable
                                     onDragStart={(e) => handleDragStart(e, event)}
                                     onClick={(e) => {
+                                      console.log('🟢 Event Click - Opening Details Dialog', event.id);
                                       e.stopPropagation();
                                       setSelectedEvent(event);
                                       setDetailsDialogOpen(true);
