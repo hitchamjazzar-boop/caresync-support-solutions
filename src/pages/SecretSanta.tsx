@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react';
 import { WishlistManager } from '@/components/secret-santa/WishlistManager';
 import { AssignmentReveal } from '@/components/secret-santa/AssignmentReveal';
 import { AdminControls } from '@/components/secret-santa/AdminControls';
+import { EventCard } from '@/components/secret-santa/EventCard';
 
 export default function SecretSanta() {
   const { user } = useAuth();
@@ -83,13 +84,13 @@ export default function SecretSanta() {
     );
   }
 
-  if (!activeEvent || !participation) {
+  if (!activeEvent) {
     return (
       <div className="space-y-6">
         <div className="text-center py-12">
           <h1 className="text-3xl font-bold mb-4">Secret Santa</h1>
           <p className="text-muted-foreground mb-8">
-            {!activeEvent ? 'No active Secret Santa event at the moment.' : 'You need to join the event to participate.'}
+            No active Secret Santa event at the moment.
           </p>
           {isAdmin && <AdminControls onEventCreated={loadActiveEvent} />}
         </div>
@@ -109,19 +110,27 @@ export default function SecretSanta() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <WishlistManager 
-          eventId={activeEvent.id}
-          userId={user?.id || ''}
-        />
+      <EventCard 
+        event={activeEvent}
+        participation={participation}
+        onUpdate={loadActiveEvent}
+      />
 
-        {assignment && activeEvent.reveal_enabled && (
-          <AssignmentReveal 
-            assignment={assignment}
+      {participation && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <WishlistManager 
             eventId={activeEvent.id}
+            userId={user?.id || ''}
           />
-        )}
-      </div>
+
+          {assignment && activeEvent.reveal_enabled && (
+            <AssignmentReveal 
+              assignment={assignment}
+              eventId={activeEvent.id}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
