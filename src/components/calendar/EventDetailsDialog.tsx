@@ -143,14 +143,18 @@ export function EventDetailsDialog({
   const handleDelete = async () => {
     try {
       setLoading(true);
+      
+      // Extract base event ID for recurring instances (format: uuid_timestamp)
+      const baseEventId = event.id.includes('_') ? event.id.split('_')[0] : event.id;
+      
       const { error } = await supabase
         .from('calendar_events')
         .delete()
-        .eq('id', event.id);
+        .eq('id', baseEventId);
 
       if (error) throw error;
 
-      toast.success('Event deleted successfully');
+      toast.success(event.is_recurring ? 'Recurring event series deleted successfully' : 'Event deleted successfully');
       onDelete();
     } catch (error: any) {
       console.error('Error deleting event:', error);
@@ -397,7 +401,10 @@ export function EventDetailsDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Event</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this event? This action cannot be undone.
+              {event.is_recurring 
+                ? 'This is a recurring event. Deleting it will remove all instances of this event. This action cannot be undone.'
+                : 'Are you sure you want to delete this event? This action cannot be undone.'
+              }
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -407,7 +414,7 @@ export function EventDetailsDialog({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={loading}
             >
-              Delete
+              {loading ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
