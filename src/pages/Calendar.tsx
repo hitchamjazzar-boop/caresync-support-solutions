@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { CreateEventDialog } from '@/components/calendar/CreateEventDialog';
 import { EventDetailsDialog } from '@/components/calendar/EventDetailsDialog';
 import { EmployeeSelector } from '@/components/calendar/EmployeeSelector';
+import { EventContextMenu } from '@/components/calendar/EventContextMenu';
 import {
   Select,
   SelectContent,
@@ -50,7 +51,9 @@ export default function Calendar() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
+  const [resizingEvent, setResizingEvent] = useState<{ event: CalendarEvent; direction: 'top' | 'bottom' } | null>(null);
   const [dragOver, setDragOver] = useState<{ employeeId: string; day: Date; slotIndex: number } | null>(null);
+  const [hoverSlot, setHoverSlot] = useState<{ employeeId: string; day: Date; slotIndex: number } | null>(null);
   const [prefilledData, setPrefilledData] = useState<any>(null);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -151,7 +154,6 @@ export default function Calendar() {
   };
 
   const handleEmployeeSelectionChange = (employeeIds: string[]) => {
-    // Enforce limits
     if (viewMode === 'week' && employeeIds.length > 3) {
       toast.error('Week view is limited to 3 employees. Switch to Day view for more.');
       return;
@@ -206,15 +208,12 @@ export default function Calendar() {
       const slot = timeSlots[slotIndex];
       const newStartTime = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
       
-      // Calculate duration of original event
       const originalStart = new Date(draggedEvent.start_time);
       const originalEnd = new Date(draggedEvent.end_time);
       const durationMs = originalEnd.getTime() - originalStart.getTime();
       
-      // Apply same duration to new start time
       const newEndTime = new Date(newStartTime.getTime() + durationMs);
 
-      // Update target_users to include the new employee if not already
       let newTargetUsers = draggedEvent.target_users || [];
       if (!newTargetUsers.includes(employeeId)) {
         newTargetUsers = [employeeId];
@@ -238,6 +237,69 @@ export default function Calendar() {
       toast.error('Failed to move event');
     } finally {
       setDraggedEvent(null);
+    }
+  };
+
+  const handleResizeStart = (e: React.MouseEvent, event: CalendarEvent, direction: 'top' | 'bottom') => {
+    e.stopPropagation();
+    setResizingEvent({ event, direction });
+  };
+
+  const handleResizeMove = (e: React.MouseEvent, employeeId: string, day: Date, slotIndex: number) => {
+    if (!resizingEvent) return;
+
+    const slot = timeSlots[slotIndex];
+    const targetTime = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
+
+    if (resizingEvent.direction === 'bottom') {
+      // Resizing end time
+      const startTime = new Date(resizingEvent.event.start_time);
+      if (targetTime > startTime) {
+        setDragOver({ employeeId, day, slotIndex });
+      }
+    } else {
+      // Resizing start time
+      const endTime = new Date(resizingEvent.event.end_time);
+      if (targetTime < endTime) {
+        setDragOver({ employeeId, day, slotIndex });
+      }
+    }
+  };
+
+  const handleResizeEnd = async (employeeId: string, day: Date, slotIndex: number) => {
+    if (!resizingEvent) return;
+
+    try {
+      const slot = timeSlots[slotIndex];
+      const targetTime = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
+      
+      if (resizingEvent.direction === 'bottom') {
+        // Add 15 minutes to include the slot
+        targetTime.setMinutes(targetTime.getMinutes() + 15);
+        
+        const { error } = await supabase
+          .from('calendar_events')
+          .update({ end_time: targetTime.toISOString() })
+          .eq('id', resizingEvent.event.id);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('calendar_events')
+          .update({ start_time: targetTime.toISOString() })
+          .eq('id', resizingEvent.event.id);
+
+        if (error) throw error;
+      }
+
+      toast.success('Event resized successfully');
+      fetchEvents();
+    } catch (error: any) {
+      console.error('Error resizing event:', error);
+      toast.error('Failed to resize event');
+    } finally {
+      setResizingEvent(null);
+      setDragOver(null);
     }
   };
 
@@ -290,6 +352,11 @@ export default function Calendar() {
     } else {
       setCurrentDate(viewMode === 'day' ? addDays(currentDate, 1) : addWeeks(currentDate, 1));
     }
+  };
+
+  const getTimeForSlot = (slotIndex: number) => {
+    const slot = timeSlots[slotIndex];
+    return format(setMinutes(setHours(new Date(), slot.hour), slot.minute), 'h:mm a');
   };
 
   if (loading && selectedEmployees.length === 0) {
@@ -379,7 +446,7 @@ export default function Calendar() {
                 {/* Header with Days and Employees */}
                 <div className="sticky top-0 z-20 bg-background border-b">
                   <div className="grid" style={{ 
-                    gridTemplateColumns: `80px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 120}px, 1fr))` 
+                    gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 140}px, 1fr))` 
                   }}>
                     <div className="p-2 text-xs font-medium text-muted-foreground border-r bg-muted/50">
                       Time
@@ -389,11 +456,11 @@ export default function Calendar() {
                         key={day.toISOString()}
                         className={`border-r last:border-r-0 ${isToday(day) ? 'bg-primary/5' : 'bg-muted/50'}`}
                       >
-                        <div className="p-2 text-center border-b">
+                        <div className="p-3 text-center border-b">
                           <div className="text-xs font-medium text-muted-foreground">
                             {format(day, 'EEE')}
                           </div>
-                          <div className={`text-lg font-semibold ${isToday(day) ? 'text-primary' : ''}`}>
+                          <div className={`text-2xl font-semibold ${isToday(day) ? 'text-primary' : ''}`}>
                             {format(day, 'd')}
                           </div>
                         </div>
@@ -401,10 +468,10 @@ export default function Calendar() {
                           {selectedEmployeeData.map((employee, empIdx) => (
                             <div
                               key={employee.id}
-                              className={`p-2 text-center text-xs font-medium border-r last:border-r-0 truncate ${getEmployeeColor(empIdx)}`}
+                              className={`p-2 text-center text-sm font-medium border-r last:border-r-0 truncate ${getEmployeeColor(empIdx)}`}
                               title={employee.full_name}
                             >
-                              {employee.full_name.split(' ')[0]}
+                              {employee.full_name}
                             </div>
                           ))}
                         </div>
@@ -420,11 +487,11 @@ export default function Calendar() {
                       key={slotIndex}
                       className="grid"
                       style={{ 
-                        gridTemplateColumns: `80px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 120}px, 1fr))`,
-                        minHeight: '40px'
+                        gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 140}px, 1fr))`,
+                        minHeight: '48px'
                       }}
                     >
-                      <div className="p-1 text-xs text-muted-foreground border-r border-b sticky left-0 bg-background z-10">
+                      <div className="p-2 text-xs text-muted-foreground border-r border-b sticky left-0 bg-background z-10 flex items-center">
                         {slot.label}
                       </div>
                       {displayDays.map(day => (
@@ -440,42 +507,79 @@ export default function Calendar() {
                               const isDragOverSlot = dragOver?.employeeId === employee.id && 
                                                       isSameDay(dragOver.day, day) && 
                                                       dragOver.slotIndex === slotIndex;
+                              const isHoverSlot = hoverSlot?.employeeId === employee.id &&
+                                                  isSameDay(hoverSlot.day, day) &&
+                                                  hoverSlot.slotIndex === slotIndex;
 
                               return (
                                 <div
                                   key={`${employee.id}-${slotIndex}`}
-                                  className={`h-10 ${getEmployeeColor(empIdx)} hover:bg-accent/50 cursor-pointer transition-colors border-r last:border-r-0 relative ${
+                                  className={`h-12 ${getEmployeeColor(empIdx)} hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative group ${
                                     isDragOverSlot ? 'ring-2 ring-primary ring-inset' : ''
                                   }`}
                                   onClick={() => handleSlotClick(employee.id, day, slotIndex)}
                                   onDragOver={(e) => handleDragOver(e, employee.id, day, slotIndex)}
                                   onDragLeave={handleDragLeave}
                                   onDrop={(e) => handleDrop(e, employee.id, day, slotIndex)}
+                                  onMouseEnter={() => setHoverSlot({ employeeId: employee.id, day, slotIndex })}
+                                  onMouseLeave={() => setHoverSlot(null)}
+                                  onMouseMove={(e) => resizingEvent && handleResizeMove(e, employee.id, day, slotIndex)}
+                                  onMouseUp={() => resizingEvent && handleResizeEnd(employee.id, day, slotIndex)}
                                 >
+                                  {isHoverSlot && (
+                                    <div className="absolute inset-0 flex items-center justify-center z-[5] pointer-events-none">
+                                      <div className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium shadow-lg">
+                                        {getTimeForSlot(slotIndex)}
+                                      </div>
+                                    </div>
+                                  )}
                                   {slotEvents.filter(isFirstSlotForEvent).map(event => {
                                     const height = calculateEventHeight(event);
                                     return (
-                                      <div
+                                      <EventContextMenu
                                         key={event.id}
-                                        draggable
-                                        onDragStart={(e) => handleDragStart(e, event)}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedEvent(event);
-                                          setDetailsDialogOpen(true);
-                                        }}
-                                        className="absolute inset-x-0 text-xs p-1 rounded text-white truncate hover:opacity-90 transition-opacity z-10 cursor-move"
-                                        style={{
-                                          backgroundColor: event.color,
-                                          height: `${height * 40}px`,
-                                        }}
-                                        title={`${event.title} - Drag to move`}
+                                        event={event}
+                                        employees={employees}
+                                        currentDate={currentDate}
+                                        onEventCopied={fetchEvents}
                                       >
-                                        <div className="font-medium truncate">{event.title}</div>
-                                        {event.location && height > 1 && (
-                                          <div className="text-[10px] opacity-90 truncate">{event.location}</div>
-                                        )}
-                                      </div>
+                                        <div
+                                          draggable
+                                          onDragStart={(e) => handleDragStart(e, event)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedEvent(event);
+                                            setDetailsDialogOpen(true);
+                                          }}
+                                          className="absolute inset-x-0 text-xs p-2 rounded text-white hover:opacity-90 transition-opacity z-10 cursor-move border-2 border-transparent hover:border-white/30"
+                                          style={{
+                                            backgroundColor: event.color,
+                                            height: `${height * 48}px`,
+                                          }}
+                                          title={`${event.title} - Right-click to copy, drag to move`}
+                                        >
+                                          {/* Resize Handle Top */}
+                                          <div
+                                            className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onMouseDown={(e) => handleResizeStart(e, event, 'top')}
+                                            onClick={(e) => e.stopPropagation()}
+                                            title="Drag to resize start time"
+                                          />
+                                          
+                                          <div className="font-medium truncate">{event.title}</div>
+                                          {event.location && height > 1 && (
+                                            <div className="text-[10px] opacity-90 truncate">{event.location}</div>
+                                          )}
+                                          
+                                          {/* Resize Handle Bottom */}
+                                          <div
+                                            className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onMouseDown={(e) => handleResizeStart(e, event, 'bottom')}
+                                            onClick={(e) => e.stopPropagation()}
+                                            title="Drag to resize end time"
+                                          />
+                                        </div>
+                                      </EventContextMenu>
                                     );
                                   })}
                                 </div>
@@ -506,6 +610,9 @@ export default function Calendar() {
                   </Badge>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                💡 Hover over time slots to see exact time • Right-click events to copy • Drag events to move • Drag edges to resize
+              </p>
             </div>
           )}
         </CardContent>
