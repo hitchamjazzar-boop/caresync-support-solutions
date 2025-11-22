@@ -879,11 +879,13 @@ export default function Calendar() {
                                     
                                     {/* Resize Handle Top */}
                                     <div
-                                      className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                      className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize hover:bg-white/30 bg-white/10 transition-all z-20 flex items-center justify-center"
                                       onMouseDown={(e) => handleResizeStart(e, event, 'top')}
                                       onClick={(e) => e.stopPropagation()}
                                       title="Drag to resize start time"
-                                    />
+                                    >
+                                      <div className="w-8 h-0.5 bg-white/50 rounded-full" />
+                                    </div>
                                      
                                      {/* Quick Actions */}
                                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
@@ -945,11 +947,13 @@ export default function Calendar() {
                                     
                                     {/* Resize Handle Bottom */}
                                     <div
-                                      className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize hover:bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize hover:bg-white/30 bg-white/10 transition-all z-20 flex items-center justify-center"
                                       onMouseDown={(e) => handleResizeStart(e, event, 'bottom')}
                                       onClick={(e) => e.stopPropagation()}
                                       title="Drag to resize end time"
-                                    />
+                                    >
+                                      <div className="w-8 h-0.5 bg-white/50 rounded-full" />
+                                    </div>
                                   </div>
                                 </EventContextMenu>
                               );
