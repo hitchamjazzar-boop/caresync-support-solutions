@@ -7,6 +7,7 @@ import { WishlistManager } from '@/components/secret-santa/WishlistManager';
 import { AssignmentReveal } from '@/components/secret-santa/AssignmentReveal';
 import { AdminControls } from '@/components/secret-santa/AdminControls';
 import { EventCard } from '@/components/secret-santa/EventCard';
+import { ParticipantsList } from '@/components/secret-santa/ParticipantsList';
 
 export default function SecretSanta() {
   const { user } = useAuth();
@@ -115,6 +116,10 @@ export default function SecretSanta() {
         participation={participation}
         onUpdate={loadActiveEvent}
       />
+
+      {isAdmin && (
+        <ParticipantsList eventId={activeEvent.id} />
+      )}
 
       {participation && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

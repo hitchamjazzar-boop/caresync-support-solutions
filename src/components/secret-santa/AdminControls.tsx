@@ -5,10 +5,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Shuffle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Plus, Shuffle, CheckCircle, RefreshCw, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { AssignmentViewer } from './AssignmentViewer';
 
 interface AdminControlsProps {
   event?: any;
@@ -20,6 +21,7 @@ export function AdminControls({ event, onEventCreated, onEventUpdated }: AdminCo
   const { user } = useAuth();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [assignmentsDialogOpen, setAssignmentsDialogOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [completing, setCompleting] = useState(false);
@@ -270,6 +272,14 @@ export function AdminControls({ event, onEventCreated, onEventUpdated }: AdminCo
 
       {event.status === 'assigned' && (
         <>
+          <Button 
+            variant="outline"
+            onClick={() => setAssignmentsDialogOpen(true)}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View Assignments
+          </Button>
+
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="outline" disabled={regenerating}>
@@ -316,6 +326,12 @@ export function AdminControls({ event, onEventCreated, onEventUpdated }: AdminCo
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          <AssignmentViewer 
+            eventId={event.id}
+            open={assignmentsDialogOpen}
+            onOpenChange={setAssignmentsDialogOpen}
+          />
         </>
       )}
     </div>
