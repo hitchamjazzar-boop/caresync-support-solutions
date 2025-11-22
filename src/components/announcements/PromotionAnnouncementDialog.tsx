@@ -94,7 +94,7 @@ export function PromotionAnnouncementDialog({ open, onOpenChange, onSuccess }: P
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + parseInt(expiresInDays));
 
-      // Create promotion announcement
+      // Create promotion announcement - only visible to promoted person
       const { error: announcementError } = await supabase
         .from('announcements')
         .insert({
@@ -103,7 +103,8 @@ export function PromotionAnnouncementDialog({ open, onOpenChange, onSuccess }: P
           created_by: user.id,
           featured_user_id: selectedEmployee,
           is_pinned: true,
-          target_type: 'all',
+          target_type: 'specific_users',
+          target_users: [selectedEmployee],
           expires_at: expiresAt.toISOString(),
         });
 
