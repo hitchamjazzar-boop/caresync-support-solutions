@@ -8,6 +8,8 @@ import { AssignmentReveal } from '@/components/secret-santa/AssignmentReveal';
 import { AdminControls } from '@/components/secret-santa/AdminControls';
 import { EventCard } from '@/components/secret-santa/EventCard';
 import { ParticipantsList } from '@/components/secret-santa/ParticipantsList';
+import { SecretSantaAssignmentCard } from '@/components/secret-santa/SecretSantaAssignmentCard';
+import { ReceiverWishlist } from '@/components/secret-santa/ReceiverWishlist';
 
 export default function SecretSanta() {
   const { user } = useAuth();
@@ -16,6 +18,7 @@ export default function SecretSanta() {
   const [activeEvent, setActiveEvent] = useState<any>(null);
   const [participation, setParticipation] = useState<any>(null);
   const [assignment, setAssignment] = useState<any>(null);
+  const [showWishlist, setShowWishlist] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -124,10 +127,20 @@ export default function SecretSanta() {
       {participation && (
         <>
           {assignment && activeEvent.reveal_enabled && (
-            <AssignmentReveal 
-              assignment={assignment}
-              eventId={activeEvent.id}
-            />
+            <div className="space-y-6">
+              <SecretSantaAssignmentCard 
+                receiver={assignment.receiver}
+                onViewDetails={() => setShowWishlist(true)}
+              />
+              
+              {showWishlist && (
+                <ReceiverWishlist 
+                  eventId={activeEvent.id}
+                  receiverId={assignment.receiver_id}
+                  receiverName={assignment.receiver?.full_name}
+                />
+              )}
+            </div>
           )}
 
           <WishlistManager 
