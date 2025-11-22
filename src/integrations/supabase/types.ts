@@ -852,6 +852,7 @@ export type Database = {
           address: string | null
           bank_name: string | null
           birthday: string | null
+          calendar_color: string | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -874,6 +875,7 @@ export type Database = {
           address?: string | null
           bank_name?: string | null
           birthday?: string | null
+          calendar_color?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -896,6 +898,7 @@ export type Database = {
           address?: string | null
           bank_name?: string | null
           birthday?: string | null
+          calendar_color?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string

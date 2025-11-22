@@ -10,6 +10,8 @@ import { CreateEventDialog } from '@/components/calendar/CreateEventDialog';
 import { EventDetailsDialog } from '@/components/calendar/EventDetailsDialog';
 import { EmployeeSelector } from '@/components/calendar/EmployeeSelector';
 import { EventContextMenu } from '@/components/calendar/EventContextMenu';
+import { MoveConfirmDialog } from '@/components/calendar/MoveConfirmDialog';
+import { ParticipantIndicators } from '@/components/calendar/ParticipantIndicators';
 import {
   Select,
   SelectContent,
@@ -58,6 +60,8 @@ export default function Calendar() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [dragSelection, setDragSelection] = useState<{ employeeId: string; day: Date; startIndex: number; endIndex: number } | null>(null);
   const [isDraggingSelection, setIsDraggingSelection] = useState(false);
+  const [moveConfirmOpen, setMoveConfirmOpen] = useState(false);
+  const [pendingMove, setPendingMove] = useState<{ event: CalendarEvent; employeeId: string; day: Date; slotIndex: number } | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
@@ -121,7 +125,7 @@ export default function Calendar() {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, photo_url, position')
+        .select('id, full_name, photo_url, position, calendar_color')
         .order('full_name');
 
       if (error) throw error;
@@ -217,40 +221,93 @@ export default function Calendar() {
 
     if (!draggedEvent) return;
 
+    // Check if this is a multi-participant event
+    if (draggedEvent.target_users && draggedEvent.target_users.length > 1) {
+      setPendingMove({ event: draggedEvent, employeeId, day, slotIndex });
+      setMoveConfirmOpen(true);
+      setDraggedEvent(null);
+      return;
+    }
+
+    // Single participant - proceed with move
+    await executeMoveEvent(draggedEvent, employeeId, day, slotIndex, false);
+  };
+
+  const executeMoveEvent = async (
+    event: CalendarEvent,
+    employeeId: string,
+    day: Date,
+    slotIndex: number,
+    createSeparate: boolean
+  ) => {
     try {
       const slot = timeSlots[slotIndex];
       const newStartTime = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
       
-      const originalStart = new Date(draggedEvent.start_time);
-      const originalEnd = new Date(draggedEvent.end_time);
+      const originalStart = new Date(event.start_time);
+      const originalEnd = new Date(event.end_time);
       const durationMs = originalEnd.getTime() - originalStart.getTime();
       
       const newEndTime = new Date(newStartTime.getTime() + durationMs);
 
-      let newTargetUsers = draggedEvent.target_users || [];
-      if (!newTargetUsers.includes(employeeId)) {
-        newTargetUsers = [employeeId];
+      // Check for conflicts
+      const conflicts = detectConflicts(event.id, employeeId, newStartTime, newEndTime);
+      if (conflicts.length > 0) {
+        toast.error(`Conflict detected with ${conflicts.length} existing event(s)`, {
+          description: 'The selected time overlaps with another event',
+        });
+        return;
       }
 
-      const { error } = await supabase
-        .from('calendar_events')
-        .update({
-          start_time: newStartTime.toISOString(),
-          end_time: newEndTime.toISOString(),
-          target_users: newTargetUsers,
-        })
-        .eq('id', draggedEvent.id);
+      if (createSeparate) {
+        // Create a new event for the target employee
+        const { error } = await supabase
+          .from('calendar_events')
+          .insert({
+            ...event,
+            id: undefined,
+            start_time: newStartTime.toISOString(),
+            end_time: newEndTime.toISOString(),
+            target_users: [employeeId],
+            description: `${event.description || ''}\n\n[Split from multi-participant event]`,
+          });
 
-      if (error) throw error;
+        if (error) throw error;
+        toast.success('Separate event created');
+      } else {
+        // Update existing event for all participants
+        let newTargetUsers = event.target_users || [];
+        if (!newTargetUsers.includes(employeeId)) {
+          newTargetUsers = [employeeId];
+        }
 
-      toast.success('Event moved successfully');
+        const { error } = await supabase
+          .from('calendar_events')
+          .update({
+            start_time: newStartTime.toISOString(),
+            end_time: newEndTime.toISOString(),
+            target_users: newTargetUsers,
+          })
+          .eq('id', event.id);
+
+        if (error) throw error;
+        toast.success('Event moved successfully');
+      }
+
       fetchEvents();
     } catch (error: any) {
       console.error('Error moving event:', error);
       toast.error('Failed to move event');
-    } finally {
-      setDraggedEvent(null);
     }
+  };
+
+  const detectConflicts = (eventId: string, employeeId: string, startTime: Date, endTime: Date) => {
+    return events.filter(e => 
+      e.id !== eventId &&
+      e.target_users?.includes(employeeId) &&
+      new Date(e.start_time) < endTime &&
+      new Date(e.end_time) > startTime
+    );
   };
 
   const handleResizeStart = (e: React.MouseEvent, event: CalendarEvent, direction: 'top' | 'bottom') => {
@@ -345,6 +402,12 @@ export default function Calendar() {
     return null;
   };
 
+  const getEventParticipants = (event: CalendarEvent) => {
+    return event.target_users
+      ?.map(id => employees.find(e => e.id === id))
+      .filter(Boolean) || [];
+  };
+
   const calculateEventHeight = (event: CalendarEvent) => {
     const start = new Date(event.start_time);
     const end = new Date(event.end_time);
@@ -366,16 +429,19 @@ export default function Calendar() {
     return colors[index % colors.length];
   };
 
+  const DEFAULT_COLORS = [
+    '#FF6B9D', '#4F46E5', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444',
+    '#06B6D4', '#F97316', '#EC4899', '#14B8A6', '#6366F1', '#84CC16',
+  ];
+
   const getEmployeeEventColor = (employeeId: string) => {
+    const employee = employees.find(e => e.id === employeeId);
+    if (employee?.calendar_color) {
+      return employee.calendar_color;
+    }
+    
     const index = selectedEmployeeData.findIndex(e => e.id === employeeId);
-    const colors = [
-      'hsl(var(--chart-1))',
-      'hsl(var(--chart-2))',
-      'hsl(var(--chart-3))',
-      'hsl(var(--chart-4))',
-      'hsl(var(--chart-5))',
-    ];
-    return colors[index % colors.length];
+    return DEFAULT_COLORS[index % DEFAULT_COLORS.length];
   };
 
   const handleNavigate = (direction: 'prev' | 'next' | 'today') => {
@@ -754,7 +820,9 @@ export default function Calendar() {
                                     
                                     <div className="flex items-center gap-2">
                                       <div className="font-semibold truncate flex-1">{event.title}</div>
-                                      {ownerEmployee && (
+                                      {event.target_users && event.target_users.length > 1 ? (
+                                        <ParticipantIndicators participants={getEventParticipants(event)} maxVisible={2} />
+                                      ) : ownerEmployee && (
                                         <div className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded whitespace-nowrap">
                                           {ownerEmployee.full_name.split(' ')[0]}
                                         </div>
@@ -822,6 +890,25 @@ export default function Calendar() {
           setDetailsDialogOpen(false);
         }}
       />
+
+      {pendingMove && (
+        <MoveConfirmDialog
+          open={moveConfirmOpen}
+          onOpenChange={setMoveConfirmOpen}
+          participants={getEventParticipants(pendingMove.event)}
+          targetEmployee={employees.find(e => e.id === pendingMove.employeeId)!}
+          onUpdateAll={() => {
+            executeMoveEvent(pendingMove.event, pendingMove.employeeId, pendingMove.day, pendingMove.slotIndex, false);
+            setMoveConfirmOpen(false);
+            setPendingMove(null);
+          }}
+          onCreateSeparate={() => {
+            executeMoveEvent(pendingMove.event, pendingMove.employeeId, pendingMove.day, pendingMove.slotIndex, true);
+            setMoveConfirmOpen(false);
+            setPendingMove(null);
+          }}
+        />
+      )}
     </div>
   );
 }
