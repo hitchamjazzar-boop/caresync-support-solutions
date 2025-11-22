@@ -138,17 +138,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
     return (
       <Sidebar collapsible="icon" className="border-r">
-        <SidebarContent>
+        <SidebarContent className="pt-2">
           <SidebarGroup>
-            <SidebarGroupLabel className="px-2 py-4">
-              <div className="flex items-center gap-2">
-                <img src={logo} alt="Care Sync" className="h-6 w-6 shrink-0" />
-                <div className={`transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
-                  <h2 className="text-sm font-semibold whitespace-nowrap">Care Sync</h2>
-                  <p className="text-xs text-muted-foreground whitespace-nowrap">Support Solutions</p>
-                </div>
-              </div>
-            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {navigation
@@ -191,12 +182,18 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         <div className="flex flex-1 flex-col w-full">
           {/* Header */}
           <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-            <div className="flex h-14 sm:h-16 items-center justify-between px-4">
-              <div className="flex items-center gap-2 sm:gap-4">
-                <SidebarTrigger className="h-10 w-10 touch-manipulation" />
-                <img src={logo} alt="Care Sync" className="h-8 sm:h-10 md:hidden" />
+            <div className="flex h-14 sm:h-16 items-center justify-between px-4 gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <SidebarTrigger className="h-10 w-10 shrink-0 touch-manipulation" />
+                <div className="flex items-center gap-2 min-w-0">
+                  <img src={logo} alt="Care Sync" className="h-8 sm:h-10 shrink-0" />
+                  <div className="hidden sm:block min-w-0">
+                    <h1 className="text-sm sm:text-base font-semibold truncate">Care Sync</h1>
+                    <p className="text-xs text-muted-foreground truncate">Support Solutions</p>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <NotificationBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
