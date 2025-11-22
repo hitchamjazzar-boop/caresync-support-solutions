@@ -18,7 +18,6 @@ export default function SecretSanta() {
   const [activeEvent, setActiveEvent] = useState<any>(null);
   const [participation, setParticipation] = useState<any>(null);
   const [assignment, setAssignment] = useState<any>(null);
-  const [showWishlist, setShowWishlist] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -130,16 +129,14 @@ export default function SecretSanta() {
             <div className="space-y-6">
               <SecretSantaAssignmentCard 
                 receiver={assignment.receiver}
-                onViewDetails={() => setShowWishlist(true)}
+                onViewDetails={() => {}}
               />
               
-              {showWishlist && (
-                <ReceiverWishlist 
-                  eventId={activeEvent.id}
-                  receiverId={assignment.receiver_id}
-                  receiverName={assignment.receiver?.full_name}
-                />
-              )}
+              <ReceiverWishlist 
+                eventId={activeEvent.id}
+                receiverId={assignment.receiver_id}
+                receiverName={assignment.receiver?.full_name}
+              />
             </div>
           )}
 

@@ -5,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Plus, Shuffle, CheckCircle, RefreshCw, Eye } from 'lucide-react';
+import { Plus, Shuffle, CheckCircle, RefreshCw, Eye, Unlock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +25,7 @@ export function AdminControls({ event, onEventCreated, onEventUpdated }: AdminCo
   const [generating, setGenerating] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [enablingReveal, setEnablingReveal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -154,6 +155,34 @@ export function AdminControls({ event, onEventCreated, onEventUpdated }: AdminCo
     }
   };
 
+  const handleEnableReveal = async () => {
+    if (!event) return;
+
+    setEnablingReveal(true);
+    try {
+      const { error } = await supabase
+        .from('secret_santa_events')
+        .update({ reveal_enabled: true })
+        .eq('id', event.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Assignments are now visible to all participants!',
+      });
+      onEventUpdated?.();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setEnablingReveal(false);
+    }
+  };
+
   const handleCompleteEvent = async () => {
     if (!event) return;
 
@@ -272,6 +301,16 @@ export function AdminControls({ event, onEventCreated, onEventUpdated }: AdminCo
 
       {event.status === 'assigned' && (
         <>
+          {!event.reveal_enabled && (
+            <Button 
+              onClick={handleEnableReveal}
+              disabled={enablingReveal}
+            >
+              <Unlock className="h-4 w-4 mr-2" />
+              {enablingReveal ? 'Enabling...' : 'Enable Reveal'}
+            </Button>
+          )}
+
           <Button 
             variant="outline"
             onClick={() => setAssignmentsDialogOpen(true)}
