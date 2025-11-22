@@ -51,7 +51,9 @@ export function EventDetailsDialog({
   const [userResponse, setUserResponse] = useState<any>(null);
 
   useEffect(() => {
+    console.log('🟠 EventDetailsDialog useEffect triggered', { open, eventId: event?.id });
     if (event && open) {
+      console.log('🟠 EventDetailsDialog fetching attendees');
       fetchAttendees();
     }
   }, [open, event?.id]);
