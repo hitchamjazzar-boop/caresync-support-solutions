@@ -161,7 +161,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                         <SidebarMenuButton 
                           asChild 
                           isActive={isActive} 
-                          className="h-12 touch-manipulation data-[active=true]:bg-destructive data-[active=true]:text-destructive-foreground data-[active=true]:font-semibold hover:bg-accent hover:text-accent-foreground transition-colors"
+                          className="h-12 touch-manipulation data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:font-semibold hover:bg-accent hover:text-accent-foreground transition-colors"
                           tooltip={item.name}
                         >
                           <NavLink to={item.href}>
