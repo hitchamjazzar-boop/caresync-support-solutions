@@ -112,7 +112,7 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
         }));
       }
     }
-  }, [open, prefilledData]);
+  }, [open]);
 
   const fetchEmployees = async () => {
     try {
