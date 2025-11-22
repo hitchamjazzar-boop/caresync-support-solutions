@@ -60,7 +60,8 @@ export default function AnnouncementGallery() {
         if (announcement) {
           const isBirthday = announcement.title.toLowerCase().includes('birthday');
           const isEmployeeOfMonth = announcement.title.toLowerCase().includes('employee of');
-          const isCelebration = isBirthday || isEmployeeOfMonth || 
+          const isPromotion = announcement.title.toLowerCase().includes('promotion');
+          const isCelebration = isBirthday || isEmployeeOfMonth || isPromotion ||
                                 announcement.title.toLowerCase().includes('congratulations');
           
           if (isCelebration) {
@@ -270,8 +271,9 @@ export default function AnnouncementGallery() {
                     ? profiles.get(announcement.featured_user_id)
                     : null;
 
-                  const isBirthday = announcement.title.toLowerCase().includes('birthday');
-                  const isHighlighted = searchParams.get('highlight') === announcement.id;
+                    const isBirthday = announcement.title.toLowerCase().includes('birthday');
+                    const isPromotion = announcement.title.toLowerCase().includes('promotion');
+                    const isHighlighted = searchParams.get('highlight') === announcement.id;
 
                   return (
                     <Card 
@@ -289,6 +291,11 @@ export default function AnnouncementGallery() {
                                 <>
                                   <Cake className="h-3 w-3" />
                                   Birthday
+                                </>
+                              ) : isPromotion ? (
+                                <>
+                                  <Award className="h-3 w-3" />
+                                  Promotion
                                 </>
                               ) : (
                                 <>
