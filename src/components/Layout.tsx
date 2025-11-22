@@ -274,8 +274,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           )}
 
           {/* Main Content */}
-          <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">
-            <div className="mx-auto max-w-7xl">{children}</div>
+          <main className="flex-1 overflow-auto">
+            <div className="h-full p-4 sm:p-6">
+              <div className="mx-auto max-w-7xl h-full">{children}</div>
+            </div>
           </main>
         </div>
       </div>
