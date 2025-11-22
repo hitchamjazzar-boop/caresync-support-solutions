@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, Loader2, CheckCheck } from 'lucide-react';
+import { Bell, Loader2, CheckCheck, Mail, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,11 +24,30 @@ interface Announcement {
   expires_at: string | null;
 }
 
+interface Memo {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  type: 'memo' | 'reminder' | 'warning';
+  is_read: boolean;
+  sender_id: string;
+}
+
+interface Notification {
+  id: string;
+  type: 'announcement' | 'memo';
+  title: string;
+  content: string;
+  created_at: string;
+  is_read: boolean;
+  data: Announcement | Memo;
+}
+
 export default function Notifications() {
   const { user } = useAuth();
   const { canSeeAnnouncement } = useAnnouncementVisibility();
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(new Set());
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAllRead, setMarkingAllRead] = useState(false);
   const navigate = useNavigate();
@@ -36,32 +55,73 @@ export default function Notifications() {
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      fetchReadStatus();
     }
   }, [user]);
 
   const fetchNotifications = async () => {
+    if (!user) return;
+
     try {
-      const { data, error } = await supabase
+      // Fetch announcements
+      const { data: announcementData, error: announcementError } = await supabase
         .from('announcements')
         .select('*')
         .eq('is_active', true)
-        .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (announcementError) throw announcementError;
+
+      // Get read status for announcements
+      const { data: readAnnouncements } = await supabase
+        .from('announcement_reads')
+        .select('announcement_id')
+        .eq('user_id', user.id);
+
+      const readAnnouncementIds = new Set(readAnnouncements?.map(r => r.announcement_id) || []);
 
       // Filter announcements user can see and not expired
       const now = new Date();
-      const visibleAnnouncements = (data || []).filter(
-        (announcement: any) => {
+      const visibleAnnouncements = (announcementData || [])
+        .filter((announcement: any) => {
           const isNotExpired = !announcement.expires_at || new Date(announcement.expires_at) > now;
           const canSee = canSeeAnnouncement(announcement);
           return isNotExpired && canSee;
-        }
+        })
+        .map((announcement: any) => ({
+          id: announcement.id,
+          type: 'announcement' as const,
+          title: announcement.title,
+          content: announcement.content,
+          created_at: announcement.created_at,
+          is_read: readAnnouncementIds.has(announcement.id),
+          data: announcement,
+        }));
+
+      // Fetch memos
+      const { data: memoData, error: memoError } = await supabase
+        .from('memos')
+        .select('*')
+        .eq('recipient_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (memoError) throw memoError;
+
+      const memos = (memoData || []).map((memo: any) => ({
+        id: memo.id,
+        type: 'memo' as const,
+        title: memo.title,
+        content: memo.content,
+        created_at: memo.created_at,
+        is_read: memo.is_read,
+        data: memo,
+      }));
+
+      // Combine and sort by date
+      const allNotifications = [...visibleAnnouncements, ...memos].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      setAnnouncements(visibleAnnouncements);
+      setNotifications(allNotifications);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -69,74 +129,87 @@ export default function Notifications() {
     }
   };
 
-  const fetchReadStatus = async () => {
+  const markAsRead = async (notification: Notification) => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('announcement_reads')
-        .select('announcement_id')
-        .eq('user_id', user.id);
+      if (notification.type === 'announcement') {
+        const { error } = await supabase
+          .from('announcement_reads')
+          .insert({
+            user_id: user.id,
+            announcement_id: notification.id,
+            read_at: new Date().toISOString(),
+          });
 
-      if (error) throw error;
+        if (error && !error.message.includes('duplicate')) {
+          console.error('Error marking as read:', error);
+          return;
+        }
+      } else if (notification.type === 'memo') {
+        const { error } = await supabase
+          .from('memos')
+          .update({ is_read: true })
+          .eq('id', notification.id);
 
-      const readIds = new Set(data?.map(r => r.announcement_id) || []);
-      setReadAnnouncementIds(readIds);
-    } catch (error) {
-      console.error('Error fetching read status:', error);
-    }
-  };
-
-  const markAsRead = async (announcementId: string) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('announcement_reads')
-        .insert({
-          user_id: user.id,
-          announcement_id: announcementId,
-          read_at: new Date().toISOString(),
-        });
-
-      if (error && !error.message.includes('duplicate')) {
-        console.error('Error marking as read:', error);
-        return;
+        if (error) {
+          console.error('Error marking memo as read:', error);
+          return;
+        }
       }
 
-      setReadAnnouncementIds(prev => new Set([...prev, announcementId]));
+      // Update local state
+      setNotifications(prev =>
+        prev.map(n => (n.id === notification.id ? { ...n, is_read: true } : n))
+      );
     } catch (error) {
       console.error('Error marking as read:', error);
     }
   };
 
   const markAllAsRead = async () => {
-    if (!user || announcements.length === 0) return;
+    if (!user || notifications.length === 0) return;
 
     setMarkingAllRead(true);
     try {
-      const unreadIds = announcements
-        .map(a => a.id)
-        .filter(id => !readAnnouncementIds.has(id));
+      const unreadNotifications = notifications.filter(n => !n.is_read);
 
-      if (unreadIds.length === 0) {
+      if (unreadNotifications.length === 0) {
         setMarkingAllRead(false);
         return;
       }
 
-      const readRecords = unreadIds.map(announcementId => ({
-        user_id: user.id,
-        announcement_id: announcementId,
-        read_at: new Date().toISOString(),
-      }));
+      // Mark announcements as read
+      const unreadAnnouncements = unreadNotifications.filter(n => n.type === 'announcement');
+      if (unreadAnnouncements.length > 0) {
+        const readRecords = unreadAnnouncements.map(notification => ({
+          user_id: user.id,
+          announcement_id: notification.id,
+          read_at: new Date().toISOString(),
+        }));
 
-      const { error } = await supabase
-        .from('announcement_reads')
-        .insert(readRecords);
+        const { error: announcementError } = await supabase
+          .from('announcement_reads')
+          .insert(readRecords);
 
-      if (error) throw error;
+        if (announcementError) throw announcementError;
+      }
 
-      setReadAnnouncementIds(new Set([...readAnnouncementIds, ...unreadIds]));
+      // Mark memos as read
+      const unreadMemos = unreadNotifications.filter(n => n.type === 'memo');
+      if (unreadMemos.length > 0) {
+        const memoIds = unreadMemos.map(n => n.id);
+
+        const { error: memoError } = await supabase
+          .from('memos')
+          .update({ is_read: true })
+          .in('id', memoIds);
+
+        if (memoError) throw memoError;
+      }
+
+      // Update local state
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     } catch (error) {
       console.error('Error marking all as read:', error);
     } finally {
@@ -144,24 +217,28 @@ export default function Notifications() {
     }
   };
 
-  const handleNotificationClick = (announcement: Announcement) => {
-    markAsRead(announcement.id);
+  const handleNotificationClick = (notification: Notification) => {
+    markAsRead(notification);
 
-    // Trigger effects based on announcement type
-    const title = announcement.title.toLowerCase();
-    if (title.includes('promotion')) {
-      triggerAchievementConfetti();
-      playCelebrationSound();
-    } else if (title.includes('employee of the month')) {
-      triggerAchievementConfetti();
-      playCelebrationSound();
-    } else if (title.includes('birthday')) {
-      triggerBirthdayConfetti();
-      playBirthdaySound();
+    if (notification.type === 'announcement') {
+      // Trigger effects based on announcement type
+      const title = notification.title.toLowerCase();
+      if (title.includes('promotion')) {
+        triggerAchievementConfetti();
+        playCelebrationSound();
+      } else if (title.includes('employee of the month')) {
+        triggerAchievementConfetti();
+        playCelebrationSound();
+      } else if (title.includes('birthday')) {
+        triggerBirthdayConfetti();
+        playBirthdaySound();
+      }
+    } else if (notification.type === 'memo') {
+      navigate('/memos');
     }
   };
 
-  const unreadCount = announcements.filter(a => !readAnnouncementIds.has(a.id)).length;
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (loading) {
     return (
@@ -183,7 +260,7 @@ export default function Notifications() {
             View all your notifications and announcements
           </p>
         </div>
-        {user && announcements.length > 0 && (
+        {user && notifications.length > 0 && (
           <Button
             variant="outline"
             size="sm"
@@ -219,7 +296,7 @@ export default function Notifications() {
         </Card>
       )}
 
-      {announcements.length === 0 ? (
+      {notifications.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Bell className="h-12 w-12 text-muted-foreground mb-4" />
@@ -231,29 +308,39 @@ export default function Notifications() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {announcements.map((announcement) => {
-            const isUnread = !readAnnouncementIds.has(announcement.id);
+          {notifications.map((notification) => {
+            const isUnread = !notification.is_read;
+            const isMemo = notification.type === 'memo';
+            const memoType = isMemo ? (notification.data as Memo).type : null;
 
             return (
               <Card
-                key={announcement.id}
+                key={`${notification.type}-${notification.id}`}
                 className={`cursor-pointer transition-all ${
                   isUnread
                     ? 'bg-accent/40 border-primary/30 hover:bg-accent/60'
                     : 'hover:bg-accent/20'
                 }`}
-                onClick={() => handleNotificationClick(announcement)}
+                onClick={() => handleNotificationClick(notification)}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2 flex-1">
-                      {announcement.is_pinned && (
-                        <span className="text-lg" title="Pinned">
-                          📌
-                        </span>
+                      {isMemo ? (
+                        memoType === 'warning' ? (
+                          <AlertTriangle className="h-4 w-4 text-destructive" />
+                        ) : (
+                          <Mail className="h-4 w-4 text-primary" />
+                        )
+                      ) : (
+                        (notification.data as Announcement).is_pinned && (
+                          <span className="text-lg" title="Pinned">
+                            📌
+                          </span>
+                        )
                       )}
                       <CardTitle className="text-base flex items-center gap-2">
-                        {announcement.title}
+                        {notification.title}
                         {isUnread && (
                           <Badge
                             variant="default"
@@ -263,14 +350,22 @@ export default function Notifications() {
                           </Badge>
                         )}
                       </CardTitle>
+                      {isMemo && (
+                        <Badge
+                          variant={memoType === 'warning' ? 'destructive' : 'secondary'}
+                          className="text-[10px] px-1.5 py-0 h-5"
+                        >
+                          {memoType}
+                        </Badge>
+                      )}
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {format(new Date(announcement.created_at), 'MMM dd, yyyy')}
+                      {format(new Date(notification.created_at), 'MMM dd, yyyy')}
                     </span>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground">{announcement.content}</p>
+                  <p className="text-sm text-muted-foreground">{notification.content}</p>
                 </CardContent>
               </Card>
             );

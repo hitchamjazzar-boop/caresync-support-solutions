@@ -59,7 +59,7 @@ export function FeaturedAnnouncements() {
 
   const fetchData = async () => {
     try {
-      // Fetch featured announcements (Employee of the Month & Birthdays)
+      // Fetch featured announcements (Employee of the Month & Birthdays - excluding promotions)
       const { data: announcementData, error: announcementError } = await supabase
         .from('announcements')
         .select('*')
@@ -71,7 +71,12 @@ export function FeaturedAnnouncements() {
 
       if (announcementError) throw announcementError;
 
-      setAnnouncements(announcementData || []);
+      // Filter out promotion announcements - they are private
+      const filteredAnnouncements = (announcementData || []).filter(
+        a => !a.title.toLowerCase().includes('promotion')
+      );
+
+      setAnnouncements(filteredAnnouncements);
 
       // Fetch profiles for featured users
       if (announcementData && announcementData.length > 0) {
