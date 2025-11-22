@@ -166,7 +166,7 @@ export function NotificationBell() {
 
   const handleViewAll = () => {
     setOpen(false);
-    navigate('/announcement-gallery');
+    navigate('/notifications');
   };
 
   const markAsRead = async (announcementId: string) => {
@@ -292,7 +292,7 @@ export function NotificationBell() {
             className="w-full text-xs sm:text-sm"
             onClick={handleViewAll}
           >
-            View all announcements
+            View all notifications
           </Button>
         </div>
       </PopoverContent>
