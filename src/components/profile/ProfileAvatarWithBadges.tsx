@@ -93,6 +93,7 @@ export const ProfileAvatarWithBadges = ({
   };
 
   const getFrameStyles = () => {
+    // Birthday takes priority over achievements
     if (status.isBirthday) {
       return 'ring-4 ring-pink-500 ring-offset-2 ring-offset-background';
     }
@@ -122,7 +123,8 @@ export const ProfileAvatarWithBadges = ({
 
       {showBadges && (
         <div className="absolute -bottom-1 -right-1 flex gap-1">
-          {status.isBirthday && (
+          {/* Birthday badge takes priority */}
+          {status.isBirthday ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -133,15 +135,14 @@ export const ProfileAvatarWithBadges = ({
             >
               <Cake className="h-3 w-3 text-white" />
             </button>
-          )}
-          {status.hasAchievements && status.latestAchievementColor && (
+          ) : status.hasAchievements && status.latestAchievementColor ? (
             <div 
               className="rounded-full p-1 shadow-lg border-2 border-background"
               style={{ backgroundColor: status.latestAchievementColor }}
             >
               <Award className="h-3 w-3 text-white" />
             </div>
-          )}
+          ) : null}
         </div>
       )}
     </div>
