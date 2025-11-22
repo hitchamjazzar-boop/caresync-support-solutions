@@ -59,12 +59,11 @@ export function SecretSantaAssignment() {
     try {
       setLoading(true);
 
-      // Get active event with reveal enabled
+      // Get the most recent non-completed event (matching SecretSanta page logic)
       const { data: events, error: eventsError } = await supabase
         .from('secret_santa_events')
         .select('*')
-        .eq('status', 'assigned')
-        .eq('reveal_enabled', true)
+        .neq('status', 'completed')
         .order('created_at', { ascending: false })
         .limit(1);
 
@@ -80,6 +79,12 @@ export function SecretSantaAssignment() {
       }
 
       const event = events[0];
+
+      // Only show if event is assigned AND reveal is enabled
+      if (event.status !== 'assigned' || !event.reveal_enabled) {
+        setAssignment(null);
+        return;
+      }
 
       // Get user's assignment for this specific event
       const { data: assignmentData, error: assignmentError } = await supabase
