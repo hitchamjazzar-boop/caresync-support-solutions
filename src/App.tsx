@@ -27,6 +27,7 @@ import Feedback from "./pages/Feedback";
 import EmployeeVoting from "./pages/EmployeeVoting";
 import Achievements from "./pages/Achievements";
 import SecretSanta from "./pages/SecretSanta";
+import Calendar from "./pages/Calendar";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
@@ -237,6 +238,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <SecretSanta />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Calendar />
                   </Layout>
                 </ProtectedRoute>
               }

@@ -274,6 +274,75 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_events: {
+        Row: {
+          all_day: boolean | null
+          color: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          end_time: string
+          event_type: string
+          id: string
+          is_public: boolean | null
+          is_recurring: boolean | null
+          location: string | null
+          recurrence_end_date: string | null
+          recurrence_pattern: string | null
+          reminder_enabled: boolean | null
+          reminder_minutes_before: number | null
+          start_time: string
+          target_departments: string[] | null
+          target_users: string[] | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          all_day?: boolean | null
+          color?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          end_time: string
+          event_type: string
+          id?: string
+          is_public?: boolean | null
+          is_recurring?: boolean | null
+          location?: string | null
+          recurrence_end_date?: string | null
+          recurrence_pattern?: string | null
+          reminder_enabled?: boolean | null
+          reminder_minutes_before?: number | null
+          start_time: string
+          target_departments?: string[] | null
+          target_users?: string[] | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          all_day?: boolean | null
+          color?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          end_time?: string
+          event_type?: string
+          id?: string
+          is_public?: boolean | null
+          is_recurring?: boolean | null
+          location?: string | null
+          recurrence_end_date?: string | null
+          recurrence_pattern?: string | null
+          reminder_enabled?: boolean | null
+          reminder_minutes_before?: number | null
+          start_time?: string
+          target_departments?: string[] | null
+          target_users?: string[] | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       employee_achievements: {
         Row: {
           achievement_type_id: string
@@ -598,6 +667,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notification_acknowledgments: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string | null
+          id: string
+          notification_id: string
+          notification_type: string
+          user_id: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          created_at?: string | null
+          id?: string
+          notification_id: string
+          notification_type: string
+          user_id: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          created_at?: string | null
+          id?: string
+          notification_id?: string
+          notification_type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       org_chart: {
         Row: {
