@@ -25,6 +25,7 @@ import WeeklySummary from "./pages/WeeklySummary";
 import Profile from "./pages/Profile";
 import Feedback from "./pages/Feedback";
 import EmployeeVoting from "./pages/EmployeeVoting";
+import Achievements from "./pages/Achievements";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -214,6 +215,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <EmployeeVoting />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/achievements"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Achievements />
                   </Layout>
                 </ProtectedRoute>
               }

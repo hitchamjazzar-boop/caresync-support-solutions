@@ -35,34 +35,43 @@ export const VotingResults = ({ votingPeriodId, isAdmin, status }: VotingResults
     try {
       const { data, error } = await supabase
         .from('employee_votes')
-        .select(`
-          nominated_user_id,
-          profiles:nominated_user_id (
-            full_name,
-            position,
-            photo_url
-          )
-        `)
+        .select('nominated_user_id')
         .eq('voting_period_id', votingPeriodId);
 
       if (error) throw error;
 
-      // Count votes per nominee
-      const voteMap = new Map<string, VoteResult>();
+      const voteMap = new Map<string, number>();
       data?.forEach((vote: any) => {
         const userId = vote.nominated_user_id;
-        if (voteMap.has(userId)) {
-          voteMap.get(userId)!.vote_count++;
-        } else {
-          voteMap.set(userId, {
-            nominated_user_id: userId,
-            vote_count: 1,
-            profiles: vote.profiles
-          });
-        }
+        voteMap.set(userId, (voteMap.get(userId) || 0) + 1);
       });
 
-      const sortedResults = Array.from(voteMap.values()).sort((a, b) => b.vote_count - a.vote_count);
+      const uniqueUserIds = Array.from(voteMap.keys());
+
+      if (uniqueUserIds.length === 0) {
+        setResults([]);
+        setLoading(false);
+        return;
+      }
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, position, photo_url')
+        .in('id', uniqueUserIds);
+
+      if (profilesError) throw profilesError;
+
+      const resultsWithProfiles = profilesData?.map((profile) => ({
+        nominated_user_id: profile.id,
+        vote_count: voteMap.get(profile.id) || 0,
+        profiles: {
+          full_name: profile.full_name,
+          position: profile.position || 'N/A',
+          photo_url: profile.photo_url,
+        },
+      })) || [];
+
+      const sortedResults = resultsWithProfiles.sort((a, b) => b.vote_count - a.vote_count);
       setResults(sortedResults);
     } catch (error: any) {
       console.error('Error fetching results:', error);

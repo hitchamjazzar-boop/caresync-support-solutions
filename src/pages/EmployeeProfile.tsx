@@ -35,6 +35,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
 import { ProfilePhotoUpload } from '@/components/profile/ProfilePhotoUpload';
+import { EmployeeAchievementsBadges } from '@/components/profile/EmployeeAchievementsBadges';
 
 interface Profile {
   id: string;
@@ -355,6 +356,8 @@ export default function EmployeeProfile() {
 
         {/* Personal Info Tab */}
         <TabsContent value="personal" className="space-y-4">
+          <EmployeeAchievementsBadges userId={id!} />
+
           <Card>
             <CardHeader>
               <CardTitle>Employee Details</CardTitle>

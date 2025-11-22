@@ -40,34 +40,42 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
     try {
       const { data, error } = await supabase
         .from('employee_nominations')
-        .select(`
-          nominated_user_id,
-          profiles:nominated_user_id (
-            full_name,
-            position,
-            photo_url
-          )
-        `)
+        .select('nominated_user_id')
         .eq('voting_period_id', votingPeriodId);
 
       if (error) throw error;
 
-      // Group by nominated user and count nominations
-      const nomineeMap = new Map<string, Nominee>();
+      const nomineeMap = new Map<string, number>();
       data?.forEach((nomination: any) => {
         const userId = nomination.nominated_user_id;
-        if (nomineeMap.has(userId)) {
-          nomineeMap.get(userId)!.nomination_count++;
-        } else {
-          nomineeMap.set(userId, {
-            nominated_user_id: userId,
-            profiles: nomination.profiles,
-            nomination_count: 1
-          });
-        }
+        nomineeMap.set(userId, (nomineeMap.get(userId) || 0) + 1);
       });
 
-      setNominees(Array.from(nomineeMap.values()));
+      const uniqueUserIds = Array.from(nomineeMap.keys());
+
+      if (uniqueUserIds.length === 0) {
+        setNominees([]);
+        return;
+      }
+
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, position, photo_url')
+        .in('id', uniqueUserIds);
+
+      if (profilesError) throw profilesError;
+
+      const nomineesWithProfiles = profilesData?.map((profile) => ({
+        nominated_user_id: profile.id,
+        profiles: {
+          full_name: profile.full_name,
+          position: profile.position || 'N/A',
+          photo_url: profile.photo_url,
+        },
+        nomination_count: nomineeMap.get(profile.id) || 1,
+      })) || [];
+
+      setNominees(nomineesWithProfiles);
     } catch (error: any) {
       console.error('Error fetching nominees:', error);
       toast.error('Failed to load nominees');
