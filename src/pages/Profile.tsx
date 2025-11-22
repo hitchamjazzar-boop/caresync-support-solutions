@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, User } from 'lucide-react';
+import { Loader2, Upload, User, KeyRound } from 'lucide-react';
 import { z } from 'zod';
 import { PaymentMethodForm } from '@/components/profile/PaymentMethodForm';
 
@@ -15,6 +15,14 @@ const profileSchema = z.object({
   full_name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
   contact_email: z.string().trim().email('Invalid email').max(255, 'Email must be less than 255 characters').optional().or(z.literal('')),
   contact_phone: z.string().trim().max(20, 'Phone must be less than 20 characters').optional().or(z.literal('')),
+});
+
+const passwordSchema = z.object({
+  newPassword: z.string().min(6, 'Password must be at least 6 characters'),
+  confirmPassword: z.string().min(6, 'Password must be at least 6 characters'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 interface ProfileData {
@@ -32,13 +40,19 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [formData, setFormData] = useState({
     full_name: '',
     contact_email: '',
     contact_phone: '',
   });
+  const [passwordData, setPasswordData] = useState({
+    newPassword: '',
+    confirmPassword: '',
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (user) {
@@ -218,6 +232,68 @@ export default function Profile() {
     }
   };
 
+  const validatePasswordForm = () => {
+    try {
+      passwordSchema.parse(passwordData);
+      setPasswordErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const newErrors: Record<string, string> = {};
+        error.errors.forEach((err) => {
+          if (err.path[0]) {
+            newErrors[err.path[0].toString()] = err.message;
+          }
+        });
+        setPasswordErrors(newErrors);
+      }
+      return false;
+    }
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validatePasswordForm()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please check the form for errors',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setChangingPassword(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Password changed successfully',
+      });
+
+      // Clear the form
+      setPasswordData({
+        newPassword: '',
+        confirmPassword: '',
+      });
+      setPasswordErrors({});
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to change password',
+        variant: 'destructive',
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -377,6 +453,67 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Password Change Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5" />
+            Change Password
+          </CardTitle>
+          <CardDescription>Update your account password</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password *</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, newPassword: e.target.value })
+                  }
+                  className={passwordErrors.newPassword ? 'border-destructive' : ''}
+                  placeholder="Enter new password"
+                />
+                {passwordErrors.newPassword && (
+                  <p className="text-sm text-destructive">{passwordErrors.newPassword}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                  }
+                  className={passwordErrors.confirmPassword ? 'border-destructive' : ''}
+                  placeholder="Confirm new password"
+                />
+                {passwordErrors.confirmPassword && (
+                  <p className="text-sm text-destructive">{passwordErrors.confirmPassword}</p>
+                )}
+              </div>
+            </div>
+
+            <Button type="submit" disabled={changingPassword}>
+              {changingPassword ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Changing Password...
+                </>
+              ) : (
+                'Change Password'
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Payment Method Section */}
       <PaymentMethodForm />
