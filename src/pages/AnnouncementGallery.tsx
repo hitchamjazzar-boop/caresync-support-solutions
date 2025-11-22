@@ -43,9 +43,32 @@ export default function AnnouncementGallery() {
   useEffect(() => {
     const highlightId = searchParams.get('highlight');
     if (highlightId && announcements.length > 0) {
+      const announcement = announcements.find(a => a.id === highlightId);
+      
       // Scroll to highlighted announcement after a short delay to ensure rendering
       setTimeout(() => {
         highlightedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Trigger confetti for celebration announcements
+        if (announcement) {
+          const isBirthday = announcement.title.toLowerCase().includes('birthday');
+          const isEmployeeOfMonth = announcement.title.toLowerCase().includes('employee of');
+          const isCelebration = isBirthday || isEmployeeOfMonth || 
+                                announcement.title.toLowerCase().includes('congratulations');
+          
+          if (isCelebration) {
+            // Trigger confetti after scroll completes
+            setTimeout(() => {
+              import('@/lib/confetti').then(({ triggerBirthdayConfetti, triggerAchievementConfetti }) => {
+                if (isBirthday) {
+                  triggerBirthdayConfetti();
+                } else {
+                  triggerAchievementConfetti();
+                }
+              });
+            }, 500);
+          }
+        }
         
         // Remove highlight param after scrolling and showing
         setTimeout(() => {
