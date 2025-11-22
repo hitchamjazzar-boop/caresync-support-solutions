@@ -437,12 +437,23 @@ export default function Calendar() {
 
   const getEmployeeEventColor = (employeeId: string) => {
     const employee = employees.find(e => e.id === employeeId);
-    if (employee?.calendar_color) {
-      return employee.calendar_color;
+    const color = employee?.calendar_color;
+    
+    console.log('Employee color lookup:', { 
+      employeeId, 
+      employeeName: employee?.full_name,
+      calendarColor: color,
+      hasColor: !!color 
+    });
+    
+    if (color) {
+      return color;
     }
     
     const index = selectedEmployeeData.findIndex(e => e.id === employeeId);
-    return DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+    const fallbackColor = DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+    console.log('Using fallback color:', fallbackColor, 'for employee:', employee?.full_name);
+    return fallbackColor;
   };
 
   const handleNavigate = (direction: 'prev' | 'next' | 'today') => {
@@ -462,11 +473,13 @@ export default function Calendar() {
 
   const getTimeRangeForHover = (startIndex: number, currentIndex: number) => {
     const startSlot = timeSlots[startIndex];
-    const currentSlot = timeSlots[currentIndex];
     const endSlot = timeSlots[currentIndex];
     
     const startTime = format(setMinutes(setHours(new Date(), startSlot.hour), startSlot.minute), 'h:mm a');
+    // Add 15 minutes to show the end of the selected slot
     const endTime = format(setMinutes(setHours(new Date(), endSlot.hour), endSlot.minute + 15), 'h:mm a');
+    
+    console.log('Hover time range:', { startIndex, currentIndex, startTime, endTime });
     
     return `${startTime} - ${endTime}`;
   };
@@ -520,6 +533,15 @@ export default function Calendar() {
       const startTime = setMinutes(setHours(new Date(dragSelection.day), startSlot.hour), startSlot.minute);
       const endTime = setMinutes(setHours(new Date(dragSelection.day), endSlot.hour), endSlot.minute);
       endTime.setMinutes(endTime.getMinutes() + 15); // Add 15 minutes to include the end slot
+      
+      console.log('Selection end:', {
+        startSlotIndex,
+        endSlotIndex,
+        startTime: format(startTime, 'h:mm a'),
+        endTime: format(endTime, 'h:mm a'),
+        startTimeISO: startTime.toISOString().slice(0, 16),
+        endTimeISO: endTime.toISOString().slice(0, 16),
+      });
       
       setPrefilledData({
         employeeId: dragSelection.employeeId,

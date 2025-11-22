@@ -40,23 +40,40 @@ export function UpcomingReminders() {
     const now = new Date();
     const nextWeek = addDays(now, 7);
 
+    console.log('📅 Fetching upcoming reminders:', {
+      now: now.toISOString(),
+      nextWeek: nextWeek.toISOString(),
+    });
+
     try {
       // Fetch active announcements
-      const { data: announcements } = await supabase
+      const { data: announcements, error: announcementsError } = await supabase
         .from('announcements')
         .select('id, title, content, created_at, expires_at, image_url, is_pinned')
         .eq('is_active', true)
         .or(`expires_at.is.null,expires_at.gte.${now.toISOString()}`)
         .limit(3);
 
+      console.log('📢 Announcements query result:', {
+        count: announcements?.length || 0,
+        data: announcements,
+        error: announcementsError,
+      });
+
       // Fetch upcoming calendar events
-      const { data: events } = await supabase
+      const { data: events, error: eventsError } = await supabase
         .from('calendar_events')
         .select('id, title, event_type, start_time, end_time')
         .gte('start_time', now.toISOString())
         .lte('start_time', nextWeek.toISOString())
         .order('start_time', { ascending: true })
         .limit(5);
+
+      console.log('📆 Events query result:', {
+        count: events?.length || 0,
+        data: events,
+        error: eventsError,
+      });
 
       const items: Array<{
         id: string;
@@ -97,9 +114,16 @@ export function UpcomingReminders() {
 
       // Sort by date and take top 5
       items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      setUpcomingItems(items.slice(0, 5));
+      const finalItems = items.slice(0, 5);
+      
+      console.log('✅ Final upcoming items:', {
+        count: finalItems.length,
+        items: finalItems,
+      });
+      
+      setUpcomingItems(finalItems);
     } catch (error) {
-      console.error('Error fetching upcoming items:', error);
+      console.error('❌ Error fetching upcoming items:', error);
     }
   };
 
