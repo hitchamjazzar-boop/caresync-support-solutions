@@ -3,13 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, Loader2, CheckCheck, Mail, AlertTriangle } from 'lucide-react';
+import { Bell, Loader2, CheckCheck, Mail, AlertTriangle, Award, Cake, TrendingUp } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAnnouncementVisibility } from '@/hooks/useAnnouncementVisibility';
 import { triggerBirthdayConfetti, triggerAchievementConfetti } from '@/lib/confetti';
 import { playBirthdaySound, playCelebrationSound } from '@/lib/sounds';
+
+interface AchievementType {
+  name: string;
+  description: string;
+  color: string;
+  category: string;
+  icon: string;
+}
 
 interface Announcement {
   id: string;
@@ -22,6 +30,8 @@ interface Announcement {
   target_roles: string[] | null;
   target_departments: string[] | null;
   expires_at: string | null;
+  featured_user_id: string | null;
+  achievement?: AchievementType;
 }
 
 interface Memo {
@@ -81,21 +91,71 @@ export default function Notifications() {
 
       // Filter announcements user can see and not expired
       const now = new Date();
-      const visibleAnnouncements = (announcementData || [])
+      const visibleAnnouncementData = (announcementData || [])
         .filter((announcement: any) => {
           const isNotExpired = !announcement.expires_at || new Date(announcement.expires_at) > now;
           const canSee = canSeeAnnouncement(announcement);
           return isNotExpired && canSee;
-        })
-        .map((announcement: any) => ({
+        });
+
+      // For promotion announcements, fetch the related achievement
+      const promotionAnnouncements = visibleAnnouncementData.filter((a: any) => 
+        a.title.toLowerCase().includes('promotion') && a.featured_user_id
+      );
+
+      let achievementsMap = new Map();
+      if (promotionAnnouncements.length > 0) {
+        const userIds = promotionAnnouncements.map((a: any) => a.featured_user_id);
+        
+        // Get the most recent promotion achievement for each user
+        const { data: achievementData } = await supabase
+          .from('employee_achievements')
+          .select('user_id, achievement_type_id')
+          .in('user_id', userIds)
+          .order('awarded_date', { ascending: false });
+
+        if (achievementData && achievementData.length > 0) {
+          const typeIds = [...new Set(achievementData.map((a: any) => a.achievement_type_id))];
+          
+          const { data: typesData } = await supabase
+            .from('achievement_types')
+            .select('id, name, description, color, category, icon')
+            .in('id', typeIds);
+
+          if (typesData) {
+            const typesMap = new Map(typesData.map((t: any) => [t.id, t]));
+            
+            // Map user to their latest achievement
+            achievementData.forEach((ach: any) => {
+              if (!achievementsMap.has(ach.user_id)) {
+                const type = typesMap.get(ach.achievement_type_id);
+                if (type) {
+                  achievementsMap.set(ach.user_id, type);
+                }
+              }
+            });
+          }
+        }
+      }
+
+      const visibleAnnouncements = visibleAnnouncementData.map((announcement: any) => {
+        const achievement = announcement.featured_user_id 
+          ? achievementsMap.get(announcement.featured_user_id)
+          : undefined;
+
+        return {
           id: announcement.id,
           type: 'announcement' as const,
           title: announcement.title,
           content: announcement.content,
           created_at: announcement.created_at,
           is_read: readAnnouncementIds.has(announcement.id),
-          data: announcement,
-        }));
+          data: {
+            ...announcement,
+            achievement,
+          },
+        };
+      });
 
       // Fetch memos
       const { data: memoData, error: memoError } = await supabase
@@ -312,6 +372,13 @@ export default function Notifications() {
             const isUnread = !notification.is_read;
             const isMemo = notification.type === 'memo';
             const memoType = isMemo ? (notification.data as Memo).type : null;
+            
+            // Check announcement types
+            const announcement = !isMemo ? (notification.data as Announcement) : null;
+            const isPromotion = announcement?.title.toLowerCase().includes('promotion');
+            const isBirthday = announcement?.title.toLowerCase().includes('birthday');
+            const isEmployeeOfMonth = announcement?.title.toLowerCase().includes('employee of the month');
+            const achievement = announcement?.achievement;
 
             return (
               <Card
@@ -324,48 +391,110 @@ export default function Notifications() {
                 onClick={() => handleNotificationClick(notification)}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 flex-1">
-                      {isMemo ? (
-                        memoType === 'warning' ? (
-                          <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <div className="flex items-start gap-3">
+                    {/* Icon/Badge Display */}
+                    {isMemo ? (
+                      <div className="shrink-0">
+                        {memoType === 'warning' ? (
+                          <div className="p-2 rounded-lg bg-destructive/20">
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                          </div>
                         ) : (
-                          <Mail className="h-4 w-4 text-primary" />
-                        )
-                      ) : (
-                        (notification.data as Announcement).is_pinned && (
-                          <span className="text-lg" title="Pinned">
-                            📌
-                          </span>
-                        )
-                      )}
-                      <CardTitle className="text-base flex items-center gap-2">
-                        {notification.title}
-                        {isUnread && (
-                          <Badge
-                            variant="default"
-                            className="text-[10px] px-1.5 py-0 h-5 leading-none animate-pulse"
-                          >
-                            New
-                          </Badge>
+                          <div className="p-2 rounded-lg bg-primary/20">
+                            <Mail className="h-5 w-5 text-primary" />
+                          </div>
                         )}
-                      </CardTitle>
-                      {isMemo && (
-                        <Badge
-                          variant={memoType === 'warning' ? 'destructive' : 'secondary'}
-                          className="text-[10px] px-1.5 py-0 h-5"
-                        >
-                          {memoType}
-                        </Badge>
-                      )}
+                      </div>
+                    ) : achievement ? (
+                      <div
+                        className="p-3 rounded-lg shrink-0"
+                        style={{ backgroundColor: `${achievement.color}20` }}
+                      >
+                        {isPromotion ? (
+                          <TrendingUp
+                            className="h-6 w-6"
+                            style={{ color: achievement.color }}
+                          />
+                        ) : (
+                          <Award
+                            className="h-6 w-6"
+                            style={{ color: achievement.color }}
+                          />
+                        )}
+                      </div>
+                    ) : isBirthday ? (
+                      <div className="p-2 rounded-lg bg-pink-500/20 shrink-0">
+                        <Cake className="h-5 w-5 text-pink-500" />
+                      </div>
+                    ) : isEmployeeOfMonth ? (
+                      <div className="p-2 rounded-lg bg-yellow-500/20 shrink-0">
+                        <Award className="h-5 w-5 text-yellow-500" />
+                      </div>
+                    ) : (
+                      announcement?.is_pinned && (
+                        <span className="text-lg" title="Pinned">
+                          📌
+                        </span>
+                      )
+                    )}
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+                            {notification.title}
+                            {isUnread && (
+                              <Badge
+                                variant="default"
+                                className="text-[10px] px-1.5 py-0 h-5 leading-none animate-pulse"
+                              >
+                                New
+                              </Badge>
+                            )}
+                          </CardTitle>
+                          {/* Achievement Details */}
+                          {achievement && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge
+                                variant="secondary"
+                                className="text-xs"
+                                style={{
+                                  backgroundColor: `${achievement.color}20`,
+                                  color: achievement.color,
+                                  borderColor: `${achievement.color}40`,
+                                }}
+                              >
+                                {achievement.name}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {achievement.category}
+                              </Badge>
+                            </div>
+                          )}
+                          {isMemo && (
+                            <Badge
+                              variant={memoType === 'warning' ? 'destructive' : 'secondary'}
+                              className="text-[10px] px-1.5 py-0 h-5 mt-1"
+                            >
+                              {memoType}
+                            </Badge>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {format(new Date(notification.created_at), 'MMM dd, yyyy')}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {format(new Date(notification.created_at), 'MMM dd, yyyy')}
-                    </span>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{notification.content}</p>
+                  {achievement && (
+                    <p className="text-xs text-muted-foreground mt-2 italic">
+                      {achievement.description}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             );
