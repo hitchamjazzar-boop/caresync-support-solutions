@@ -122,19 +122,19 @@ export default function SecretSanta() {
       )}
 
       {participation && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <WishlistManager 
-            eventId={activeEvent.id}
-            userId={user?.id || ''}
-          />
-
+        <>
           {assignment && activeEvent.reveal_enabled && (
             <AssignmentReveal 
               assignment={assignment}
               eventId={activeEvent.id}
             />
           )}
-        </div>
+
+          <WishlistManager 
+            eventId={activeEvent.id}
+            userId={user?.id || ''}
+          />
+        </>
       )}
     </div>
   );
