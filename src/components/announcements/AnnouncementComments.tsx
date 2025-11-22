@@ -4,10 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Loader2, MessageSquare, Send } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface Comment {
   id: string;
@@ -175,12 +175,12 @@ export function AnnouncementComments({ announcementId }: AnnouncementCommentsPro
         {comments.map((comment) => (
           <Card key={comment.id} className="p-3">
             <div className="flex gap-3">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={comment.profiles.photo_url || undefined} />
-                <AvatarFallback className="text-xs">
-                  {comment.profiles.full_name.charAt(0)}
-                </AvatarFallback>
-              </Avatar>
+              <ProfileAvatarWithBadges
+                userId={comment.user_id}
+                photoUrl={comment.profiles.photo_url}
+                fullName={comment.profiles.full_name}
+                className="h-8 w-8"
+              />
               <div className="flex-1 space-y-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{comment.profiles.full_name}</span>
