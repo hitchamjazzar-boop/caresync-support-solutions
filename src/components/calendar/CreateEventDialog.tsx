@@ -93,7 +93,8 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
     recurrence_pattern: 'weekly',
     recurrence_end_date: '',
   });
-
+  console.log('🔁 Render CreateEventDialog', { open, mounted, attendees: selectedAttendees.length });
+ 
   useEffect(() => {
     if (open) {
       setMounted(false);
