@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, BarChart3, Award } from 'lucide-react';
+import { Plus, Pencil, Trash2, BarChart3, Award, Cake } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AnnouncementDialog } from '@/components/announcements/AnnouncementDialog';
 import { EmployeeOfMonthDialog } from '@/components/announcements/EmployeeOfMonthDialog';
+import { BirthdayAnnouncementDialog } from '@/components/announcements/BirthdayAnnouncementDialog';
 import { DeleteAnnouncementDialog } from '@/components/announcements/DeleteAnnouncementDialog';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -33,6 +34,7 @@ export default function Announcements() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [eomDialogOpen, setEomDialogOpen] = useState(false);
+  const [birthdayDialogOpen, setBirthdayDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const { toast } = useToast();
@@ -132,7 +134,7 @@ export default function Announcements() {
     <div className="container mx-auto px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <h1 className="text-2xl sm:text-3xl font-bold">Announcements</h1>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           {isAdmin && (
             <>
               <Button 
@@ -150,6 +152,14 @@ export default function Announcements() {
               >
                 <Award className="h-4 w-4 mr-2" />
                 Employee of Month
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setBirthdayDialogOpen(true)}
+                className="flex-1 sm:flex-initial"
+              >
+                <Cake className="h-4 w-4 mr-2" />
+                Birthday
               </Button>
             </>
           )}
@@ -225,6 +235,12 @@ export default function Announcements() {
       <EmployeeOfMonthDialog
         open={eomDialogOpen}
         onOpenChange={setEomDialogOpen}
+        onSuccess={fetchAnnouncements}
+      />
+
+      <BirthdayAnnouncementDialog
+        open={birthdayDialogOpen}
+        onOpenChange={setBirthdayDialogOpen}
         onSuccess={fetchAnnouncements}
       />
 
