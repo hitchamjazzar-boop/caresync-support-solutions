@@ -14,6 +14,9 @@ import { MoveConfirmDialog } from '@/components/calendar/MoveConfirmDialog';
 import { ParticipantIndicators } from '@/components/calendar/ParticipantIndicators';
 import { UpcomingReminders } from '@/components/calendar/UpcomingReminders';
 import { CalendarBanner } from '@/components/calendar/CalendarBanner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as DatePicker } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import {
   Select,
   SelectContent,
@@ -637,7 +640,30 @@ export default function Calendar() {
               <Button variant="outline" size="sm" onClick={() => handleNavigate('prev')}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <CardTitle className="text-base sm:text-xl">{dateRangeText}</CardTitle>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "min-w-[200px] justify-start text-left font-semibold",
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateRangeText}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <DatePicker
+                    mode="single"
+                    selected={currentDate}
+                    onSelect={(date) => {
+                      if (date) setCurrentDate(date);
+                    }}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
               <Button variant="outline" size="sm" onClick={() => handleNavigate('next')}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
