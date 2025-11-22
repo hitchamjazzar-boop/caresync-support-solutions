@@ -425,7 +425,10 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
                   className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg cursor-pointer"
                   onClick={() => toggleAttendee(employee.id)}
                 >
-                  <Checkbox checked={selectedAttendees.includes(employee.id)} />
+                  <Checkbox 
+                    checked={selectedAttendees.includes(employee.id)}
+                    onCheckedChange={() => toggleAttendee(employee.id)}
+                  />
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={employee.photo_url} />
                     <AvatarFallback>{employee.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>

@@ -324,12 +324,16 @@ export default function Calendar() {
   };
 
   const handleResizeStart = (e: React.MouseEvent, event: CalendarEvent, direction: 'top' | 'bottom') => {
+    console.log('🟣 Resize Start', { eventId: event.id, direction });
     e.stopPropagation();
+    e.preventDefault();
     setResizingEvent({ event, direction });
+    setDraggedEvent(null); // Ensure we're not also dragging
   };
 
   const handleResizeMove = (e: React.MouseEvent, employeeId: string, day: Date, slotIndex: number) => {
     if (!resizingEvent) return;
+    console.log('🟣 Resize Move', { slotIndex });
 
     const slot = timeSlots[slotIndex];
     const targetTime = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
@@ -351,6 +355,7 @@ export default function Calendar() {
 
   const handleResizeEnd = async (employeeId: string, day: Date, slotIndex: number) => {
     if (!resizingEvent) return;
+    console.log('🟣 Resize End', { slotIndex });
 
     try {
       const slot = timeSlots[slotIndex];
@@ -870,15 +875,22 @@ export default function Calendar() {
                                   onEventCopied={fetchEvents}
                                 >
                                    <div
-                                    draggable
-                                    onDragStart={(e) => handleDragStart(e, event)}
+                                    draggable={!resizingEvent}
+                                    onDragStart={(e) => {
+                                      if (resizingEvent) {
+                                        e.preventDefault();
+                                        return;
+                                      }
+                                      handleDragStart(e, event);
+                                    }}
                                     onClick={(e) => {
+                                      if (resizingEvent) return;
                                       console.log('🟢 Event Click - Opening Details Dialog', event.id);
                                       e.stopPropagation();
                                       setSelectedEvent(event);
                                       setDetailsDialogOpen(true);
                                     }}
-                                    className="absolute inset-x-1 text-xs p-2 rounded-md text-white hover:opacity-90 transition-opacity z-10 cursor-move border-2 border-transparent hover:border-white/30 group shadow-md overflow-hidden"
+                                    className={`absolute inset-x-1 text-xs p-2 rounded-md text-white hover:opacity-90 transition-opacity z-10 ${resizingEvent?.event.id === event.id ? 'cursor-ns-resize' : 'cursor-move'} border-2 ${resizingEvent?.event.id === event.id ? 'border-white/60' : 'border-transparent hover:border-white/30'} group shadow-md overflow-hidden`}
                                     style={{
                                       backgroundColor: eventTypeColor,
                                       height: `${height * 24}px`,
@@ -893,12 +905,18 @@ export default function Calendar() {
                                     
                                     {/* Resize Handle Top */}
                                     <div
-                                      className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize hover:bg-white/30 bg-white/10 transition-all z-20 flex items-center justify-center"
-                                      onMouseDown={(e) => handleResizeStart(e, event, 'top')}
+                                      className="absolute top-0 left-0 right-0 h-3 cursor-ns-resize hover:bg-white/30 bg-white/10 transition-all z-30 flex items-center justify-center"
+                                      draggable={false}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleResizeStart(e, event, 'top');
+                                      }}
+                                      onDragStart={(e) => e.preventDefault()}
                                       onClick={(e) => e.stopPropagation()}
                                       title="Drag to resize start time"
                                     >
-                                      <div className="w-8 h-0.5 bg-white/50 rounded-full" />
+                                      <div className="w-8 h-0.5 bg-white/50 rounded-full pointer-events-none" />
                                     </div>
                                      
                                      {/* Quick Actions */}
@@ -961,12 +979,18 @@ export default function Calendar() {
                                     
                                     {/* Resize Handle Bottom */}
                                     <div
-                                      className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize hover:bg-white/30 bg-white/10 transition-all z-20 flex items-center justify-center"
-                                      onMouseDown={(e) => handleResizeStart(e, event, 'bottom')}
+                                      className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize hover:bg-white/30 bg-white/10 transition-all z-30 flex items-center justify-center"
+                                      draggable={false}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleResizeStart(e, event, 'bottom');
+                                      }}
+                                      onDragStart={(e) => e.preventDefault()}
                                       onClick={(e) => e.stopPropagation()}
                                       title="Drag to resize end time"
                                     >
-                                      <div className="w-8 h-0.5 bg-white/50 rounded-full" />
+                                      <div className="w-8 h-0.5 bg-white/50 rounded-full pointer-events-none" />
                                     </div>
                                   </div>
                                 </EventContextMenu>
