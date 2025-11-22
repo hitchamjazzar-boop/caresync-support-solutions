@@ -247,15 +247,18 @@ export default function Calendar() {
 
       if (error) throw error;
 
-      // Show all events to all employees (shared visibility)
-      // Filter by selected employees only
+      // Show events that belong to the selected employees
+      // Events are owned by whoever is in target_users
       const filteredEvents = (data || []).filter(event => {
-        // If event has target_users, only show if one of selected employees is targeted
+        // Show events where any selected employee is the owner (in target_users)
         if (event.target_users && event.target_users.length > 0) {
           return selectedEmployees.some(empId => event.target_users.includes(empId));
         }
-        // Public events with no specific targets are shown to everyone
-        return true;
+        // Events with no target_users are shown to everyone (legacy/public events)
+        if (event.created_by) {
+          return selectedEmployees.includes(event.created_by);
+        }
+        return false;
       });
 
       // Expand recurring events into individual instances
