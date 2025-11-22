@@ -9,7 +9,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAnnouncementVisibility } from '@/hooks/useAnnouncementVisibility';
 import { triggerBirthdayConfetti, triggerAchievementConfetti } from '@/lib/confetti';
-import { playBirthdaySound, playCelebrationSound, playNotificationSound } from '@/lib/sounds';
+import { playBirthdaySound, playCelebrationSound, playAnnouncementSound, playMemoSound, playAchievementSound } from '@/lib/sounds';
 
 interface AchievementType {
   name: string;
@@ -233,7 +233,25 @@ export default function Notifications() {
       if (!isInitialLoadRef.current) {
         const currentUnreadCount = allNotifications.filter(n => !n.is_read).length;
         if (currentUnreadCount > previousNotificationCountRef.current) {
-          playNotificationSound();
+          // Get the newest unread notification to determine sound
+          const newestUnread = allNotifications.find(n => !n.is_read);
+          
+          if (newestUnread) {
+            if (newestUnread.type === 'memo') {
+              playMemoSound();
+            } else {
+              const announcement = newestUnread.data as Announcement;
+              const title = announcement.title.toLowerCase();
+              
+              if (title.includes('promotion') || title.includes('employee of the month')) {
+                playAchievementSound();
+              } else if (title.includes('birthday')) {
+                playBirthdaySound();
+              } else {
+                playAnnouncementSound();
+              }
+            }
+          }
         }
         previousNotificationCountRef.current = currentUnreadCount;
       } else {

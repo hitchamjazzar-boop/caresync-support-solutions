@@ -35,6 +35,39 @@ export const ProfileAvatarWithBadges = ({
   useEffect(() => {
     if (showBadges) {
       checkUserStatus();
+      
+      // Set up real-time listener for profile changes
+      const channel = supabase
+        .channel(`profile-status-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${userId}`,
+          },
+          () => {
+            checkUserStatus();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'employee_achievements',
+            filter: `user_id=eq.${userId}`,
+          },
+          () => {
+            checkUserStatus();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [userId, showBadges]);
 
