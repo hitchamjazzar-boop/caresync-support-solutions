@@ -11,6 +11,7 @@ interface Employee {
 interface ParticipantIndicatorsProps {
   participants: Employee[];
   maxVisible?: number;
+  getColorForEmployee?: (employeeId: string) => string;
 }
 
 const DEFAULT_COLORS = [
@@ -21,11 +22,15 @@ const DEFAULT_COLORS = [
 export function ParticipantIndicators({
   participants,
   maxVisible = 3,
+  getColorForEmployee,
 }: ParticipantIndicatorsProps) {
   const visibleParticipants = participants.slice(0, maxVisible);
   const remainingCount = Math.max(0, participants.length - maxVisible);
 
   const getEmployeeColor = (employee: Employee, index: number) => {
+    if (getColorForEmployee) {
+      return getColorForEmployee(employee.id);
+    }
     return employee.calendar_color || DEFAULT_COLORS[index % DEFAULT_COLORS.length];
   };
 

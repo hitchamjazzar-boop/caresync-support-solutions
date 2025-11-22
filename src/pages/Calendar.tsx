@@ -195,8 +195,8 @@ export default function Calendar() {
 
     setPrefilledData({
       employeeId,
-      startTime: startTime.toISOString().slice(0, 16),
-      endTime: endTime.toISOString().slice(0, 16),
+      startTime: formatDateTimeLocal(startTime),
+      endTime: formatDateTimeLocal(endTime),
     });
     setCreateDialogOpen(true);
   };
@@ -439,21 +439,23 @@ export default function Calendar() {
     const employee = employees.find(e => e.id === employeeId);
     const color = employee?.calendar_color;
     
-    console.log('Employee color lookup:', { 
-      employeeId, 
-      employeeName: employee?.full_name,
-      calendarColor: color,
-      hasColor: !!color 
-    });
-    
     if (color) {
       return color;
     }
     
     const index = selectedEmployeeData.findIndex(e => e.id === employeeId);
     const fallbackColor = DEFAULT_COLORS[index % DEFAULT_COLORS.length];
-    console.log('Using fallback color:', fallbackColor, 'for employee:', employee?.full_name);
     return fallbackColor;
+  };
+
+  // Helper to format date for datetime-local input without timezone conversion
+  const formatDateTimeLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
   const handleNavigate = (direction: 'prev' | 'next' | 'today') => {
@@ -478,8 +480,6 @@ export default function Calendar() {
     const startTime = format(setMinutes(setHours(new Date(), startSlot.hour), startSlot.minute), 'h:mm a');
     // Add 15 minutes to show the end of the selected slot
     const endTime = format(setMinutes(setHours(new Date(), endSlot.hour), endSlot.minute + 15), 'h:mm a');
-    
-    console.log('Hover time range:', { startIndex, currentIndex, startTime, endTime });
     
     return `${startTime} - ${endTime}`;
   };
@@ -534,19 +534,10 @@ export default function Calendar() {
       const endTime = setMinutes(setHours(new Date(dragSelection.day), endSlot.hour), endSlot.minute);
       endTime.setMinutes(endTime.getMinutes() + 15); // Add 15 minutes to include the end slot
       
-      console.log('Selection end:', {
-        startSlotIndex,
-        endSlotIndex,
-        startTime: format(startTime, 'h:mm a'),
-        endTime: format(endTime, 'h:mm a'),
-        startTimeISO: startTime.toISOString().slice(0, 16),
-        endTimeISO: endTime.toISOString().slice(0, 16),
-      });
-      
       setPrefilledData({
         employeeId: dragSelection.employeeId,
-        startTime: startTime.toISOString().slice(0, 16),
-        endTime: endTime.toISOString().slice(0, 16),
+        startTime: formatDateTimeLocal(startTime),
+        endTime: formatDateTimeLocal(endTime),
       });
       
       setCreateDialogOpen(true);
@@ -698,11 +689,12 @@ export default function Calendar() {
                           </div>
                         </div>
                         <div className="grid" style={{ gridTemplateColumns: `repeat(${selectedEmployeeData.length}, 1fr)` }}>
-                          {selectedEmployeeData.map((employee, empIdx) => (
+                          {selectedEmployeeData.map((employee) => (
                             <div
                               key={employee.id}
-                              className={`p-2 text-center text-sm font-medium border-r last:border-r-0 truncate ${getEmployeeColor(empIdx)}`}
+                              className="p-2 text-center text-sm font-medium border-r last:border-r-0 truncate bg-muted/40"
                               title={employee.full_name}
+                              style={{ color: getEmployeeEventColor(employee.id) }}
                             >
                               {employee.full_name}
                             </div>
@@ -765,7 +757,7 @@ export default function Calendar() {
                               return (
                                 <div
                                   key={`${employee.id}-${slotIndex}`}
-                                  className={`h-12 ${getEmployeeColor(empIdx)} hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative ${
+                                  className={`h-12 bg-background hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative ${
                                     isDragOverSlot ? 'ring-2 ring-primary ring-inset' : ''
                                   } ${isInHoverRange ? 'bg-accent/50' : ''} ${isInDragSelection ? 'bg-primary/20 ring-2 ring-primary ring-inset' : ''}`}
                                   onClick={() => !isDraggingSelection && handleSlotClick(employee.id, day, slotIndex)}
@@ -855,7 +847,11 @@ export default function Calendar() {
                                     <div className="flex items-center gap-2">
                                       <div className="font-semibold truncate flex-1">{event.title}</div>
                                       {event.target_users && event.target_users.length > 1 ? (
-                                        <ParticipantIndicators participants={getEventParticipants(event)} maxVisible={2} />
+                                        <ParticipantIndicators 
+                                          participants={getEventParticipants(event)} 
+                                          maxVisible={2}
+                                          getColorForEmployee={getEmployeeEventColor}
+                                        />
                                       ) : ownerEmployee && (
                                         <div className="text-[10px] bg-white/20 px-1.5 py-0.5 rounded whitespace-nowrap">
                                           {ownerEmployee.full_name.split(' ')[0]}
