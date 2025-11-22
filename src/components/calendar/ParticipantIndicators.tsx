@@ -23,7 +23,6 @@ export function ParticipantIndicators({
   maxVisible = 3,
   getColorForEmployee,
 }: ParticipantIndicatorsProps) {
-  console.log('🔁 Render ParticipantIndicators', { count: participants.length, maxVisible });
   const visibleParticipants = participants.slice(0, maxVisible);
   const remainingCount = Math.max(0, participants.length - maxVisible);
 

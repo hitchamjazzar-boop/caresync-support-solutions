@@ -53,15 +53,6 @@ export default function Calendar() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🔵 Calendar State Change:', {
-      createDialogOpen,
-      detailsDialogOpen,
-      hasSelectedEvent: !!selectedEvent,
-      selectedEventId: selectedEvent?.id,
-    });
-  }, [createDialogOpen, detailsDialogOpen, selectedEvent]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
@@ -169,6 +160,7 @@ export default function Calendar() {
 
       const filteredEvents = (data || []).filter(event => {
         if (event.is_public) return true;
+        if (user && event.created_by === user.id) return true;
         if (!event.target_users) return false;
         return selectedEmployees.some(empId => event.target_users.includes(empId));
       });
@@ -199,7 +191,6 @@ export default function Calendar() {
   };
 
   const handleSlotClick = (employeeId: string, day: Date, slotIndex: number) => {
-    console.log('🟢 Slot Click - Opening Create Dialog');
     const slot = timeSlots[slotIndex];
     const startTime = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
     const endTime = new Date(startTime);
@@ -324,7 +315,6 @@ export default function Calendar() {
   };
 
   const handleResizeStart = (e: React.MouseEvent, event: CalendarEvent, direction: 'top' | 'bottom') => {
-    console.log('🟣 Resize Start', { eventId: event.id, direction });
     e.stopPropagation();
     e.preventDefault();
     setResizingEvent({ event, direction });
@@ -333,7 +323,6 @@ export default function Calendar() {
 
   const handleResizeMove = (e: React.MouseEvent, employeeId: string, day: Date, slotIndex: number) => {
     if (!resizingEvent) return;
-    console.log('🟣 Resize Move', { slotIndex });
 
     const slot = timeSlots[slotIndex];
     const targetTime = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
@@ -355,7 +344,6 @@ export default function Calendar() {
 
   const handleResizeEnd = async (employeeId: string, day: Date, slotIndex: number) => {
     if (!resizingEvent) return;
-    console.log('🟣 Resize End', { slotIndex });
 
     try {
       const slot = timeSlots[slotIndex];
