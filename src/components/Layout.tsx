@@ -17,6 +17,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/hooks/useAdmin';
 import { NotificationBell } from '@/components/announcements/NotificationBell';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { signOut, user } = useAuth();
@@ -138,12 +139,12 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 sm:h-10 sm:w-10 rounded-full">
-                  <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-                    <AvatarImage src={profilePhoto || undefined} />
-                    <AvatarFallback>
-                      {fullName?.charAt(0) || <User className="h-4 w-4" />}
-                    </AvatarFallback>
-                  </Avatar>
+                  <ProfileAvatarWithBadges
+                    userId={user?.id || ''}
+                    photoUrl={profilePhoto}
+                    fullName={fullName || 'User'}
+                    className="h-8 w-8 sm:h-10 sm:w-10"
+                  />
                 </Button>
               </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">

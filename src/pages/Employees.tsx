@@ -12,6 +12,7 @@ import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog'
 import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 export default function Employees() {
   const { user } = useAuth();
@@ -81,19 +82,12 @@ export default function Employees() {
           >
             <CardHeader className="pb-3">
               <div className="flex items-start gap-4">
-                {employee.photo_url ? (
-                  <img
-                    src={employee.photo_url}
-                    alt={employee.full_name}
-                    className="h-16 w-16 rounded-full object-cover flex-shrink-0"
-                  />
-                ) : (
-                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <span className="text-2xl font-semibold text-muted-foreground">
-                      {employee.full_name.charAt(0)}
-                    </span>
-                  </div>
-                )}
+                <ProfileAvatarWithBadges
+                  userId={employee.id}
+                  photoUrl={employee.photo_url}
+                  fullName={employee.full_name}
+                  className="h-16 w-16"
+                />
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-lg truncate">{employee.full_name}</CardTitle>
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-1">

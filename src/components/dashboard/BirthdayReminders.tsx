@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Cake, Calendar, Loader2 } from 'lucide-react';
 import { format, addDays, isSameDay, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface UpcomingBirthday {
   id: string;
@@ -130,10 +131,12 @@ export function BirthdayReminders() {
             className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={employee.photo_url || undefined} />
-                <AvatarFallback>{employee.full_name.charAt(0)}</AvatarFallback>
-              </Avatar>
+              <ProfileAvatarWithBadges
+                userId={employee.id}
+                photoUrl={employee.photo_url}
+                fullName={employee.full_name}
+                className="h-10 w-10"
+              />
               <div>
                 <p className="font-medium">{employee.full_name}</p>
                 <p className="text-sm text-muted-foreground">{employee.position || 'N/A'}</p>

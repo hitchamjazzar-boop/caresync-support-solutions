@@ -1,7 +1,7 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Pencil, Trash2, User } from 'lucide-react';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface OrgChartNode {
   id: string;
@@ -39,12 +39,12 @@ export function OrgChartTree({ nodes, onEdit, onDelete, editable = false }: OrgC
     <Card className="w-[240px] sm:w-56 md:w-64 lg:w-72 mb-2 sm:mb-3 hover:shadow-lg transition-shadow">
       <CardContent className="p-2 sm:p-3">
         <div className="flex items-start gap-2">
-          <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-            <AvatarImage src={node.profiles.photo_url || undefined} />
-            <AvatarFallback>
-              {node.profiles.full_name?.charAt(0) || <User className="h-3 w-3 sm:h-4 sm:w-4" />}
-            </AvatarFallback>
-          </Avatar>
+          <ProfileAvatarWithBadges
+            userId={node.user_id}
+            photoUrl={node.profiles.photo_url}
+            fullName={node.profiles.full_name}
+            className="h-8 w-8 sm:h-10 sm:w-10"
+          />
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-xs sm:text-sm truncate">{node.profiles.full_name}</h3>
             <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
