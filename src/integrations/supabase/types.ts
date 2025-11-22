@@ -274,6 +274,51 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_event_responses: {
+        Row: {
+          created_at: string | null
+          event_id: string
+          id: string
+          responded_at: string | null
+          response_status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          event_id: string
+          id?: string
+          responded_at?: string | null
+          response_status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string
+          id?: string
+          responded_at?: string | null
+          response_status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_responses_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_responses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_events: {
         Row: {
           all_day: boolean | null
@@ -287,6 +332,7 @@ export type Database = {
           is_public: boolean | null
           is_recurring: boolean | null
           location: string | null
+          meeting_link: string | null
           recurrence_end_date: string | null
           recurrence_pattern: string | null
           reminder_enabled: boolean | null
@@ -309,6 +355,7 @@ export type Database = {
           is_public?: boolean | null
           is_recurring?: boolean | null
           location?: string | null
+          meeting_link?: string | null
           recurrence_end_date?: string | null
           recurrence_pattern?: string | null
           reminder_enabled?: boolean | null
@@ -331,6 +378,7 @@ export type Database = {
           is_public?: boolean | null
           is_recurring?: boolean | null
           location?: string | null
+          meeting_link?: string | null
           recurrence_end_date?: string | null
           recurrence_pattern?: string | null
           reminder_enabled?: boolean | null

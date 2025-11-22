@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdmin } from '@/hooks/useAdmin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isSameDay, isToday, startOfDay, endOfDay, addDays } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday, addDays, startOfDay, setHours, setMinutes } from 'date-fns';
 import { toast } from 'sonner';
 import { CreateEventDialog } from '@/components/calendar/CreateEventDialog';
 import { EventDetailsDialog } from '@/components/calendar/EventDetailsDialog';
+import { EmployeeSelector } from '@/components/calendar/EmployeeSelector';
 
 interface CalendarEvent {
   id: string;
@@ -20,32 +19,49 @@ interface CalendarEvent {
   end_time: string;
   all_day: boolean;
   location: string;
+  meeting_link: string;
   color: string;
   created_by: string;
   is_public: boolean;
+  target_users: string[];
+  is_recurring: boolean;
+  recurrence_pattern: string;
 }
 
 export default function Calendar() {
   const { user } = useAuth();
-  const { isAdmin } = useAdmin();
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
+  const [prefilledData, setPrefilledData] = useState<any>(null);
 
-  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Monday
+  const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-  const timeSlots = Array.from({ length: 13 }, (_, i) => i + 6); // 6am to 6pm
+  // 15-minute slots from 6am to 6pm
+  const timeSlots = Array.from({ length: 48 }, (_, i) => {
+    const hour = Math.floor(i / 4) + 6;
+    const minute = (i % 4) * 15;
+    return { hour, minute, label: i % 4 === 0 ? format(setMinutes(setHours(new Date(), hour), minute), 'h:mm a') : '' };
+  });
 
   useEffect(() => {
     if (user) {
+      fetchEmployees();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (selectedEmployees.length > 0) {
       fetchEvents();
 
-      // Set up real-time subscription
       const channel = supabase
         .channel('calendar-events-changes')
         .on(
@@ -65,57 +81,48 @@ export default function Calendar() {
         supabase.removeChannel(channel);
       };
     }
-  }, [user, currentWeek]);
+  }, [selectedEmployees, currentWeek]);
+
+  const fetchEmployees = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, photo_url, position')
+        .order('full_name');
+
+      if (error) throw error;
+      setEmployees(data || []);
+      
+      // Select current user by default
+      if (user && data) {
+        setSelectedEmployees([user.id]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching employees:', error);
+    }
+  };
 
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      
-      // Fetch calendar events
-      const { data: calendarData, error: calendarError } = await supabase
+
+      const { data, error } = await supabase
         .from('calendar_events')
         .select('*')
         .gte('start_time', weekStart.toISOString())
         .lte('end_time', weekEnd.toISOString())
         .order('start_time', { ascending: true });
 
-      if (calendarError) throw calendarError;
+      if (error) throw error;
 
-      // Fetch birthdays from profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, full_name, birthday')
-        .not('birthday', 'is', null);
+      // Filter events for selected employees
+      const filteredEvents = (data || []).filter(event => {
+        if (event.is_public) return true;
+        if (!event.target_users) return false;
+        return selectedEmployees.some(empId => event.target_users.includes(empId));
+      });
 
-      if (profilesError) throw profilesError;
-
-      // Convert birthdays to calendar events
-      const birthdayEvents: CalendarEvent[] = (profilesData || [])
-        .filter(profile => {
-          if (!profile.birthday) return false;
-          const birthday = new Date(profile.birthday);
-          const thisYearBirthday = new Date(currentWeek.getFullYear(), birthday.getMonth(), birthday.getDate());
-          return thisYearBirthday >= weekStart && thisYearBirthday <= weekEnd;
-        })
-        .map(profile => {
-          const birthday = new Date(profile.birthday!);
-          const thisYearBirthday = new Date(currentWeek.getFullYear(), birthday.getMonth(), birthday.getDate());
-          return {
-            id: `birthday-${profile.id}`,
-            title: `🎂 ${profile.full_name}'s Birthday`,
-            description: `Happy Birthday to ${profile.full_name}!`,
-            event_type: 'birthday',
-            start_time: thisYearBirthday.toISOString(),
-            end_time: thisYearBirthday.toISOString(),
-            all_day: true,
-            location: '',
-            color: '#ec4899',
-            created_by: 'system',
-            is_public: true,
-          };
-        });
-
-      setEvents([...(calendarData || []), ...birthdayEvents]);
+      setEvents(filteredEvents);
     } catch (error: any) {
       console.error('Error fetching events:', error);
       toast.error('Failed to load calendar events');
@@ -124,29 +131,33 @@ export default function Calendar() {
     }
   };
 
-  const handlePreviousWeek = () => {
-    setCurrentWeek(subWeeks(currentWeek, 1));
+  const handleSlotClick = (employeeId: string, day: Date, slotIndex: number) => {
+    const slot = timeSlots[slotIndex];
+    const startTime = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
+    const endTime = addDays(startTime, 0);
+    endTime.setMinutes(endTime.getMinutes() + 30);
+
+    setPrefilledData({
+      employeeId,
+      startTime: startTime.toISOString().slice(0, 16),
+      endTime: endTime.toISOString().slice(0, 16),
+    });
+    setCreateDialogOpen(true);
   };
 
-  const handleNextWeek = () => {
-    setCurrentWeek(addWeeks(currentWeek, 1));
-  };
+  const getEventsForEmployeeSlot = (employeeId: string, day: Date, slotIndex: number) => {
+    const slot = timeSlots[slotIndex];
+    const slotStart = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
+    const slotEnd = new Date(slotStart);
+    slotEnd.setMinutes(slotEnd.getMinutes() + 15);
 
-  const handleToday = () => {
-    setCurrentWeek(new Date());
-  };
-
-  const getEventsForTimeSlot = (day: Date, hour: number) => {
-    const slotStart = new Date(day);
-    slotStart.setHours(hour, 0, 0, 0);
-    const slotEnd = new Date(day);
-    slotEnd.setHours(hour + 1, 0, 0, 0);
-
-    return events.filter((event) => {
+    return events.filter(event => {
       const eventStart = new Date(event.start_time);
       const eventEnd = new Date(event.end_time);
       
-      return (
+      const isForEmployee = event.is_public || event.target_users?.includes(employeeId);
+      
+      return isForEmployee && (
         (eventStart >= slotStart && eventStart < slotEnd) ||
         (eventEnd > slotStart && eventEnd <= slotEnd) ||
         (eventStart <= slotStart && eventEnd >= slotEnd)
@@ -154,19 +165,28 @@ export default function Calendar() {
     });
   };
 
-  const getAllDayEvents = (day: Date) => {
-    return events.filter((event) => {
-      const eventDate = new Date(event.start_time);
-      return event.all_day && isSameDay(eventDate, day);
-    });
+  const calculateEventHeight = (event: CalendarEvent) => {
+    const start = new Date(event.start_time);
+    const end = new Date(event.end_time);
+    const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+    const slots = Math.ceil(durationMinutes / 15);
+    return Math.max(slots, 1);
   };
 
-  const handleEventClick = (event: CalendarEvent) => {
-    setSelectedEvent(event);
-    setDetailsDialogOpen(true);
+  const getEmployeeColor = (index: number) => {
+    const colors = [
+      'bg-blue-50',
+      'bg-green-50',
+      'bg-purple-50',
+      'bg-orange-50',
+      'bg-pink-50',
+      'bg-yellow-50',
+      'bg-indigo-50',
+    ];
+    return colors[index % colors.length];
   };
 
-  if (loading) {
+  if (loading && selectedEmployees.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -174,145 +194,163 @@ export default function Calendar() {
     );
   }
 
+  const selectedEmployeeData = employees.filter(e => selectedEmployees.includes(e.id));
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <CalendarIcon className="h-8 w-8 text-primary" />
-            Company Calendar
+            Team Calendar
           </h1>
           <p className="text-muted-foreground mt-2">
-            View and manage appointments, events, and important dates
+            Schedule and view team availability
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Event
-        </Button>
+        <div className="flex gap-2">
+          <EmployeeSelector
+            selectedEmployees={selectedEmployees}
+            onSelectionChange={setSelectedEmployees}
+          />
+          <Button onClick={() => {
+            setPrefilledData(null);
+            setCreateDialogOpen(true);
+          }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Event
+          </Button>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="outline" size="sm" onClick={handlePreviousWeek}>
+              <Button variant="outline" size="sm" onClick={() => setCurrentWeek(subWeeks(currentWeek, 1))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <CardTitle className="text-xl">
                 {format(weekStart, 'MMM d')} - {format(weekEnd, 'MMM d, yyyy')}
               </CardTitle>
-              <Button variant="outline" size="sm" onClick={handleNextWeek}>
+              <Button variant="outline" size="sm" onClick={() => setCurrentWeek(addWeeks(currentWeek, 1))}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <Button variant="outline" onClick={handleToday}>
+            <Button variant="outline" onClick={() => setCurrentWeek(new Date())}>
               Today
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-lg overflow-hidden">
-            {/* Calendar Header */}
-            <div className="grid grid-cols-8 border-b bg-muted/50">
-              <div className="p-2 text-xs font-medium text-muted-foreground border-r">
-                Time
-              </div>
-              {weekDays.map((day) => (
-                <div
-                  key={day.toISOString()}
-                  className={`p-2 text-center border-r last:border-r-0 ${
-                    isToday(day) ? 'bg-primary/10' : ''
-                  }`}
-                >
-                  <div className="text-xs font-medium text-muted-foreground">
-                    {format(day, 'EEE')}
+          {selectedEmployeeData.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              Select employees to view their calendars
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-auto">
+              {/* Header */}
+              <div className="sticky top-0 z-10 bg-background">
+                <div className="grid border-b" style={{ gridTemplateColumns: `80px repeat(${weekDays.length}, minmax(0, 1fr))` }}>
+                  <div className="p-2 text-xs font-medium text-muted-foreground border-r bg-muted/50">
+                    Time
                   </div>
-                  <div
-                    className={`text-lg font-semibold ${
-                      isToday(day) ? 'text-primary' : ''
-                    }`}
-                  >
-                    {format(day, 'd')}
-                  </div>
-                  
-                  {/* All-day events */}
-                  {getAllDayEvents(day).length > 0 && (
-                    <div className="mt-2 space-y-1">
-                      {getAllDayEvents(day).map((event) => (
-                        <button
-                          key={event.id}
-                          onClick={() => handleEventClick(event)}
-                          className="w-full text-xs p-1 rounded text-white truncate hover:opacity-80 transition-opacity"
-                          style={{ backgroundColor: event.color }}
+                  {weekDays.map(day => (
+                    <div
+                      key={day.toISOString()}
+                      className={`p-2 text-center border-r last:border-r-0 ${isToday(day) ? 'bg-primary/10' : 'bg-muted/50'}`}
+                    >
+                      <div className="text-xs font-medium text-muted-foreground">
+                        {format(day, 'EEE')}
+                      </div>
+                      <div className={`text-lg font-semibold ${isToday(day) ? 'text-primary' : ''}`}>
+                        {format(day, 'd')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Employee Headers */}
+                <div className="grid border-b" style={{ gridTemplateColumns: `80px repeat(${weekDays.length}, minmax(0, 1fr))` }}>
+                  <div className="border-r bg-muted/50" />
+                  {weekDays.map(day => (
+                    <div key={`header-${day.toISOString()}`} className="border-r last:border-r-0">
+                      {selectedEmployeeData.map((employee, idx) => (
+                        <div
+                          key={employee.id}
+                          className={`p-2 text-xs font-medium truncate border-b last:border-b-0 ${getEmployeeColor(idx)}`}
                         >
-                          {event.title}
-                        </button>
+                          {employee.full_name}
+                        </div>
                       ))}
                     </div>
-                  )}
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
 
-            {/* Time Slots */}
-            <div className="max-h-[600px] overflow-y-auto">
-              {timeSlots.map((hour) => (
-                <div key={hour} className="grid grid-cols-8 border-b last:border-b-0">
-                  <div className="p-2 text-xs text-muted-foreground border-r">
-                    {format(new Date().setHours(hour, 0), 'h:mm a')}
-                  </div>
-                  {weekDays.map((day) => {
-                    const slotEvents = getEventsForTimeSlot(day, hour);
-                    return (
-                      <div
-                        key={`${day.toISOString()}-${hour}`}
-                        className="min-h-[60px] p-1 border-r last:border-r-0 hover:bg-muted/30 transition-colors"
-                      >
-                        {slotEvents.map((event) => (
-                          <button
-                            key={event.id}
-                            onClick={() => handleEventClick(event)}
-                            className="w-full text-xs p-1 mb-1 rounded text-white truncate hover:opacity-80 transition-opacity"
-                            style={{ backgroundColor: event.color }}
-                          >
-                            <div className="font-medium">{event.title}</div>
-                            {event.location && (
-                              <div className="text-[10px] opacity-90">{event.location}</div>
-                            )}
-                          </button>
-                        ))}
+              {/* Time Grid */}
+              <div className="max-h-[600px] overflow-y-auto">
+                {timeSlots.map((slot, slotIndex) => (
+                  <div
+                    key={slotIndex}
+                    className="grid"
+                    style={{
+                      gridTemplateColumns: `80px repeat(${weekDays.length}, minmax(0, 1fr))`,
+                      minHeight: '40px'
+                    }}
+                  >
+                    <div className="p-1 text-xs text-muted-foreground border-r border-b">
+                      {slot.label}
+                    </div>
+                    {weekDays.map(day => (
+                      <div key={`${day.toISOString()}-${slotIndex}`} className="border-r border-b last:border-r-0">
+                        {selectedEmployeeData.map((employee, empIdx) => {
+                          const slotEvents = getEventsForEmployeeSlot(employee.id, day, slotIndex);
+                          const isFirstSlotForEvent = (event: CalendarEvent) => {
+                            const eventStart = new Date(event.start_time);
+                            const slotStart = setMinutes(setHours(new Date(day), slot.hour), slot.minute);
+                            return Math.abs(eventStart.getTime() - slotStart.getTime()) < 15 * 60 * 1000;
+                          };
+
+                          return (
+                            <div
+                              key={`${employee.id}-${slotIndex}`}
+                              className={`h-10 ${getEmployeeColor(empIdx)} hover:bg-accent/50 cursor-pointer transition-colors border-b last:border-b-0 relative`}
+                              onClick={() => handleSlotClick(employee.id, day, slotIndex)}
+                            >
+                              {slotEvents.filter(isFirstSlotForEvent).map(event => {
+                                const height = calculateEventHeight(event);
+                                return (
+                                  <button
+                                    key={event.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedEvent(event);
+                                      setDetailsDialogOpen(true);
+                                    }}
+                                    className="absolute inset-x-0 text-xs p-1 rounded text-white truncate hover:opacity-90 transition-opacity z-10"
+                                    style={{
+                                      backgroundColor: event.color,
+                                      height: `${height * 40}px`,
+                                    }}
+                                  >
+                                    <div className="font-medium truncate">{event.title}</div>
+                                    {event.location && (
+                                      <div className="text-[10px] opacity-90 truncate">{event.location}</div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
-              ))}
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-
-          {/* Legend */}
-          <div className="mt-4 flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#3b82f6' }} />
-              <span className="text-sm">Event</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#10b981' }} />
-              <span className="text-sm">Meeting</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#f59e0b' }} />
-              <span className="text-sm">Reminder</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#ec4899' }} />
-              <span className="text-sm">Birthday</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded" style={{ backgroundColor: '#8b5cf6' }} />
-              <span className="text-sm">Project</span>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -322,7 +360,9 @@ export default function Calendar() {
         onSuccess={() => {
           fetchEvents();
           setCreateDialogOpen(false);
+          setPrefilledData(null);
         }}
+        prefilledData={prefilledData}
       />
 
       <EventDetailsDialog

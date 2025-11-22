@@ -3,13 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, Loader2, CheckCheck, Mail, AlertTriangle, Award, Cake, TrendingUp } from 'lucide-react';
+import { Bell, Loader2, CheckCheck, Mail, AlertTriangle, Award, Cake, TrendingUp, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAnnouncementVisibility } from '@/hooks/useAnnouncementVisibility';
 import { triggerBirthdayConfetti, triggerAchievementConfetti } from '@/lib/confetti';
 import { playBirthdaySound, playCelebrationSound, playAnnouncementSound, playMemoSound, playAchievementSound } from '@/lib/sounds';
+import { EventInvitationCard } from '@/components/calendar/EventInvitationCard';
 
 interface AchievementType {
   name: string;
@@ -46,18 +47,19 @@ interface Memo {
 
 interface Notification {
   id: string;
-  type: 'announcement' | 'memo';
+  type: 'announcement' | 'memo' | 'calendar_invitation';
   title: string;
   content: string;
   created_at: string;
   is_read: boolean;
-  data: Announcement | Memo;
+  data: Announcement | Memo | any;
 }
 
 export default function Notifications() {
   const { user } = useAuth();
   const { canSeeAnnouncement } = useAnnouncementVisibility();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [calendarInvitations, setCalendarInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAllRead, setMarkingAllRead] = useState(false);
   const navigate = useNavigate();
@@ -100,6 +102,29 @@ export default function Notifications() {
             event: '*',
             schema: 'public',
             table: 'announcement_reads',
+            filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            fetchNotifications();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'calendar_events',
+          },
+          () => {
+            fetchNotifications();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'calendar_event_responses',
             filter: `user_id=eq.${user.id}`,
           },
           () => {
@@ -221,6 +246,31 @@ export default function Notifications() {
         is_read: memo.is_read,
         data: memo,
       }));
+
+      // Fetch calendar invitations
+      const { data: invitationsData, error: invitationsError } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .contains('target_users', [user.id])
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true });
+
+      if (invitationsError) throw invitationsError;
+
+      // Get RSVP status for invitations
+      const { data: responsesData } = await supabase
+        .from('calendar_event_responses')
+        .select('event_id, response_status')
+        .eq('user_id', user.id);
+
+      const responsesMap = new Map(responsesData?.map(r => [r.event_id, r.response_status]) || []);
+
+      // Filter pending invitations
+      const pendingInvitations = (invitationsData || []).filter(
+        event => responsesMap.get(event.id) === 'pending' || !responsesMap.has(event.id)
+      );
+
+      setCalendarInvitations(pendingInvitations);
 
       // Combine and sort by date
       const allNotifications = [...visibleAnnouncements, ...memos].sort(
@@ -431,6 +481,24 @@ export default function Notifications() {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Calendar Invitations */}
+      {calendarInvitations.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold">Pending Calendar Invitations</h2>
+            <Badge variant="secondary">{calendarInvitations.length}</Badge>
+          </div>
+          {calendarInvitations.map(event => (
+            <EventInvitationCard
+              key={event.id}
+              event={event}
+              onResponse={() => fetchNotifications()}
+            />
+          ))}
+        </div>
       )}
 
       {notifications.length === 0 ? (
