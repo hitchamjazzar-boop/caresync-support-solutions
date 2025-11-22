@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Award, Cake } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { triggerBirthdayConfetti } from '@/lib/confetti';
 
 interface ProfileAvatarWithBadgesProps {
   userId: string;
@@ -96,9 +97,16 @@ export const ProfileAvatarWithBadges = ({
       {showBadges && (
         <div className="absolute -bottom-1 -right-1 flex gap-1">
           {status.isBirthday && (
-            <div className="bg-pink-500 rounded-full p-1 shadow-lg border-2 border-background">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerBirthdayConfetti();
+              }}
+              className="bg-pink-500 rounded-full p-1 shadow-lg border-2 border-background hover:scale-110 transition-transform cursor-pointer animate-pulse"
+              aria-label="Celebrate birthday"
+            >
               <Cake className="h-3 w-3 text-white" />
-            </div>
+            </button>
           )}
           {status.hasAchievements && (
             <div className="bg-amber-500 rounded-full p-1 shadow-lg border-2 border-background">

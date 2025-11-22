@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, User, KeyRound } from 'lucide-react';
 import { z } from 'zod';
 import { PaymentMethodForm } from '@/components/profile/PaymentMethodForm';
+import { EmployeeAchievementsBadges } from '@/components/profile/EmployeeAchievementsBadges';
 
 const profileSchema = z.object({
   full_name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
@@ -580,6 +581,9 @@ export default function Profile() {
 
       {/* Payment Method Section */}
       <PaymentMethodForm />
+
+      {/* Achievements Section */}
+      {user && <EmployeeAchievementsBadges userId={user.id} />}
     </div>
   );
 }
