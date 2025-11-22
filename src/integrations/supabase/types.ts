@@ -46,6 +46,41 @@ export type Database = {
           },
         ]
       }
+      announcement_comments: {
+        Row: {
+          announcement_id: string
+          comment: string
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          comment: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          comment?: string
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_comments_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       announcement_reads: {
         Row: {
           announcement_id: string
@@ -84,7 +119,9 @@ export type Database = {
           created_at: string
           created_by: string
           expires_at: string | null
+          featured_user_id: string | null
           id: string
+          image_url: string | null
           is_active: boolean
           is_pinned: boolean
           target_departments: string[] | null
@@ -99,7 +136,9 @@ export type Database = {
           created_at?: string
           created_by: string
           expires_at?: string | null
+          featured_user_id?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           is_pinned?: boolean
           target_departments?: string[] | null
@@ -114,7 +153,9 @@ export type Database = {
           created_at?: string
           created_by?: string
           expires_at?: string | null
+          featured_user_id?: string | null
           id?: string
+          image_url?: string | null
           is_active?: boolean
           is_pinned?: boolean
           target_departments?: string[] | null
@@ -161,6 +202,39 @@ export type Database = {
           status?: string | null
           total_hours?: number | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      employee_feedback: {
+        Row: {
+          admin_response: string | null
+          created_at: string | null
+          id: string
+          message: string
+          status: string | null
+          subject: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_response?: string | null
+          created_at?: string | null
+          id?: string
+          message: string
+          status?: string | null
+          subject: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_response?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string
+          status?: string | null
+          subject?: string
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -428,7 +502,9 @@ export type Database = {
         Row: {
           account_holder_name: string | null
           account_number: string | null
+          address: string | null
           bank_name: string | null
+          birthday: string | null
           contact_email: string | null
           contact_phone: string | null
           created_at: string
@@ -443,11 +519,14 @@ export type Database = {
           routing_number: string | null
           start_date: string
           updated_at: string
+          zodiac_sign: string | null
         }
         Insert: {
           account_holder_name?: string | null
           account_number?: string | null
+          address?: string | null
           bank_name?: string | null
+          birthday?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -462,11 +541,14 @@ export type Database = {
           routing_number?: string | null
           start_date?: string
           updated_at?: string
+          zodiac_sign?: string | null
         }
         Update: {
           account_holder_name?: string | null
           account_number?: string | null
+          address?: string | null
           bank_name?: string | null
+          birthday?: string | null
           contact_email?: string | null
           contact_phone?: string | null
           created_at?: string
@@ -481,6 +563,7 @@ export type Database = {
           routing_number?: string | null
           start_date?: string
           updated_at?: string
+          zodiac_sign?: string | null
         }
         Relationships: []
       }

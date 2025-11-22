@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, BarChart3 } from 'lucide-react';
+import { Plus, Pencil, Trash2, BarChart3, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AnnouncementDialog } from '@/components/announcements/AnnouncementDialog';
+import { EmployeeOfMonthDialog } from '@/components/announcements/EmployeeOfMonthDialog';
 import { DeleteAnnouncementDialog } from '@/components/announcements/DeleteAnnouncementDialog';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -31,6 +32,7 @@ export default function Announcements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [eomDialogOpen, setEomDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const { toast } = useToast();
@@ -132,14 +134,24 @@ export default function Announcements() {
         <h1 className="text-2xl sm:text-3xl font-bold">Announcements</h1>
         <div className="flex gap-2 w-full sm:w-auto">
           {isAdmin && (
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/announcement-analytics')}
-              className="flex-1 sm:flex-initial"
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Analytics
-            </Button>
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => navigate('/announcement-analytics')}
+                className="flex-1 sm:flex-initial"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Analytics
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setEomDialogOpen(true)}
+                className="flex-1 sm:flex-initial"
+              >
+                <Award className="h-4 w-4 mr-2" />
+                Employee of Month
+              </Button>
+            </>
           )}
           <Button onClick={handleCreateNew} className="flex-1 sm:flex-initial">
             <Plus className="h-4 w-4 mr-2" />
@@ -207,6 +219,12 @@ export default function Announcements() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         announcement={selectedAnnouncement}
+        onSuccess={fetchAnnouncements}
+      />
+
+      <EmployeeOfMonthDialog
+        open={eomDialogOpen}
+        onOpenChange={setEomDialogOpen}
         onSuccess={fetchAnnouncements}
       />
 
