@@ -510,8 +510,11 @@ export default function Calendar() {
       const eventStart = new Date(event.start_time);
       const eventEnd = new Date(event.end_time);
       
-      // Event must be for this specific employee (or public and visible to all)
-      const isForThisEmployee = event.target_users?.includes(employeeId) || event.is_public;
+      // Event belongs to employee only if they are in target_users
+      // Fallback: if no target_users, show to creator (for legacy events)
+      const isForThisEmployee = event.target_users && event.target_users.length > 0
+        ? event.target_users.includes(employeeId)
+        : event.created_by === employeeId;
       
       return isForThisEmployee && (
         (eventStart >= slotStart && eventStart < slotEnd) ||
