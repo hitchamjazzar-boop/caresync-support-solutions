@@ -23,9 +23,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, Clock, MapPin, User, Trash2, Link2, Users, Repeat, CheckCircle2, XCircle, Clock as ClockPending, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Trash2, Link2, Users, Repeat, CheckCircle2, XCircle, Clock as ClockPending, AlertCircle, Copy } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface EventDetailsDialogProps {
   open: boolean;
@@ -49,14 +50,30 @@ export function EventDetailsDialog({
   const [attendees, setAttendees] = useState<any[]>([]);
   const [responses, setResponses] = useState<any[]>([]);
   const [userResponse, setUserResponse] = useState<any>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedCopyTarget, setSelectedCopyTarget] = useState<string>('');
 
   useEffect(() => {
-    console.log('🟠 EventDetailsDialog useEffect triggered', { open, eventId: event?.id });
     if (event && open) {
-      console.log('🟠 EventDetailsDialog fetching attendees');
       fetchAttendees();
+      fetchEmployees();
     }
   }, [open, event?.id]);
+
+  const fetchEmployees = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, photo_url, position')
+        .order('full_name');
+
+      if (error) throw error;
+      setEmployees(data || []);
+    } catch (error: any) {
+      console.error('Error fetching employees:', error);
+    }
+  };
 
   const fetchAttendees = async () => {
     if (!event?.target_users || event.target_users.length === 0) return;
@@ -139,6 +156,50 @@ export function EventDetailsDialog({
     } finally {
       setLoading(false);
       setDeleteDialogOpen(false);
+    }
+  };
+
+  const handleCopyEvent = async () => {
+    if (!selectedCopyTarget || !user) {
+      toast.error('Please select an employee');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Create a copy of the event for the target employee
+      const { error } = await supabase
+        .from('calendar_events')
+        .insert({
+          title: event.title,
+          description: event.description ? `${event.description}\n\n[Copied from original event]` : '[Copied from original event]',
+          event_type: event.event_type,
+          start_time: event.start_time,
+          end_time: event.end_time,
+          all_day: event.all_day,
+          location: event.location,
+          meeting_link: event.meeting_link,
+          color: event.color,
+          created_by: user.id,
+          is_public: false,
+          target_users: [selectedCopyTarget],
+          is_recurring: event.is_recurring,
+          recurrence_pattern: event.recurrence_pattern,
+          recurrence_end_date: event.recurrence_end_date,
+        });
+
+      if (error) throw error;
+
+      toast.success('Event copied successfully');
+      setCopyDialogOpen(false);
+      setSelectedCopyTarget('');
+      onUpdate();
+    } catch (error: any) {
+      console.error('Error copying event:', error);
+      toast.error('Failed to copy event');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -296,9 +357,13 @@ export function EventDetailsDialog({
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Close
+            </Button>
+            <Button variant="outline" onClick={() => setCopyDialogOpen(true)}>
+              <Copy className="h-4 w-4 mr-2" />
+              Copy Event
             </Button>
             {event.meeting_link && (
               <Button asChild>
@@ -328,6 +393,48 @@ export function EventDetailsDialog({
               disabled={loading}
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Copy Event Dialog */}
+      <AlertDialog open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Copy Event to Employee Calendar</AlertDialogTitle>
+            <AlertDialogDescription>
+              Select an employee to copy this event to their calendar.
+              {event.is_recurring && ' The copied event will maintain the same recurring pattern.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Select value={selectedCopyTarget} onValueChange={setSelectedCopyTarget}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select an employee" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map((emp) => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={emp.photo_url} />
+                        <AvatarFallback>{emp.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <span>{emp.full_name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCopyEvent}
+              disabled={loading || !selectedCopyTarget}
+            >
+              {loading ? 'Copying...' : 'Copy Event'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
