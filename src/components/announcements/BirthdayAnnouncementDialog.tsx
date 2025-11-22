@@ -201,16 +201,7 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
               <SelectContent>
                 {employees.map((employee) => (
                   <SelectItem key={employee.id} value={employee.id}>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={employee.photo_url || undefined} />
-                        <AvatarFallback>{employee.full_name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <span>
-                        {employee.full_name} 
-                        {employee.birthday && ` - ${format(new Date(employee.birthday), 'MMM dd')}`}
-                      </span>
-                    </div>
+                    {employee.full_name} {employee.birthday && `(${format(new Date(employee.birthday), 'MMM dd')})`}
                   </SelectItem>
                 ))}
               </SelectContent>

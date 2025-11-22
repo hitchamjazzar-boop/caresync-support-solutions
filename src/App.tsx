@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Announcements from "./pages/Announcements";
 import AnnouncementAnalytics from "./pages/AnnouncementAnalytics";
+import AnnouncementGallery from "./pages/AnnouncementGallery";
 import Memos from "./pages/Memos";
 import MemoAnalytics from "./pages/MemoAnalytics";
 import OrgChart from "./pages/OrgChart";
@@ -62,6 +63,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <AnnouncementAnalytics />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/announcement-gallery"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AnnouncementGallery />
                   </Layout>
                 </ProtectedRoute>
               }

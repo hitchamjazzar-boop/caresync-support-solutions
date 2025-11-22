@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Menu, X, Megaphone, Network, Mail, MessageSquare } from 'lucide-react';
+import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Menu, X, Megaphone, Network, Mail, MessageSquare, ImageIcon } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -64,6 +64,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: BarChart3 },
     { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
+    { name: 'Celebration Gallery', href: '/announcement-gallery', icon: ImageIcon },
     { name: 'Memo Analytics', href: '/memo-analytics', icon: Mail, adminOnly: true },
     { name: 'Org Chart', href: '/org-chart', icon: Network },
     { name: 'Employees', href: '/employees', icon: Users, adminOnly: true },
