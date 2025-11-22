@@ -22,7 +22,6 @@ export function EmployeeSelector({ selectedEmployees, onSelectionChange }: Emplo
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    console.log('🔁 Render EmployeeSelector', { selectedCount: selectedEmployees.length });
     fetchEmployees();
   }, []);
 

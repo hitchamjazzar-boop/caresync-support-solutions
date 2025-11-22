@@ -93,7 +93,14 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
     recurrence_pattern: 'weekly',
     recurrence_end_date: '',
   });
-  console.log('🔁 Render CreateEventDialog', { open, mounted, attendees: selectedAttendees.length });
+
+  // Helper to convert local time to UTC ISO string
+  const toUtcIso = (value: string | null | undefined) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return null;
+    return date.toISOString();
+  };
  
   useEffect(() => {
     if (open) {
@@ -106,6 +113,9 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
       
       if (prefilledData?.employeeId) {
         setSelectedAttendees([prefilledData.employeeId]);
+        // When creating event for specific person, default to private
+        updates.is_public = false;
+        hasUpdates = true;
       }
       
       if (prefilledData?.startTime) {
@@ -173,13 +183,26 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
         recurrencePatternStr = `weekly:${selectedDays.join(',')}`;
       }
 
+      // Ensure creator is included in target_users
+      let attendees = selectedAttendees;
+      if (attendees.length > 0 && !attendees.includes(user.id)) {
+        attendees = [...attendees, user.id];
+      }
+
       const eventData: any = {
         ...formData,
+        start_time: toUtcIso(formData.start_time)!,
+        end_time: toUtcIso(formData.end_time)!,
+        // If there are explicit attendees, make event private by default
+        is_public: attendees.length === 0 ? formData.is_public : false,
         recurrence_pattern: formData.is_recurring ? recurrencePatternStr : null,
-        recurrence_end_date: formData.is_recurring && formData.recurrence_end_date ? formData.recurrence_end_date : null,
+        recurrence_end_date:
+          formData.is_recurring && formData.recurrence_end_date
+            ? toUtcIso(formData.recurrence_end_date)
+            : null,
         color: eventTypeColors[formData.event_type as keyof typeof eventTypeColors] || '#3b82f6',
         created_by: user.id,
-        target_users: selectedAttendees.length > 0 ? selectedAttendees : null,
+        target_users: attendees.length > 0 ? attendees : null,
       };
 
       const { data: newEvent, error } = await supabase
@@ -191,8 +214,8 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
       if (error) throw error;
 
       // Create RSVP records for all attendees
-      if (selectedAttendees.length > 0 && newEvent) {
-        const responses = selectedAttendees.map(attendeeId => ({
+      if (attendees.length > 0 && newEvent) {
+        const responses = attendees.map(attendeeId => ({
           event_id: newEvent.id,
           user_id: attendeeId,
           response_status: 'pending',
@@ -205,7 +228,7 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
         if (rsvpError) throw rsvpError;
 
         // Create notifications for attendees
-        const notifications = selectedAttendees
+        const notifications = attendees
           .filter(id => id !== user.id)
           .map(attendeeId => ({
             notification_id: newEvent.id,
@@ -220,7 +243,7 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
         }
       }
 
-      toast.success('Event created successfully' + (selectedAttendees.length > 0 ? ' and invitations sent' : ''));
+      toast.success('Event created successfully' + (attendees.length > 0 ? ' and invitations sent' : ''));
       resetForm();
       onSuccess();
     } catch (error: any) {
