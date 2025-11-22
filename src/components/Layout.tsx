@@ -94,19 +94,19 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const mainNavigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Calendar', href: '/calendar', icon: Calendar },
+    { name: 'My Achievements', href: '/profile#achievements', icon: Award },
+    { name: 'Attendance', href: '/attendance', icon: Clock },
+    { name: 'EOD Reports', href: '/reports', icon: FileText },
+    { name: 'Payroll', href: '/payroll', icon: DollarSign },
     { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
     { name: 'Celebration Gallery', href: '/announcement-gallery', icon: ImageIcon },
     { name: 'Employee Voting', href: '/voting', icon: Vote },
     { name: 'Secret Santa', href: '/secret-santa', icon: Gift },
-    { name: 'Calendar', href: '/calendar', icon: Calendar },
-    { name: 'My Achievements', href: '/profile#achievements', icon: Award },
-    { name: 'My Memos', href: '/memos', icon: Mail },
     { name: 'Org Chart', href: '/org-chart', icon: Network },
     { name: 'Employees', href: '/employees', icon: Users, adminOnly: true },
-    { name: 'Attendance', href: '/attendance', icon: Clock },
+    { name: 'My Memos', href: '/memos', icon: Mail },
     { name: 'Schedules', href: '/schedules', icon: Calendar },
-    { name: 'EOD Reports', href: '/reports', icon: FileText },
-    { name: 'Payroll', href: '/payroll', icon: DollarSign },
     { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   ];
 
