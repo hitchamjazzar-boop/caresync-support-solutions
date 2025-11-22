@@ -435,7 +435,10 @@ export default function Calendar() {
 
   const handleSelectionMove = (employeeId: string, day: Date, slotIndex: number) => {
     if (isDraggingSelection && dragSelection && dragSelection.employeeId === employeeId && isSameDay(dragSelection.day, day)) {
-      setDragSelection(prev => prev ? { ...prev, endIndex: slotIndex } : null);
+      // Only update if the endIndex actually changed to prevent infinite loops
+      if (dragSelection.endIndex !== slotIndex) {
+        setDragSelection(prev => prev ? { ...prev, endIndex: slotIndex } : null);
+      }
     }
   };
 
@@ -671,25 +674,26 @@ export default function Calendar() {
                                   onDrop={(e) => handleDrop(e, employee.id, day, slotIndex)}
                                   onMouseDown={(e) => {
                                     if (e.button === 0 && !resizingEvent) {
+                                      e.preventDefault();
                                       handleSelectionStart(employee.id, day, slotIndex);
                                     }
                                   }}
                                   onMouseEnter={() => {
                                     if (isDraggingSelection) {
                                       handleSelectionMove(employee.id, day, slotIndex);
-                                    } else if (hoverSlot) {
-                                      handleSlotHover(employee.id, day, slotIndex, hoverSlot.startIndex);
                                     }
                                   }}
-                                  onMouseLeave={() => !isDraggingSelection && setHoverSlot(null)}
-                                  onMouseMove={(e) => resizingEvent && handleResizeMove(e, employee.id, day, slotIndex)}
+                                  onMouseMove={(e) => {
+                                    if (resizingEvent) {
+                                      handleResizeMove(e, employee.id, day, slotIndex);
+                                    }
+                                  }}
                                   onMouseUp={() => {
                                     if (resizingEvent) {
                                       handleResizeEnd(employee.id, day, slotIndex);
                                     } else if (isDraggingSelection) {
                                       handleSelectionEnd();
                                     }
-                                    setHoverSlot(null);
                                   }}
                                 >
                                   {isInDragSelection && dragSelection && slotIndex === Math.min(dragSelection.startIndex, dragSelection.endIndex) && (
