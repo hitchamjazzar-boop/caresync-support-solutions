@@ -166,10 +166,13 @@ Deno.serve(async (req) => {
       throw insertError;
     }
 
-    // Update event status to 'assigned'
+    // Update event status to 'assigned' and enable reveal
     const { error: updateError } = await supabaseClient
       .from('secret_santa_events')
-      .update({ status: 'assigned' })
+      .update({ 
+        status: 'assigned',
+        reveal_enabled: true 
+      })
       .eq('id', eventId);
 
     if (updateError) {
