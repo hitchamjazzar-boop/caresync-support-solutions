@@ -168,9 +168,7 @@ export default function AnnouncementGallery() {
 
       const { error } = await supabase
         .from('announcement_reads')
-        .upsert(readRecords, {
-          onConflict: 'user_id,announcement_id',
-        });
+        .insert(readRecords);
 
       if (error) throw error;
 
