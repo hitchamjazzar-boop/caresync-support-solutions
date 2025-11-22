@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -14,10 +14,14 @@ import { FeaturedAnnouncements } from '@/components/dashboard/FeaturedAnnounceme
 import { BirthdayReminders } from '@/components/dashboard/BirthdayReminders';
 import { SecretSantaAssignment } from '@/components/dashboard/SecretSantaAssignment';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { playNotificationSound } from '@/lib/sounds';
+import { triggerSecretSantaConfetti } from '@/lib/confetti';
 
 export default function Dashboard() {
   const { isAdmin } = useAdmin();
   const { user } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalEmployees: 0,
@@ -26,6 +30,7 @@ export default function Dashboard() {
     pendingPayroll: 0,
   });
   const [approvedPayroll, setApprovedPayroll] = useState<any[]>([]);
+  const hasShownSecretSantaNotification = useRef(false);
 
   useEffect(() => {
     if (isAdmin) {
@@ -34,7 +39,7 @@ export default function Dashboard() {
       fetchEmployeePayroll();
       
       // Set up real-time subscription for payroll changes
-      const channel = supabase
+      const payrollChannel = supabase
         .channel('payroll-changes')
         .on(
           'postgres_changes',
@@ -51,11 +56,48 @@ export default function Dashboard() {
         )
         .subscribe();
 
+      // Set up real-time listener for Secret Santa reveal
+      const secretSantaChannel = supabase
+        .channel('secret-santa-reveal-notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'secret_santa_events',
+            filter: `status=eq.assigned`,
+          },
+          async (payload) => {
+            // Check if reveal_enabled changed to true
+            if (payload.new.reveal_enabled === true && payload.old.reveal_enabled === false) {
+              // Check if user is a participant in this event
+              const { data: participation } = await supabase
+                .from('secret_santa_participants')
+                .select('*')
+                .eq('event_id', payload.new.id)
+                .eq('user_id', user.id)
+                .maybeSingle();
+
+              if (participation && !hasShownSecretSantaNotification.current) {
+                hasShownSecretSantaNotification.current = true;
+                triggerSecretSantaConfetti();
+                playNotificationSound();
+                toast({
+                  title: "🎅 Secret Santa Revealed!",
+                  description: "Your Secret Santa assignment is now available! Check the dashboard to see who you're gifting to.",
+                });
+              }
+            }
+          }
+        )
+        .subscribe();
+
       return () => {
-        supabase.removeChannel(channel);
+        supabase.removeChannel(payrollChannel);
+        supabase.removeChannel(secretSantaChannel);
       };
     }
-  }, [isAdmin, user]);
+  }, [isAdmin, user, toast]);
 
   const fetchAdminStats = async () => {
     const today = new Date().toISOString().split('T')[0];
