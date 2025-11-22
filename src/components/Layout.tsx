@@ -19,10 +19,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarProvider,
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -88,26 +92,31 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const navigation: NavigationItem[] = [
-    { name: 'Dashboard', href: '/', icon: BarChart3 },
+  const mainNavigation: NavigationItem[] = [
+    { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
     { name: 'Celebration Gallery', href: '/announcement-gallery', icon: ImageIcon },
     { name: 'Employee Voting', href: '/voting', icon: Vote },
     { name: 'Secret Santa', href: '/secret-santa', icon: Gift },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
-    { name: 'Calendar Settings', href: '/calendar/settings', icon: Settings, adminOnly: true },
     { name: 'My Achievements', href: '/profile#achievements', icon: Award },
-    { name: 'Manage Achievements', href: '/achievements', icon: Award, adminOnly: true },
-    { name: 'Memo Analytics', href: '/memo-analytics', icon: Mail, adminOnly: true },
+    { name: 'My Memos', href: '/memos', icon: Mail },
     { name: 'Org Chart', href: '/org-chart', icon: Network },
     { name: 'Employees', href: '/employees', icon: Users, adminOnly: true },
-    { name: 'My Memos', href: '/memos', icon: Mail },
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'Schedules', href: '/schedules', icon: Calendar },
     { name: 'EOD Reports', href: '/reports', icon: FileText },
     { name: 'Payroll', href: '/payroll', icon: DollarSign },
     { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   ];
+
+  const settingsNavigation: NavigationItem[] = [
+    { name: 'Calendar Settings', href: '/calendar/settings', icon: Settings, adminOnly: true },
+    { name: 'Manage Achievements', href: '/achievements', icon: Award, adminOnly: true },
+    { name: 'Memo Analytics', href: '/memo-analytics', icon: BarChart3, adminOnly: true },
+  ];
+
+  const allNavigation = [...mainNavigation, ...settingsNavigation];
 
   const getBreadcrumbs = () => {
     const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -120,7 +129,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     let currentPath = '';
     pathSegments.forEach((segment) => {
       currentPath += `/${segment}`;
-      const navItem = navigation.find(item => item.href === currentPath);
+      const navItem = allNavigation.find(item => item.href === currentPath);
       if (navItem) {
         breadcrumbs.push({ name: navItem.name, href: navItem.href, icon: navItem.icon });
       } else {
@@ -137,37 +146,87 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const AppSidebar = () => {
     const { open } = useSidebar();
+    const [settingsOpen, setSettingsOpen] = useState(() => {
+      // Check if current route is in settings navigation
+      return settingsNavigation.some(item => location.pathname === item.href);
+    });
+
+    const filteredMainNav = mainNavigation.filter((item) => !item.adminOnly || isAdmin);
+    const filteredSettingsNav = settingsNavigation.filter((item) => !item.adminOnly || isAdmin);
+    const hasSettingsItems = filteredSettingsNav.length > 0;
 
     return (
       <Sidebar collapsible="icon" className="border-r">
         <SidebarContent className="pt-2">
+          {/* Main Menu */}
           <SidebarGroup>
+            <SidebarGroupLabel>Main Menu</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {navigation
-                  .filter((item) => !item.adminOnly || isAdmin)
-                  .map((item) => {
-                    const Icon = item.icon;
-                    const isActive = location.pathname === item.href;
-                    return (
-                      <SidebarMenuItem key={item.name}>
-                        <SidebarMenuButton 
-                          asChild 
-                          isActive={isActive} 
-                          className="h-12 touch-manipulation data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:font-semibold hover:bg-accent hover:text-accent-foreground transition-colors"
-                          tooltip={item.name}
-                        >
-                          <NavLink to={item.href}>
-                            <Icon className="h-5 w-5 shrink-0" />
-                            <span>{item.name}</span>
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
+                {filteredMainNav.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.href;
+                  return (
+                    <SidebarMenuItem key={item.name}>
+                      <SidebarMenuButton 
+                        asChild 
+                        isActive={isActive} 
+                        className="h-12 touch-manipulation data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:font-semibold hover:bg-accent hover:text-accent-foreground transition-colors"
+                        tooltip={item.name}
+                      >
+                        <NavLink to={item.href}>
+                          <Icon className="h-5 w-5 shrink-0" />
+                          <span>{item.name}</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
+
+          {/* Settings Menu */}
+          {hasSettingsItems && (
+            <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen} className="group/collapsible">
+              <SidebarGroup>
+                <SidebarGroupLabel asChild>
+                  <CollapsibleTrigger className="flex w-full items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </div>
+                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                  </CollapsibleTrigger>
+                </SidebarGroupLabel>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {filteredSettingsNav.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = location.pathname === item.href;
+                        return (
+                          <SidebarMenuItem key={item.name}>
+                            <SidebarMenuButton 
+                              asChild 
+                              isActive={isActive}
+                              className="h-10 pl-6 touch-manipulation data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:font-semibold hover:bg-accent hover:text-accent-foreground transition-colors"
+                              tooltip={item.name}
+                            >
+                              <NavLink to={item.href}>
+                                <Icon className="h-4 w-4 shrink-0" />
+                                <span>{item.name}</span>
+                              </NavLink>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          )}
         </SidebarContent>
       </Sidebar>
     );
