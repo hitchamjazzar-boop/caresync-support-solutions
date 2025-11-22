@@ -579,14 +579,14 @@ export default function Calendar() {
     : `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
 
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex flex-col h-full p-4 sm:p-6 gap-3">
       <div className="flex items-center justify-between flex-wrap gap-3 shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <CalendarIcon className="h-6 w-6 text-primary" />
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             Team Calendar
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Schedule and view team availability
           </p>
         </div>
@@ -616,98 +616,93 @@ export default function Calendar() {
 
       {selectedEmployees.length > 3 && viewMode === 'week' && (
         <Card className="bg-warning/10 border-warning shrink-0">
-          <CardContent className="p-3">
+          <CardContent className="p-2">
             <p className="text-xs text-warning-foreground">
-              ⚠️ Week view is limited to 3 employees. Please select fewer employees or switch to Day view.
+              ⚠️ Week view limited to 3 employees. Select fewer or switch to Day view.
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Upcoming Reminders & Events */}
-      <div className="shrink-0">
-        <UpcomingReminders />
-      </div>
-      
-      {/* Birthday & Company Events Banner */}
-      <div className="shrink-0">
-        <CalendarBanner />
-      </div>
-
-      <Card className="flex-1 flex flex-col min-h-0">
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
+      <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <CardHeader className="shrink-0 pb-3">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3 sm:gap-4">
               <Button variant="outline" size="sm" onClick={() => handleNavigate('prev')}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <CardTitle className="text-xl">{dateRangeText}</CardTitle>
+              <CardTitle className="text-base sm:text-xl">{dateRangeText}</CardTitle>
               <Button variant="outline" size="sm" onClick={() => handleNavigate('next')}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <Button variant="outline" onClick={() => handleNavigate('today')}>
+            <Button variant="outline" size="sm" onClick={() => handleNavigate('today')}>
               Today
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col p-4 min-h-0">
-          {/* Legends */}
+        <CardContent className="flex-1 flex flex-col p-3 min-h-0 overflow-hidden">
+          {/* Legends - Collapsible */}
           {selectedEmployeeData.length > 0 && (
-            <div className="mb-3 space-y-2 shrink-0">
+            <details className="mb-2 shrink-0" open>
+              <summary className="cursor-pointer text-xs font-semibold text-muted-foreground mb-2">
+                Legends (click to hide)
+              </summary>
+              <div className="space-y-2">
               {/* Employee Color Legend */}
-              <div className="p-3 bg-muted/30 rounded-lg border">
-                <h3 className="text-xs font-semibold mb-2 text-muted-foreground">Employee Legend</h3>
-                <div className="flex flex-wrap gap-2">
+              <div className="p-2 bg-muted/30 rounded border">
+                <h3 className="text-xs font-semibold mb-1.5 text-muted-foreground">Employees</h3>
+                <div className="flex flex-wrap gap-2 text-xs">
                   {selectedEmployeeData.map((employee) => {
                     const employeeColor = getEmployeeEventColor(employee.id);
                     return (
-                      <div key={employee.id} className="flex items-center gap-2">
-                        <div 
-                          className="w-4 h-4 rounded border-2 border-white shadow-sm"
-                          style={{ backgroundColor: employeeColor }}
-                        />
-                        <span className="text-sm">{employee.full_name}</span>
-                      </div>
+                    <div key={employee.id} className="flex items-center gap-1.5">
+                      <div 
+                        className="w-3 h-3 rounded border border-white shadow-sm"
+                        style={{ backgroundColor: employeeColor }}
+                      />
+                      <span className="text-xs">{employee.full_name}</span>
+                    </div>
                     );
                   })}
                 </div>
               </div>
               
               {/* Event Type Legend */}
-              <div className="p-3 bg-muted/30 rounded-lg border">
-                <h3 className="text-xs font-semibold mb-2 text-muted-foreground">Event Type Legend</h3>
-                <div className="flex flex-wrap gap-2">
+              <div className="p-2 bg-muted/30 rounded border">
+                <h3 className="text-xs font-semibold mb-1.5 text-muted-foreground">Event Types</h3>
+                <div className="flex flex-wrap gap-2 text-xs">
                   {Object.entries(eventTypeColors).map(([type, color]) => (
-                    <div key={type} className="flex items-center gap-2">
+                    <div key={type} className="flex items-center gap-1.5">
                       <div 
-                        className="w-4 h-4 rounded border-2 border-white shadow-sm"
+                        className="w-3 h-3 rounded border border-white shadow-sm"
                         style={{ backgroundColor: color }}
                       />
-                      <span className="text-sm capitalize">{type}</span>
+                      <span className="text-xs capitalize">{type}</span>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
+            </details>
           )}
 
           {selectedEmployeeData.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
               Select employees to view their calendars
             </div>
           ) : (
             <div 
-              className="border rounded-lg overflow-auto flex-1"
+              className="border rounded overflow-hidden flex-1 flex flex-col min-h-0"
               onMouseLeave={() => {
                 if (isDraggingSelection) {
                   handleSelectionEnd();
                 }
               }}
             >
-              <div className="min-w-max">
+              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 {/* Header with Days and Employees */}
-                <div className="sticky top-0 z-20 bg-background border-b">
+                <div className="sticky top-0 z-20 bg-background border-b shrink-0">
                   <div className="grid" style={{ 
                     gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 140}px, 1fr))` 
                   }}>
@@ -971,9 +966,9 @@ export default function Calendar() {
 
           {/* Tips */}
           {selectedEmployeeData.length > 0 && (
-            <div className="mt-2 shrink-0">
-              <p className="text-xs text-muted-foreground">
-                💡 Click and drag to select time block (6 AM - 10 PM) • Right-click events to copy • Drag events to move • Drag edges to resize
+            <div className="mt-1.5 shrink-0">
+              <p className="text-[10px] text-muted-foreground">
+                💡 Drag to select • Right-click to copy • Drag events to move • Drag edges to resize
               </p>
             </div>
           )}
