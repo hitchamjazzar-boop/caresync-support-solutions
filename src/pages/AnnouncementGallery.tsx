@@ -9,6 +9,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AnnouncementReactions } from '@/components/announcements/AnnouncementReactions';
 import { AnnouncementComments } from '@/components/announcements/AnnouncementComments';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Announcement {
   id: string;
@@ -28,8 +29,10 @@ interface Profile {
 }
 
 export default function AnnouncementGallery() {
+  const { user } = useAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
+  const [readAnnouncementIds, setReadAnnouncementIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -37,7 +40,10 @@ export default function AnnouncementGallery() {
 
   useEffect(() => {
     fetchAnnouncements();
-  }, []);
+    if (user) {
+      fetchReadStatus();
+    }
+  }, [user]);
 
   // Handle highlighted announcement from notifications
   useEffect(() => {
@@ -116,6 +122,24 @@ export default function AnnouncementGallery() {
       console.error('Error fetching announcements:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchReadStatus = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('announcement_reads')
+        .select('announcement_id')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      const readIds = new Set(data?.map(r => r.announcement_id) || []);
+      setReadAnnouncementIds(readIds);
+    } catch (error) {
+      console.error('Error fetching read status:', error);
     }
   };
 
@@ -198,19 +222,29 @@ export default function AnnouncementGallery() {
                     >
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between mb-2">
-                          <Badge variant="outline" className="gap-1">
-                            {isBirthday ? (
-                              <>
-                                <Cake className="h-3 w-3" />
-                                Birthday
-                              </>
-                            ) : (
-                              <>
-                                <Award className="h-3 w-3" />
-                                Employee of Month
-                              </>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="gap-1">
+                              {isBirthday ? (
+                                <>
+                                  <Cake className="h-3 w-3" />
+                                  Birthday
+                                </>
+                              ) : (
+                                <>
+                                  <Award className="h-3 w-3" />
+                                  Employee of Month
+                                </>
+                              )}
+                            </Badge>
+                            {!readAnnouncementIds.has(announcement.id) && (
+                              <Badge 
+                                variant="default" 
+                                className="gap-1 bg-primary text-primary-foreground animate-pulse"
+                              >
+                                New
+                              </Badge>
                             )}
-                          </Badge>
+                          </div>
                           <span className="text-xs text-muted-foreground">
                             {format(new Date(announcement.created_at), 'MMM dd, yyyy')}
                           </span>
