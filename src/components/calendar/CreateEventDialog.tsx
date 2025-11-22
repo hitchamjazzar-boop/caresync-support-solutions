@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -21,13 +21,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Link2, Users, Calendar, Repeat } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 interface CreateEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  prefilledData?: {
+    employeeId?: string;
+    startTime?: string;
+    endTime?: string;
+  };
 }
 
 const eventTypeColors = {
@@ -40,19 +48,90 @@ const eventTypeColors = {
   meeting: '#10b981',
 };
 
-export function CreateEventDialog({ open, onOpenChange, onSuccess }: CreateEventDialogProps) {
+const recurrencePatterns = [
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'biweekly', label: 'Bi-weekly (every 2 weeks)' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
+];
+
+const weekDays = [
+  { value: 'monday', label: 'Mon' },
+  { value: 'tuesday', label: 'Tue' },
+  { value: 'wednesday', label: 'Wed' },
+  { value: 'thursday', label: 'Thu' },
+  { value: 'friday', label: 'Fri' },
+  { value: 'saturday', label: 'Sat' },
+  { value: 'sunday', label: 'Sun' },
+];
+
+export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData }: CreateEventDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     event_type: 'event',
-    start_time: '',
-    end_time: '',
+    start_time: prefilledData?.startTime || '',
+    end_time: prefilledData?.endTime || '',
     all_day: false,
     location: '',
+    meeting_link: '',
     is_public: true,
+    is_recurring: false,
+    recurrence_pattern: 'weekly',
+    recurrence_end_date: '',
   });
+
+  useEffect(() => {
+    if (open) {
+      fetchEmployees();
+      if (prefilledData?.employeeId) {
+        setSelectedAttendees([prefilledData.employeeId]);
+      }
+      if (prefilledData?.startTime) {
+        setFormData(prev => ({
+          ...prev,
+          start_time: prefilledData.startTime!,
+          end_time: prefilledData.endTime || prefilledData.startTime!,
+        }));
+      }
+    }
+  }, [open, prefilledData]);
+
+  const fetchEmployees = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, photo_url, position')
+        .order('full_name');
+
+      if (error) throw error;
+      setEmployees(data || []);
+    } catch (error: any) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const toggleAttendee = (employeeId: string) => {
+    setSelectedAttendees(prev =>
+      prev.includes(employeeId)
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
+
+  const toggleDay = (day: string) => {
+    setSelectedDays(prev =>
+      prev.includes(day)
+        ? prev.filter(d => d !== day)
+        : [...prev, day]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,25 +140,61 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess }: CreateEvent
     try {
       setLoading(true);
 
-      const { error } = await supabase.from('calendar_events').insert({
+      // Build recurrence pattern string
+      let recurrencePatternStr = formData.recurrence_pattern;
+      if (formData.is_recurring && formData.recurrence_pattern === 'weekly' && selectedDays.length > 0) {
+        recurrencePatternStr = `weekly:${selectedDays.join(',')}`;
+      }
+
+      const eventData: any = {
         ...formData,
+        recurrence_pattern: formData.is_recurring ? recurrencePatternStr : null,
+        recurrence_end_date: formData.is_recurring && formData.recurrence_end_date ? formData.recurrence_end_date : null,
         color: eventTypeColors[formData.event_type as keyof typeof eventTypeColors] || '#3b82f6',
         created_by: user.id,
-      });
+        target_users: selectedAttendees.length > 0 ? selectedAttendees : null,
+      };
+
+      const { data: newEvent, error } = await supabase
+        .from('calendar_events')
+        .insert(eventData)
+        .select()
+        .single();
 
       if (error) throw error;
 
-      toast.success('Event created successfully');
-      setFormData({
-        title: '',
-        description: '',
-        event_type: 'event',
-        start_time: '',
-        end_time: '',
-        all_day: false,
-        location: '',
-        is_public: true,
-      });
+      // Create RSVP records for all attendees
+      if (selectedAttendees.length > 0 && newEvent) {
+        const responses = selectedAttendees.map(attendeeId => ({
+          event_id: newEvent.id,
+          user_id: attendeeId,
+          response_status: 'pending',
+        }));
+
+        const { error: rsvpError } = await supabase
+          .from('calendar_event_responses')
+          .insert(responses);
+
+        if (rsvpError) throw rsvpError;
+
+        // Create notifications for attendees
+        const notifications = selectedAttendees
+          .filter(id => id !== user.id)
+          .map(attendeeId => ({
+            notification_id: newEvent.id,
+            notification_type: 'calendar_invitation',
+            user_id: attendeeId,
+          }));
+
+        if (notifications.length > 0) {
+          await supabase
+            .from('notification_acknowledgments')
+            .insert(notifications);
+        }
+      }
+
+      toast.success('Event created successfully' + (selectedAttendees.length > 0 ? ' and invitations sent' : ''));
+      resetForm();
       onSuccess();
     } catch (error: any) {
       console.error('Error creating event:', error);
@@ -89,13 +204,32 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess }: CreateEvent
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      event_type: 'event',
+      start_time: '',
+      end_time: '',
+      all_day: false,
+      location: '',
+      meeting_link: '',
+      is_public: true,
+      is_recurring: false,
+      recurrence_pattern: 'weekly',
+      recurrence_end_date: '',
+    });
+    setSelectedAttendees([]);
+    setSelectedDays([]);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Event</DialogTitle>
           <DialogDescription>
-            Add a new event, appointment, or reminder to the company calendar
+            Add a new event and invite team members
           </DialogDescription>
         </DialogHeader>
 
@@ -111,25 +245,41 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess }: CreateEvent
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="event_type">Event Type *</Label>
-            <Select
-              value={formData.event_type}
-              onValueChange={(value) => setFormData({ ...formData, event_type: value })}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="event">Event</SelectItem>
-                <SelectItem value="meeting">Meeting</SelectItem>
-                <SelectItem value="appointment">Appointment</SelectItem>
-                <SelectItem value="project">Project</SelectItem>
-                <SelectItem value="reminder">Reminder</SelectItem>
-                <SelectItem value="birthday">Birthday</SelectItem>
-                <SelectItem value="holiday">Holiday</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="event_type">Event Type *</Label>
+              <Select
+                value={formData.event_type}
+                onValueChange={(value) => setFormData({ ...formData, event_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="event">Event</SelectItem>
+                  <SelectItem value="meeting">Meeting</SelectItem>
+                  <SelectItem value="appointment">Appointment</SelectItem>
+                  <SelectItem value="project">Project</SelectItem>
+                  <SelectItem value="reminder">Reminder</SelectItem>
+                  <SelectItem value="birthday">Birthday</SelectItem>
+                  <SelectItem value="holiday">Holiday</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meeting_link">
+                <Link2 className="h-4 w-4 inline mr-1" />
+                Meeting Link
+              </Label>
+              <Input
+                id="meeting_link"
+                type="url"
+                value={formData.meeting_link}
+                onChange={(e) => setFormData({ ...formData, meeting_link: e.target.value })}
+                placeholder="https://zoom.us/j/..."
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -177,7 +327,103 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess }: CreateEvent
             />
           </div>
 
-          <div className="flex items-center justify-between space-x-2">
+          {/* Attendees Section */}
+          <div className="space-y-2">
+            <Label>
+              <Users className="h-4 w-4 inline mr-1" />
+              Invite Attendees ({selectedAttendees.length} selected)
+            </Label>
+            <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+              {employees.map(employee => (
+                <div
+                  key={employee.id}
+                  className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg cursor-pointer"
+                  onClick={() => toggleAttendee(employee.id)}
+                >
+                  <Checkbox checked={selectedAttendees.includes(employee.id)} />
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={employee.photo_url} />
+                    <AvatarFallback>{employee.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{employee.full_name}</div>
+                    {employee.position && (
+                      <div className="text-xs text-muted-foreground">{employee.position}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Recurring Event Section */}
+          <div className="space-y-3 border-t pt-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="is_recurring" className="flex items-center gap-2">
+                <Repeat className="h-4 w-4" />
+                Recurring Event
+              </Label>
+              <Switch
+                id="is_recurring"
+                checked={formData.is_recurring}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_recurring: checked })}
+              />
+            </div>
+
+            {formData.is_recurring && (
+              <div className="space-y-3 pl-6 border-l-2">
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence_pattern">Repeat Pattern</Label>
+                  <Select
+                    value={formData.recurrence_pattern}
+                    onValueChange={(value) => setFormData({ ...formData, recurrence_pattern: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {recurrencePatterns.map(pattern => (
+                        <SelectItem key={pattern.value} value={pattern.value}>
+                          {pattern.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {formData.recurrence_pattern === 'weekly' && (
+                  <div className="space-y-2">
+                    <Label>Repeat on</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {weekDays.map(day => (
+                        <Badge
+                          key={day.value}
+                          variant={selectedDays.includes(day.value) ? 'default' : 'outline'}
+                          className="cursor-pointer"
+                          onClick={() => toggleDay(day.value)}
+                        >
+                          {day.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="recurrence_end_date">End Date (optional)</Label>
+                  <Input
+                    id="recurrence_end_date"
+                    type="date"
+                    value={formData.recurrence_end_date}
+                    onChange={(e) => setFormData({ ...formData, recurrence_end_date: e.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">Leave empty for no end date</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between space-x-2 border-t pt-4">
             <Label htmlFor="all_day">All Day Event</Label>
             <Switch
               id="all_day"
