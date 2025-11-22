@@ -24,6 +24,7 @@ import PayrollAnalytics from "./pages/PayrollAnalytics";
 import WeeklySummary from "./pages/WeeklySummary";
 import Profile from "./pages/Profile";
 import Feedback from "./pages/Feedback";
+import EmployeeVoting from "./pages/EmployeeVoting";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -203,6 +204,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Feedback />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/voting"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <EmployeeVoting />
                   </Layout>
                 </ProtectedRoute>
               }

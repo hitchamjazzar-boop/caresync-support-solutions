@@ -271,6 +271,73 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_nominations: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          nominated_user_id: string
+          nominator_user_id: string
+          voting_period_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          nominated_user_id: string
+          nominator_user_id: string
+          voting_period_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          nominated_user_id?: string
+          nominator_user_id?: string
+          voting_period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_nominations_voting_period_id_fkey"
+            columns: ["voting_period_id"]
+            isOneToOne: false
+            referencedRelation: "voting_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_votes: {
+        Row: {
+          created_at: string
+          id: string
+          nominated_user_id: string
+          voter_user_id: string
+          voting_period_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nominated_user_id: string
+          voter_user_id: string
+          voting_period_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nominated_user_id?: string
+          voter_user_id?: string
+          voting_period_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_votes_voting_period_id_fkey"
+            columns: ["voting_period_id"]
+            isOneToOne: false
+            referencedRelation: "voting_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       eod_reports: {
         Row: {
           attachments: Json | null
@@ -653,6 +720,33 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      voting_periods: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          id: string
+          month: number
+          status: string
+          year: number
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          month: number
+          status?: string
+          year: number
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          id?: string
+          month?: number
+          status?: string
+          year?: number
         }
         Relationships: []
       }
