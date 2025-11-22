@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AddToOrgChartDialog } from '@/components/orgchart/AddToOrgChartDialog';
 import { EditOrgChartDialog } from '@/components/orgchart/EditOrgChartDialog';
 import { DraggableOrgChartTree } from '@/components/orgchart/DraggableOrgChartTree';
+import { useAdmin } from '@/hooks/useAdmin';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,7 @@ export default function OrgChart() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<OrgChartNode | null>(null);
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
+  const { isAdmin } = useAdmin();
   
   const getDefaultZoom = () => {
     if (typeof window === 'undefined') return 100;
@@ -268,7 +270,9 @@ export default function OrgChart() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Organizational Chart</h1>
-          <p className="text-muted-foreground">Manage your organization's hierarchy</p>
+          <p className="text-muted-foreground">
+            {isAdmin ? 'Manage your organization\'s hierarchy' : 'View your organization\'s hierarchy'}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={expandAll}>
@@ -279,10 +283,12 @@ export default function OrgChart() {
             <Minimize2 className="h-4 w-4 mr-2" />
             Collapse All
           </Button>
-          <Button onClick={() => setAddDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add to Org Chart
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => setAddDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add to Org Chart
+            </Button>
+          )}
         </div>
       </div>
 
@@ -299,7 +305,9 @@ export default function OrgChart() {
               <div>
                 <CardTitle>Organization Hierarchy</CardTitle>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Drag and drop employees to reorganize the hierarchy
+                  {isAdmin 
+                    ? 'Drag and drop employees to reorganize the hierarchy' 
+                    : 'View your organization structure'}
                 </p>
               </div>
               <div className="hidden sm:flex items-center gap-3">
@@ -324,47 +332,52 @@ export default function OrgChart() {
           <CardContent>
             <DraggableOrgChartTree 
               nodes={nodes} 
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onDragEnd={handleDragEnd}
+              onEdit={isAdmin ? handleEdit : undefined}
+              onDelete={isAdmin ? handleDelete : undefined}
+              onDragEnd={isAdmin ? handleDragEnd : undefined}
               collapsedNodes={collapsedNodes}
               onToggleCollapse={toggleCollapse}
               zoom={zoom}
+              editable={isAdmin}
             />
           </CardContent>
         </Card>
       )}
 
-      <AddToOrgChartDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onSuccess={fetchOrgChart}
-        existingNodes={nodes}
-      />
+      {isAdmin && (
+        <>
+          <AddToOrgChartDialog
+            open={addDialogOpen}
+            onOpenChange={setAddDialogOpen}
+            onSuccess={fetchOrgChart}
+            existingNodes={nodes}
+          />
 
-      <EditOrgChartDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        node={selectedNode}
-        onSuccess={fetchOrgChart}
-        existingNodes={nodes}
-      />
+          <EditOrgChartDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            node={selectedNode}
+            onSuccess={fetchOrgChart}
+            existingNodes={nodes}
+          />
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove from Org Chart?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will remove {selectedNode?.profiles?.full_name} from the organizational chart.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove from Org Chart?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will remove {selectedNode?.profiles?.full_name} from the organizational chart.
+                  This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete}>Remove</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      )}
     </div>
   );
 }

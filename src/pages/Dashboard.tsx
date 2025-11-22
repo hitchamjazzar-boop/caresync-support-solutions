@@ -10,7 +10,6 @@ import { useNavigate } from 'react-router-dom';
 import { ClockInOut } from '@/components/attendance/ClockInOut';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 import { MemoAlert } from '@/components/memos/MemoAlert';
-import { OrgChartDisplay } from '@/components/orgchart/OrgChartDisplay';
 import { format } from 'date-fns';
 
 export default function Dashboard() {
@@ -316,16 +315,6 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           </div>
-
-          {/* Organization Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Organization Chart</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <OrgChartDisplay />
-            </CardContent>
-          </Card>
         </div>
       )}
     </div>
