@@ -56,6 +56,7 @@ export default function Calendar() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [editEvent, setEditEvent] = useState<CalendarEvent | null>(null);
 
   const [employees, setEmployees] = useState<any[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
@@ -1085,13 +1086,21 @@ export default function Calendar() {
       {createDialogOpen && (
         <CreateEventDialog
           open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
+          onOpenChange={(open) => {
+            setCreateDialogOpen(open);
+            if (!open) {
+              setPrefilledData(null);
+              setEditEvent(null);
+            }
+          }}
           onSuccess={() => {
             fetchEvents();
             setCreateDialogOpen(false);
             setPrefilledData(null);
+            setEditEvent(null);
           }}
           prefilledData={prefilledData}
+          editEvent={editEvent}
         />
       )}
 
@@ -1104,6 +1113,10 @@ export default function Calendar() {
           onDelete={() => {
             fetchEvents();
             setDetailsDialogOpen(false);
+          }}
+          onEdit={() => {
+            setEditEvent(selectedEvent);
+            setCreateDialogOpen(true);
           }}
         />
       )}
