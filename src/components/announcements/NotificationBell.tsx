@@ -33,6 +33,7 @@ export function NotificationBell() {
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [recentAnnouncements, setRecentAnnouncements] = useState<Announcement[]>([]);
+  const [readAnnouncementIds, setReadAnnouncementIds] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -107,6 +108,7 @@ export function NotificationBell() {
         .eq('user_id', user.id);
 
       const readIds = readAnnouncements?.map(a => a.announcement_id) || [];
+      setReadAnnouncementIds(readIds);
 
       // Get active announcements
       const { data: announcements, error } = await supabase
@@ -172,21 +174,24 @@ export function NotificationBell() {
     if (!user) return;
 
     try {
-      // Insert or update read status
+      // Insert read status
       const { error } = await supabase
         .from('announcement_reads')
-        .upsert({
+        .insert({
           user_id: user.id,
           announcement_id: announcementId,
           read_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id,announcement_id',
         });
 
       if (error) {
         console.error('Error marking announcement as read:', error);
         return;
       }
+
+      // Optimistically update local state
+      setReadAnnouncementIds((prev) =>
+        prev.includes(announcementId) ? prev : [...prev, announcementId]
+      );
       
       // Refresh counts after marking as read
       await fetchUnreadCount();
@@ -233,32 +238,52 @@ export function NotificationBell() {
             </div>
           ) : (
             <div className="divide-y">
-              {recentAnnouncements.map((announcement) => (
-                <div
-                  key={announcement.id}
-                  className="p-4 hover:bg-accent cursor-pointer transition-colors"
-                  onClick={() => handleAnnouncementClick(announcement.id)}
-                >
-                  <div className="flex items-start gap-2">
-                    {announcement.is_pinned && (
-                      <span className="text-lg" title="Pinned">
-                        📌
-                      </span>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm truncate">
-                        {announcement.title}
-                      </h4>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                        {announcement.content}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(announcement.created_at), { addSuffix: true })}
-                      </p>
+              {recentAnnouncements.map((announcement) => {
+                const isUnread = !readAnnouncementIds.includes(announcement.id);
+
+                return (
+                  <div
+                    key={announcement.id}
+                    className={`p-4 cursor-pointer transition-colors ${
+                      isUnread ? 'bg-accent/40 hover:bg-accent' : 'hover:bg-accent'
+                    }`}
+                    onClick={() => handleAnnouncementClick(announcement.id)}
+                  >
+                    <div className="flex items-start gap-2">
+                      {announcement.is_pinned && (
+                        <span className="text-lg" title="Pinned">
+                          📌
+                        </span>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <h4
+                            className={`text-sm truncate ${
+                              isUnread ? 'font-semibold' : 'font-medium text-muted-foreground'
+                            }`}
+                          >
+                            {announcement.title}
+                          </h4>
+                          {isUnread && (
+                            <Badge
+                              variant="default"
+                              className="text-[10px] px-1.5 py-0 h-5 leading-none"
+                            >
+                              New
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                          {announcement.content}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatDistanceToNow(new Date(announcement.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </ScrollArea>
