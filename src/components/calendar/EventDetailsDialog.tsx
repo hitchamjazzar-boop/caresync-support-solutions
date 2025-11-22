@@ -54,7 +54,7 @@ export function EventDetailsDialog({
     if (event && open) {
       fetchAttendees();
     }
-  }, [event, open]);
+  }, [open, event?.id]);
 
   const fetchAttendees = async () => {
     if (!event?.target_users || event.target_users.length === 0) return;
