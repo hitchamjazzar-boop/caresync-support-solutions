@@ -319,6 +319,27 @@ export type Database = {
             referencedRelation: "achievement_types"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_employee_achievements_achievement_type_id"
+            columns: ["achievement_type_id"]
+            isOneToOne: false
+            referencedRelation: "achievement_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_employee_achievements_awarded_by"
+            columns: ["awarded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_employee_achievements_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       employee_feedback: {
