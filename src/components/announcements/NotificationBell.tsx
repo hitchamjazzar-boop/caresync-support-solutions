@@ -144,8 +144,7 @@ export function NotificationBell() {
         .select('id, title, content, created_at, is_pinned, target_type, target_users, target_roles, target_departments, expires_at')
         .eq('is_active', true)
         .order('is_pinned', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(5);
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -231,7 +230,7 @@ export function NotificationBell() {
             </Badge>
           )}
         </div>
-        <ScrollArea className="h-[300px] sm:h-[400px]">
+        <ScrollArea className="h-[300px] sm:h-[500px] max-h-[60vh]">
           {recentAnnouncements.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
               No announcements
