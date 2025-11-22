@@ -277,7 +277,7 @@ export default function Dashboard() {
             <ClockInOut />
 
             {/* Quick Actions */}
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
