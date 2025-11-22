@@ -16,7 +16,41 @@ export function SecretSantaAssignment() {
   const [wishlist, setWishlist] = useState<any[]>([]);
 
   useEffect(() => {
-    loadAssignment();
+    if (user) {
+      loadAssignment();
+
+      // Set up real-time subscription for assignment changes
+      const channel = supabase
+        .channel('secret-santa-assignment-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'secret_santa_assignments',
+            filter: `giver_id=eq.${user.id}`,
+          },
+          () => {
+            loadAssignment();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'secret_santa_events',
+          },
+          () => {
+            loadAssignment();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [user]);
 
   const loadAssignment = async () => {
@@ -25,14 +59,20 @@ export function SecretSantaAssignment() {
     try {
       setLoading(true);
 
-      // Get active event
-      const { data: events } = await supabase
+      // Get active event with reveal enabled
+      const { data: events, error: eventsError } = await supabase
         .from('secret_santa_events')
         .select('*')
-        .neq('status', 'completed')
+        .eq('status', 'assigned')
         .eq('reveal_enabled', true)
         .order('created_at', { ascending: false })
         .limit(1);
+
+      if (eventsError) {
+        console.error('Error fetching events:', eventsError);
+        setAssignment(null);
+        return;
+      }
 
       if (!events || events.length === 0) {
         setAssignment(null);
@@ -41,33 +81,58 @@ export function SecretSantaAssignment() {
 
       const event = events[0];
 
-      // Get user's assignment
-      const { data: assignmentData } = await supabase
+      // Get user's assignment for this specific event
+      const { data: assignmentData, error: assignmentError } = await supabase
         .from('secret_santa_assignments')
         .select(`
           *,
-          receiver:profiles!secret_santa_assignments_receiver_id_fkey(*)
+          receiver:profiles!secret_santa_assignments_receiver_id_fkey(
+            id,
+            full_name,
+            photo_url,
+            department,
+            position
+          ),
+          event:secret_santa_events(
+            id,
+            name,
+            budget_limit
+          )
         `)
         .eq('event_id', event.id)
         .eq('giver_id', user.id)
         .maybeSingle();
 
-      if (assignmentData) {
-        setAssignment(assignmentData);
-
-        // Load receiver's wishlist
-        const { data: wishlistData } = await supabase
-          .from('secret_santa_wishlists')
-          .select('*')
-          .eq('event_id', event.id)
-          .eq('user_id', assignmentData.receiver_id)
-          .order('priority', { ascending: true })
-          .limit(3);
-
-        setWishlist(wishlistData || []);
+      if (assignmentError) {
+        console.error('Error fetching assignment:', assignmentError);
+        setAssignment(null);
+        return;
       }
+
+      if (!assignmentData) {
+        setAssignment(null);
+        return;
+      }
+
+      setAssignment(assignmentData);
+
+      // Load receiver's wishlist for this event
+      const { data: wishlistData, error: wishlistError } = await supabase
+        .from('secret_santa_wishlists')
+        .select('*')
+        .eq('event_id', event.id)
+        .eq('user_id', assignmentData.receiver_id)
+        .order('priority', { ascending: true })
+        .limit(3);
+
+      if (wishlistError) {
+        console.error('Error fetching wishlist:', wishlistError);
+      }
+
+      setWishlist(wishlistData || []);
     } catch (error) {
       console.error('Error loading Secret Santa assignment:', error);
+      setAssignment(null);
     } finally {
       setLoading(false);
     }
@@ -88,6 +153,8 @@ export function SecretSantaAssignment() {
   }
 
   const receiver = assignment.receiver;
+  const event = assignment.event;
+  
   const initials = receiver?.full_name
     ?.split(' ')
     .map((n: string) => n[0])
@@ -101,7 +168,9 @@ export function SecretSantaAssignment() {
           <Gift className="h-5 w-5 text-red-600 dark:text-red-400" />
           🎅 Your Secret Santa Assignment
         </CardTitle>
-        <CardDescription>You're the Secret Santa for...</CardDescription>
+        <CardDescription>
+          {event?.name || 'Secret Santa'} - You're the Secret Santa for...
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
@@ -111,10 +180,18 @@ export function SecretSantaAssignment() {
           </Avatar>
           <div className="flex-1">
             <h3 className="text-xl font-bold">{receiver?.full_name}</h3>
+            {receiver?.position && (
+              <p className="text-sm text-muted-foreground">{receiver.position}</p>
+            )}
             {receiver?.department && (
-              <p className="text-sm text-muted-foreground">{receiver.department}</p>
+              <p className="text-xs text-muted-foreground">{receiver.department}</p>
             )}
           </div>
+          {event?.budget_limit && (
+            <Badge variant="secondary" className="shrink-0">
+              Budget: ${event.budget_limit}
+            </Badge>
+          )}
         </div>
 
         {wishlist.length > 0 && (
@@ -152,6 +229,14 @@ export function SecretSantaAssignment() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {wishlist.length === 0 && (
+          <div className="p-4 bg-muted/50 rounded-lg text-center">
+            <p className="text-sm text-muted-foreground">
+              {receiver?.full_name} hasn't added any wishlist items yet
+            </p>
           </div>
         )}
 
