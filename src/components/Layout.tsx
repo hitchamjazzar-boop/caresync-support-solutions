@@ -104,11 +104,11 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="container flex h-14 sm:h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2 sm:gap-4">
+        <div className="container flex h-14 sm:h-16 items-center justify-between px-4 max-w-full">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             {/* Mobile Menu Toggle */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild>
@@ -130,10 +130,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               </SheetContent>
             </Sheet>
 
-            <img src={logo} alt="Care Sync" className="h-8 sm:h-10" />
-            <div className="hidden sm:block">
-              <h1 className="text-base sm:text-lg font-semibold">Care Sync</h1>
-              <p className="text-xs text-muted-foreground">Support Solutions</p>
+            <img src={logo} alt="Care Sync" className="h-8 sm:h-10 flex-shrink-0" />
+            <div className="hidden sm:block min-w-0 flex-1">
+              <h1 className="text-base sm:text-lg font-semibold truncate">Care Sync</h1>
+              <p className="text-xs text-muted-foreground truncate">Support Solutions</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   />
                 </Button>
               </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 z-[60]">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{fullName}</p>
@@ -172,15 +172,15 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex overflow-x-hidden">
         {/* Desktop Sidebar - Hidden on mobile */}
-        <aside className="hidden md:block sticky top-14 sm:top-16 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] w-64 border-r bg-card p-4">
+        <aside className="hidden md:block sticky top-14 sm:top-16 h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] w-64 border-r bg-card p-4 overflow-y-auto flex-shrink-0">
           <NavItems />
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-4 sm:p-6">
-          <div className="mx-auto max-w-7xl">{children}</div>
+        <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">
+          <div className="mx-auto max-w-7xl w-full">{children}</div>
         </main>
       </div>
     </div>
