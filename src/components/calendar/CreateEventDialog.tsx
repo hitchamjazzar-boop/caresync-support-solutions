@@ -73,6 +73,7 @@ const weekDays = [
 export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData }: CreateEventDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -94,29 +95,39 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
   });
 
   useEffect(() => {
-    console.log('🟡 CreateEventDialog useEffect triggered', { open, hasPrefilledData: !!prefilledData });
     if (open) {
-      console.log('🟡 CreateEventDialog fetching employees');
+      setMounted(false);
       fetchEmployees();
+      
+      // Consolidate all initial state updates
+      const updates: any = {};
+      let hasUpdates = false;
+      
       if (prefilledData?.employeeId) {
-        console.log('🟡 CreateEventDialog setting prefilled attendee');
         setSelectedAttendees([prefilledData.employeeId]);
       }
+      
       if (prefilledData?.startTime) {
-        console.log('🟡 CreateEventDialog setting prefilled times');
         const startDateTime = new Date(prefilledData.startTime);
         const endDateTime = prefilledData.endTime ? new Date(prefilledData.endTime) : startDateTime;
         
         setStartDate(startDateTime);
         setEndDate(endDateTime);
-        setFormData(prev => ({
-          ...prev,
-          start_time: prefilledData.startTime!,
-          end_time: prefilledData.endTime || prefilledData.startTime!,
-        }));
+        updates.start_time = prefilledData.startTime;
+        updates.end_time = prefilledData.endTime || prefilledData.startTime;
+        hasUpdates = true;
       }
+      
+      if (hasUpdates) {
+        setFormData(prev => ({ ...prev, ...updates }));
+      }
+      
+      // Delay mounting of Popovers to prevent ref conflicts
+      setTimeout(() => setMounted(true), 100);
+    } else {
+      setMounted(false);
     }
-  }, [open]);
+  }, [open, prefilledData?.employeeId, prefilledData?.startTime, prefilledData?.endTime]);
 
   const fetchEmployees = async () => {
     try {
@@ -312,36 +323,47 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
             <div className="space-y-2">
               <Label>Start Date & Time *</Label>
               <div className="flex gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "flex-1 justify-start text-left font-normal",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={startDate}
-                      onSelect={(date) => {
-                        setStartDate(date);
-                        if (date && formData.start_time) {
-                          const time = formData.start_time.split('T')[1] || '09:00';
-                          const newDateTime = `${format(date, 'yyyy-MM-dd')}T${time}`;
-                          setFormData({ ...formData, start_time: newDateTime });
-                        }
-                      }}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
+                {mounted ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "flex-1 justify-start text-left font-normal",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={(date) => {
+                          setStartDate(date);
+                          if (date && formData.start_time) {
+                            const time = formData.start_time.split('T')[1] || '09:00';
+                            const newDateTime = `${format(date, 'yyyy-MM-dd')}T${time}`;
+                            setFormData({ ...formData, start_time: newDateTime });
+                          }
+                        }}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="flex-1 justify-start text-left font-normal text-muted-foreground"
+                    disabled
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <span>Loading...</span>
+                  </Button>
+                )}
                 <Input
                   type="time"
                   value={formData.start_time.split('T')[1] || ''}
@@ -358,36 +380,47 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
             <div className="space-y-2">
               <Label>End Date & Time *</Label>
               <div className="flex gap-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "flex-1 justify-start text-left font-normal",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={endDate}
-                      onSelect={(date) => {
-                        setEndDate(date);
-                        if (date && formData.end_time) {
-                          const time = formData.end_time.split('T')[1] || '10:00';
-                          const newDateTime = `${format(date, 'yyyy-MM-dd')}T${time}`;
-                          setFormData({ ...formData, end_time: newDateTime });
-                        }
-                      }}
-                      initialFocus
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
+                {mounted ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "flex-1 justify-start text-left font-normal",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={(date) => {
+                          setEndDate(date);
+                          if (date && formData.end_time) {
+                            const time = formData.end_time.split('T')[1] || '10:00';
+                            const newDateTime = `${format(date, 'yyyy-MM-dd')}T${time}`;
+                            setFormData({ ...formData, end_time: newDateTime });
+                          }
+                        }}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="flex-1 justify-start text-left font-normal text-muted-foreground"
+                    disabled
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <span>Loading...</span>
+                  </Button>
+                )}
                 <Input
                   type="time"
                   value={formData.end_time.split('T')[1] || ''}
