@@ -40,6 +40,7 @@ interface CreateEventDialogProps {
     startTime?: string;
     endTime?: string;
   };
+  editEvent?: any;
 }
 
 const eventTypeColors = {
@@ -70,7 +71,7 @@ const weekDays = [
   { value: 'sunday', label: 'Sun' },
 ];
 
-export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData }: CreateEventDialogProps) {
+export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData, editEvent }: CreateEventDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -107,36 +108,68 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
       setMounted(false);
       fetchEmployees();
       
-      // Consolidate all initial state updates
-      const updates: any = {};
-      let hasUpdates = false;
-      
-      if (prefilledData?.employeeId) {
-        setSelectedAttendees([prefilledData.employeeId]);
-        hasUpdates = true;
-      }
-      
-      if (prefilledData?.startTime) {
-        const startDateTime = new Date(prefilledData.startTime);
-        const endDateTime = prefilledData.endTime ? new Date(prefilledData.endTime) : startDateTime;
+      // If editing, populate form with existing event data
+      if (editEvent) {
+        const startDateTime = new Date(editEvent.start_time);
+        const endDateTime = new Date(editEvent.end_time);
         
         setStartDate(startDateTime);
         setEndDate(endDateTime);
-        updates.start_time = prefilledData.startTime;
-        updates.end_time = prefilledData.endTime || prefilledData.startTime;
-        hasUpdates = true;
-      }
-      
-      if (hasUpdates) {
-        setFormData(prev => ({ ...prev, ...updates }));
+        setSelectedAttendees(editEvent.target_users || []);
+        
+        // Parse recurring pattern for weekly events
+        if (editEvent.is_recurring && editEvent.recurrence_pattern?.startsWith('weekly:')) {
+          const days = editEvent.recurrence_pattern.split(':')[1].split(',');
+          setSelectedDays(days);
+        }
+        
+        setFormData({
+          title: editEvent.title || '',
+          description: editEvent.description || '',
+          event_type: editEvent.event_type || 'event',
+          start_time: editEvent.start_time,
+          end_time: editEvent.end_time,
+          all_day: editEvent.all_day || false,
+          location: editEvent.location || '',
+          meeting_link: editEvent.meeting_link || '',
+          is_public: editEvent.is_public ?? true,
+          is_recurring: editEvent.is_recurring || false,
+          recurrence_pattern: editEvent.recurrence_pattern?.split(':')[0] || 'weekly',
+          recurrence_end_date: editEvent.recurrence_end_date || '',
+        });
+      } else {
+        // New event creation
+        const updates: any = {};
+        let hasUpdates = false;
+        
+        if (prefilledData?.employeeId) {
+          setSelectedAttendees([prefilledData.employeeId]);
+          hasUpdates = true;
+        }
+        
+        if (prefilledData?.startTime) {
+          const startDateTime = new Date(prefilledData.startTime);
+          const endDateTime = prefilledData.endTime ? new Date(prefilledData.endTime) : startDateTime;
+          
+          setStartDate(startDateTime);
+          setEndDate(endDateTime);
+          updates.start_time = prefilledData.startTime;
+          updates.end_time = prefilledData.endTime || prefilledData.startTime;
+          hasUpdates = true;
+        }
+        
+        if (hasUpdates) {
+          setFormData(prev => ({ ...prev, ...updates }));
+        }
       }
       
       // Delay mounting of Popovers to prevent ref conflicts
       setTimeout(() => setMounted(true), 100);
     } else {
       setMounted(false);
+      resetForm();
     }
-  }, [open, prefilledData?.employeeId, prefilledData?.startTime, prefilledData?.endTime]);
+  }, [open, editEvent, prefilledData?.employeeId, prefilledData?.startTime, prefilledData?.endTime]);
 
   const fetchEmployees = async () => {
     try {
@@ -201,49 +234,82 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
             ? toUtcIso(formData.recurrence_end_date)
             : null,
         color: eventTypeColors[formData.event_type as keyof typeof eventTypeColors] || '#3b82f6',
-        created_by: user.id,
         target_users: attendees, // Event belongs ONLY to these users
       };
 
-      const { data: newEvent, error } = await supabase
-        .from('calendar_events')
-        .insert(eventData)
-        .select()
-        .single();
+      if (editEvent) {
+        // Update existing event
+        const { error } = await supabase
+          .from('calendar_events')
+          .update(eventData)
+          .eq('id', editEvent.id);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      // Create RSVP records for all attendees
-      if (attendees.length > 0 && newEvent) {
-        const responses = attendees.map(attendeeId => ({
-          event_id: newEvent.id,
-          user_id: attendeeId,
-          response_status: 'pending',
-        }));
-
-        const { error: rsvpError } = await supabase
+        // Update RSVP records - delete old ones and create new ones
+        await supabase
           .from('calendar_event_responses')
-          .insert(responses);
+          .delete()
+          .eq('event_id', editEvent.id);
 
-        if (rsvpError) throw rsvpError;
-
-        // Create notifications for attendees
-        const notifications = attendees
-          .filter(id => id !== user.id)
-          .map(attendeeId => ({
-            notification_id: newEvent.id,
-            notification_type: 'calendar_invitation',
+        if (attendees.length > 0) {
+          const responses = attendees.map(attendeeId => ({
+            event_id: editEvent.id,
             user_id: attendeeId,
+            response_status: 'pending',
           }));
 
-        if (notifications.length > 0) {
           await supabase
-            .from('notification_acknowledgments')
-            .insert(notifications);
+            .from('calendar_event_responses')
+            .insert(responses);
         }
-      }
 
-      toast.success('Event created successfully' + (attendees.length > 0 ? ' and invitations sent' : ''));
+        toast.success('Event updated successfully');
+      } else {
+        // Create new event
+        eventData.created_by = user.id;
+        
+        const { data: newEvent, error } = await supabase
+          .from('calendar_events')
+          .insert(eventData)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Create RSVP records for all attendees
+        if (attendees.length > 0 && newEvent) {
+          const responses = attendees.map(attendeeId => ({
+            event_id: newEvent.id,
+            user_id: attendeeId,
+            response_status: 'pending',
+          }));
+
+          const { error: rsvpError } = await supabase
+            .from('calendar_event_responses')
+            .insert(responses);
+
+          if (rsvpError) throw rsvpError;
+
+          // Create notifications for attendees
+          const notifications = attendees
+            .filter(id => id !== user.id)
+            .map(attendeeId => ({
+              notification_id: newEvent.id,
+              notification_type: 'calendar_invitation',
+              user_id: attendeeId,
+            }));
+
+          if (notifications.length > 0) {
+            await supabase
+              .from('notification_acknowledgments')
+              .insert(notifications);
+          }
+        }
+
+        toast.success('Event created successfully' + (attendees.length > 0 ? ' and invitations sent' : ''));
+      }
+      
       resetForm();
       onSuccess();
     } catch (error: any) {
@@ -277,9 +343,9 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Event</DialogTitle>
+          <DialogTitle>{editEvent ? 'Edit Event' : 'Create New Event'}</DialogTitle>
           <DialogDescription>
-            Add a new event and invite team members
+            {editEvent ? 'Update event details and attendees' : 'Add a new event and invite team members'}
           </DialogDescription>
         </DialogHeader>
 

@@ -23,7 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, Clock, MapPin, User, Trash2, Link2, Users, Repeat, CheckCircle2, XCircle, Clock as ClockPending, AlertCircle, Copy } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, Trash2, Link2, Users, Repeat, CheckCircle2, XCircle, Clock as ClockPending, AlertCircle, Copy, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -34,6 +34,7 @@ interface EventDetailsDialogProps {
   event: any;
   onUpdate: () => void;
   onDelete: () => void;
+  onEdit?: () => void;
 }
 
 export function EventDetailsDialog({
@@ -42,6 +43,7 @@ export function EventDetailsDialog({
   event,
   onUpdate,
   onDelete,
+  onEdit,
 }: EventDetailsDialogProps) {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
@@ -243,14 +245,27 @@ export function EventDetailsDialog({
                 </Badge>
               </div>
               {canEdit && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      onEdit?.();
+                      onOpenChange(false);
+                    }}
+                    className="text-primary hover:text-primary hover:bg-primary/10"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeleteDialogOpen(true)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               )}
             </div>
           </DialogHeader>
