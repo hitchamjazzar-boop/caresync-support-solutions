@@ -28,6 +28,7 @@ import EmployeeVoting from "./pages/EmployeeVoting";
 import Achievements from "./pages/Achievements";
 import SecretSanta from "./pages/SecretSanta";
 import Calendar from "./pages/Calendar";
+import CalendarSettings from "./pages/CalendarSettings";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
@@ -249,6 +250,14 @@ const App = () => (
                   <Layout>
                     <Calendar />
                   </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/calendar/settings"
+              element={
+                <ProtectedRoute>
+                  <CalendarSettings />
                 </ProtectedRoute>
               }
             />
