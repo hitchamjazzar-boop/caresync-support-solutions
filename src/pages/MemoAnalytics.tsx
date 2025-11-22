@@ -264,7 +264,7 @@ export default function MemoAnalytics() {
               <CardDescription>View engagement status for each employee</CardDescription>
             </div>
             <Select value={filterResolved} onValueChange={setFilterResolved}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>

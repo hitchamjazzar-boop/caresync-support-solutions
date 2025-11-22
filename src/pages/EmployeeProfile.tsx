@@ -498,17 +498,18 @@ export default function EmployeeProfile() {
               {attendance.length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">No attendance records found</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Clock In</TableHead>
-                      <TableHead>Clock Out</TableHead>
-                      <TableHead>Hours</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Clock In</TableHead>
+                        <TableHead>Clock Out</TableHead>
+                        <TableHead>Hours</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {attendance.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell>
@@ -538,8 +539,9 @@ export default function EmployeeProfile() {
                         </TableCell>
                       </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -556,18 +558,19 @@ export default function EmployeeProfile() {
               {payroll.length === 0 ? (
                 <p className="text-center py-8 text-muted-foreground">No payroll records found</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Gross</TableHead>
-                      <TableHead>Deductions</TableHead>
-                      <TableHead>Net</TableHead>
-                      <TableHead>Payment Date</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="whitespace-nowrap">Period</TableHead>
+                        <TableHead className="whitespace-nowrap">Gross</TableHead>
+                        <TableHead className="whitespace-nowrap">Deductions</TableHead>
+                        <TableHead className="whitespace-nowrap">Net</TableHead>
+                        <TableHead className="whitespace-nowrap">Payment Date</TableHead>
+                        <TableHead className="whitespace-nowrap">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
                     {payroll.map((record) => (
                       <TableRow key={record.id}>
                         <TableCell>
@@ -601,8 +604,9 @@ export default function EmployeeProfile() {
                         </TableCell>
                       </TableRow>
                     ))}
-                  </TableBody>
-                </Table>
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </CardContent>
           </Card>

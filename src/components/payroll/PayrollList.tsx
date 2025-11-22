@@ -242,7 +242,7 @@ export const PayrollList = ({ refresh }: { refresh: number }) => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
@@ -265,7 +265,7 @@ export const PayrollList = ({ refresh }: { refresh: number }) => {
               )}
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">Hours Worked</p>
                 <p className="text-lg font-bold">{payroll.total_hours.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</p>
@@ -292,7 +292,7 @@ export const PayrollList = ({ refresh }: { refresh: number }) => {
               </div>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 onClick={() => handleDownloadPayslip(payroll)}
                 variant="outline"
