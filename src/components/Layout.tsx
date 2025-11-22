@@ -161,10 +161,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                         <SidebarMenuButton 
                           asChild 
                           isActive={isActive} 
-                          className="h-12 touch-manipulation"
+                          className="h-12 touch-manipulation data-[active=true]:bg-destructive data-[active=true]:text-destructive-foreground data-[active=true]:font-semibold hover:bg-accent hover:text-accent-foreground transition-colors"
                           tooltip={item.name}
                         >
-                          <NavLink to={item.href} activeClassName="bg-accent text-accent-foreground">
+                          <NavLink to={item.href}>
                             <Icon className="h-5 w-5 shrink-0" />
                             <span>{item.name}</span>
                           </NavLink>
