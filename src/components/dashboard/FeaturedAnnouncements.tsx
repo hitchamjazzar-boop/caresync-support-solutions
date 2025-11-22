@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Award, Cake, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { AnnouncementComments } from '@/components/announcements/AnnouncementComments';
+import { AnnouncementReactions } from '@/components/announcements/AnnouncementReactions';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 interface Announcement {
   id: string;
@@ -28,8 +31,8 @@ interface Profile {
 export function FeaturedAnnouncements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
-  const [birthdayEmployees, setBirthdayEmployees] = useState<(Profile & { id: string })[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchData();
@@ -109,10 +112,15 @@ export function FeaturedAnnouncements() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold flex items-center gap-2">
-        <Award className="h-5 w-5" />
-        Featured Announcements
-      </h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold flex items-center gap-2">
+          <Award className="h-5 w-5" />
+          Featured Announcements
+        </h2>
+        <Button variant="outline" size="sm" onClick={() => navigate('/announcement-gallery')}>
+          View Timeline
+        </Button>
+      </div>
 
       {announcements.map((announcement) => {
         const profile = announcement.featured_user_id 
@@ -173,6 +181,9 @@ export function FeaturedAnnouncements() {
               <div className="prose prose-sm max-w-none">
                 <p className="text-foreground whitespace-pre-wrap">{announcement.content}</p>
               </div>
+
+              {/* Reactions */}
+              <AnnouncementReactions announcementId={announcement.id} />
 
               {/* Comments Section */}
               <AnnouncementComments announcementId={announcement.id} />

@@ -11,6 +11,7 @@ import { ClockInOut } from '@/components/attendance/ClockInOut';
 import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanner';
 import { MemoAlert } from '@/components/memos/MemoAlert';
 import { FeaturedAnnouncements } from '@/components/dashboard/FeaturedAnnouncements';
+import { BirthdayReminders } from '@/components/dashboard/BirthdayReminders';
 import { format } from 'date-fns';
 
 export default function Dashboard() {
@@ -170,6 +171,8 @@ export default function Dashboard() {
       <AnnouncementBanner />
 
       <MemoAlert />
+
+      {isAdmin && <BirthdayReminders />}
 
       <FeaturedAnnouncements />
 
