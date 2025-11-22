@@ -1,5 +1,4 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Employee {
   id: string;
@@ -37,7 +36,7 @@ export function ParticipantIndicators({
   const getInitials = (name: string) => {
     return name
       .split(" ")
-      .map(n => n[0])
+      .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
@@ -48,49 +47,39 @@ export function ParticipantIndicators({
   return (
     <div className="flex items-center gap-1">
       {visibleParticipants.map((participant, index) => (
-        <Tooltip key={participant.id}>
-          <TooltipTrigger>
-            <div
-              className="w-5 h-5 rounded-full border-2 border-background flex items-center justify-center"
-              style={{ backgroundColor: getEmployeeColor(participant, index) }}
-            >
-              {participant.photo_url ? (
-                <Avatar className="w-full h-full">
-                  <AvatarImage src={participant.photo_url} alt={participant.full_name} />
-                  <AvatarFallback className="text-[8px]">
-                    {getInitials(participant.full_name)}
-                  </AvatarFallback>
-                </Avatar>
-              ) : (
-                <span className="text-[8px] font-semibold text-white">
-                  {getInitials(participant.full_name)}
-                </span>
-              )}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{participant.full_name}</p>
-          </TooltipContent>
-        </Tooltip>
+        <div
+          key={participant.id}
+          className="w-5 h-5 rounded-full border-2 border-background flex items-center justify-center"
+          style={{ backgroundColor: getEmployeeColor(participant, index) }}
+          title={participant.full_name}
+        >
+          {participant.photo_url ? (
+            <Avatar className="w-full h-full">
+              <AvatarImage src={participant.photo_url} alt={participant.full_name} />
+              <AvatarFallback className="text-[8px]">
+                {getInitials(participant.full_name)}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <span className="text-[8px] font-semibold text-white">
+              {getInitials(participant.full_name)}
+            </span>
+          )}
+        </div>
       ))}
 
       {remainingCount > 0 && (
-        <Tooltip>
-          <TooltipTrigger>
-            <div className="w-5 h-5 rounded-full bg-muted border-2 border-background flex items-center justify-center">
-              <span className="text-[8px] font-semibold text-muted-foreground">
-                +{remainingCount}
-              </span>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent>
-            <div className="space-y-1">
-              {participants.slice(maxVisible).map(p => (
-                <p key={p.id}>{p.full_name}</p>
-              ))}
-            </div>
-          </TooltipContent>
-        </Tooltip>
+        <div
+          className="w-5 h-5 rounded-full bg-muted border-2 border-background flex items-center justify-center"
+          title={participants
+            .slice(maxVisible)
+            .map((p) => p.full_name)
+            .join(", ")}
+        >
+          <span className="text-[8px] font-semibold text-muted-foreground">
+            +{remainingCount}
+          </span>
+        </div>
       )}
     </div>
   );
