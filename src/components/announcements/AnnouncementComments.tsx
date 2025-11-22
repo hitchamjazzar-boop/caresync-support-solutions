@@ -40,13 +40,40 @@ export function AnnouncementComments({ announcementId }: AnnouncementCommentsPro
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'announcement_comments',
           filter: `announcement_id=eq.${announcementId}`,
         },
-        () => {
-          fetchComments();
+        async (payload) => {
+          // Fetch profile for new comment
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, full_name, photo_url')
+            .eq('id', payload.new.user_id)
+            .single();
+
+          const newComment: Comment = {
+            ...(payload.new as any),
+            profiles: profile || {
+              full_name: 'Unknown User',
+              photo_url: null,
+            },
+          };
+
+          setComments((prev) => [...prev, newComment]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'announcement_comments',
+          filter: `announcement_id=eq.${announcementId}`,
+        },
+        (payload) => {
+          setComments((prev) => prev.filter((c) => c.id !== payload.old.id));
         }
       )
       .subscribe();
