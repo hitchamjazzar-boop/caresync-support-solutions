@@ -43,13 +43,25 @@ export function AnnouncementReactions({ announcementId }: AnnouncementReactionsP
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'announcement_reactions',
           filter: `announcement_id=eq.${announcementId}`,
         },
-        () => {
-          fetchReactions();
+        (payload) => {
+          setReactions((prev) => [...prev, payload.new as Reaction]);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'announcement_reactions',
+          filter: `announcement_id=eq.${announcementId}`,
+        },
+        (payload) => {
+          setReactions((prev) => prev.filter((r) => r.id !== payload.old.id));
         }
       )
       .subscribe();
