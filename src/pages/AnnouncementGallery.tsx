@@ -57,13 +57,18 @@ export default function AnnouncementGallery() {
                                 announcement.title.toLowerCase().includes('congratulations');
           
           if (isCelebration) {
-            // Trigger confetti after scroll completes
+            // Trigger confetti and sound after scroll completes
             setTimeout(() => {
-              import('@/lib/confetti').then(({ triggerBirthdayConfetti, triggerAchievementConfetti }) => {
+              Promise.all([
+                import('@/lib/confetti'),
+                import('@/lib/sounds')
+              ]).then(([{ triggerBirthdayConfetti, triggerAchievementConfetti }, { playBirthdaySound, playCelebrationSound }]) => {
                 if (isBirthday) {
                   triggerBirthdayConfetti();
+                  playBirthdaySound();
                 } else {
                   triggerAchievementConfetti();
+                  playCelebrationSound();
                 }
               });
             }, 500);

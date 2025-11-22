@@ -41,7 +41,7 @@ export function NotificationBell() {
     fetchUnreadCount();
     fetchRecentAnnouncements();
 
-    // Set up realtime subscription
+    // Set up realtime subscriptions for both announcements and reads
     const channel = supabase
       .channel('announcements-bell')
       .on(
@@ -56,12 +56,33 @@ export function NotificationBell() {
           fetchRecentAnnouncements();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'announcement_reads',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchUnreadCount();
+          fetchRecentAnnouncements();
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
   }, [user]);
+
+  // Refetch when popover opens
+  useEffect(() => {
+    if (open && user) {
+      fetchUnreadCount();
+      fetchRecentAnnouncements();
+    }
+  }, [open, user]);
 
   const fetchUnreadCount = async () => {
     if (!user) return;
