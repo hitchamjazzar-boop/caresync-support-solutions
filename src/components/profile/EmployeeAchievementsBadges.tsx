@@ -132,7 +132,7 @@ export const EmployeeAchievementsBadges = ({ userId }: EmployeeAchievementsBadge
 
   return (
     <>
-      <Card>
+      <Card id="achievements">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Award className="h-5 w-5" />
