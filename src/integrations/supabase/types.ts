@@ -806,6 +806,192 @@ export type Database = {
         }
         Relationships: []
       }
+      secret_santa_assignments: {
+        Row: {
+          assigned_at: string
+          event_id: string
+          giver_id: string
+          id: string
+          receiver_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          event_id: string
+          giver_id: string
+          id?: string
+          receiver_id: string
+        }
+        Update: {
+          assigned_at?: string
+          event_id?: string
+          giver_id?: string
+          id?: string
+          receiver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secret_santa_assignments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "secret_santa_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_santa_assignments_giver_id_fkey"
+            columns: ["giver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_santa_assignments_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secret_santa_events: {
+        Row: {
+          budget_limit: number | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          end_date: string
+          id: string
+          name: string
+          reveal_enabled: boolean
+          start_date: string
+          status: Database["public"]["Enums"]["secret_santa_status"]
+        }
+        Insert: {
+          budget_limit?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          end_date: string
+          id?: string
+          name: string
+          reveal_enabled?: boolean
+          start_date: string
+          status?: Database["public"]["Enums"]["secret_santa_status"]
+        }
+        Update: {
+          budget_limit?: number | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          name?: string
+          reveal_enabled?: boolean
+          start_date?: string
+          status?: Database["public"]["Enums"]["secret_santa_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secret_santa_events_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secret_santa_participants: {
+        Row: {
+          event_id: string
+          id: string
+          is_active: boolean
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          event_id: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          event_id?: string
+          id?: string
+          is_active?: boolean
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secret_santa_participants_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "secret_santa_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_santa_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secret_santa_wishlists: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          item_description: string | null
+          item_title: string
+          item_url: string | null
+          priority: Database["public"]["Enums"]["wishlist_priority"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          item_description?: string | null
+          item_title: string
+          item_url?: string | null
+          priority?: Database["public"]["Enums"]["wishlist_priority"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          item_description?: string | null
+          item_title?: string
+          item_url?: string | null
+          priority?: Database["public"]["Enums"]["wishlist_priority"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secret_santa_wishlists_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "secret_santa_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "secret_santa_wishlists_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -874,6 +1060,8 @@ export type Database = {
     Enums: {
       app_role: "admin" | "manager" | "employee"
       memo_type: "memo" | "reminder" | "warning"
+      secret_santa_status: "draft" | "open" | "assigned" | "completed"
+      wishlist_priority: "high" | "medium" | "low"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1003,6 +1191,8 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "manager", "employee"],
       memo_type: ["memo", "reminder", "warning"],
+      secret_santa_status: ["draft", "open", "assigned", "completed"],
+      wishlist_priority: ["high", "medium", "low"],
     },
   },
 } as const

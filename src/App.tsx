@@ -26,6 +26,7 @@ import Profile from "./pages/Profile";
 import Feedback from "./pages/Feedback";
 import EmployeeVoting from "./pages/EmployeeVoting";
 import Achievements from "./pages/Achievements";
+import SecretSanta from "./pages/SecretSanta";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -225,6 +226,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Achievements />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/secret-santa"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <SecretSanta />
                   </Layout>
                 </ProtectedRoute>
               }
