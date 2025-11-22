@@ -23,18 +23,19 @@ interface OrgChartNode {
 
 interface DraggableOrgChartTreeProps {
   nodes: OrgChartNode[];
-  onEdit: (node: OrgChartNode) => void;
-  onDelete: (node: OrgChartNode) => void;
-  onDragEnd: (nodeId: string, newParentId: string | null, newOrder: number) => void;
+  onEdit?: (node: OrgChartNode) => void;
+  onDelete?: (node: OrgChartNode) => void;
+  onDragEnd?: (nodeId: string, newParentId: string | null, newOrder: number) => void;
   collapsedNodes?: Set<string>;
   onToggleCollapse?: (nodeId: string) => void;
   zoom?: number;
+  editable?: boolean;
 }
 
 interface NodeCardProps {
   node: OrgChartNode;
-  onEdit: (node: OrgChartNode) => void;
-  onDelete: (node: OrgChartNode) => void;
+  onEdit?: (node: OrgChartNode) => void;
+  onDelete?: (node: OrgChartNode) => void;
   hasChildren: boolean;
   isCollapsed: boolean;
   onToggleCollapse: (nodeId: string) => void;
@@ -46,6 +47,7 @@ interface NodeCardProps {
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
+  editable?: boolean;
 }
 
 function NodeCard({
@@ -63,24 +65,27 @@ function NodeCard({
   onDragOver,
   onDragLeave,
   onDrop,
+  editable = true,
 }: NodeCardProps) {
   return (
     <Card
       className={`w-[240px] sm:w-56 md:w-64 lg:w-72 mb-2 sm:mb-3 transition-all ${
         isDragging ? 'opacity-50 scale-95' : isDragOver ? 'ring-2 ring-primary shadow-lg scale-105' : 'hover:shadow-lg'
       }`}
-      draggable
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
+      draggable={editable}
+      onDragStart={editable ? onDragStart : undefined}
+      onDragEnd={editable ? onDragEnd : undefined}
+      onDragOver={editable ? onDragOver : undefined}
+      onDragLeave={editable ? onDragLeave : undefined}
+      onDrop={editable ? onDrop : undefined}
     >
       <CardContent className="p-2 sm:p-3">
         <div className="flex items-start gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-          <div className="cursor-grab active:cursor-grabbing mt-1 flex-shrink-0">
-            <GripVertical className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-          </div>
+          {editable && (
+            <div className="cursor-grab active:cursor-grabbing mt-1 flex-shrink-0">
+              <GripVertical className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+            </div>
+          )}
           <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
             <AvatarImage src={node.profiles.photo_url || undefined} />
             <AvatarFallback>
@@ -114,22 +119,26 @@ function NodeCard({
                 )}
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 sm:h-6 sm:w-6"
-              onClick={() => onEdit(node)}
-            >
-              <Pencil className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 sm:h-6 sm:w-6"
-              onClick={() => onDelete(node)}
-            >
-              <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-            </Button>
+            {editable && onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 sm:h-6 sm:w-6"
+                onClick={() => onEdit(node)}
+              >
+                <Pencil className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              </Button>
+            )}
+            {editable && onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 sm:h-6 sm:w-6"
+                onClick={() => onDelete(node)}
+              >
+                <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+              </Button>
+            )}
           </div>
         </div>
         
@@ -167,6 +176,7 @@ export function DraggableOrgChartTree({
   collapsedNodes: externalCollapsedNodes,
   onToggleCollapse: externalToggleCollapse,
   zoom = 100,
+  editable = true,
 }: DraggableOrgChartTreeProps) {
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
@@ -300,6 +310,7 @@ export function DraggableOrgChartTree({
           onDragOver={handleDragOver(node.id)}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop(node.id)}
+          editable={editable}
         />
         {hasChildren && !isCollapsed && (
           <div className="relative animate-fade-in">
