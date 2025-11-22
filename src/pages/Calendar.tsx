@@ -828,16 +828,16 @@ export default function Calendar() {
             </div>
           ) : (
             <div 
-              className="border rounded overflow-hidden flex-1 flex flex-col min-h-0"
+              className="border rounded flex-1 flex flex-col min-h-0"
               onMouseLeave={() => {
                 if (isDraggingSelection) {
                   handleSelectionEnd();
                 }
               }}
             >
-              <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+              <div className="flex-1 flex flex-col min-h-0 overflow-auto">
                 {/* Header with Days and Employees */}
-                <div className="sticky top-0 z-20 bg-background border-b shrink-0">
+                <div className="sticky top-0 z-30 bg-background border-b shrink-0 shadow-sm">
                   <div className="grid" style={{ 
                     gridTemplateColumns: `100px repeat(${displayDays.length}, minmax(${selectedEmployeeData.length * 120}px, 1fr))` 
                   }}>
@@ -875,7 +875,7 @@ export default function Calendar() {
                 </div>
 
                 {/* Time Grid */}
-                <div className="flex-1 overflow-y-auto relative" ref={scrollContainerRef}>
+                <div className="flex-1 relative" ref={scrollContainerRef}>
                   {/* Current Time Indicator */}
                   {getCurrentTimePosition() !== null && (
                     <div
