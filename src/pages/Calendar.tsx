@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
-import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday, setHours, setMinutes, isSameDay, addDays, startOfDay } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, eachDayOfInterval, isToday, setHours, setMinutes, isSameDay, addDays, startOfDay, getHours, getMinutes } from 'date-fns';
 import { toast } from 'sonner';
 import { CreateEventDialog } from '@/components/calendar/CreateEventDialog';
 import { EventDetailsDialog } from '@/components/calendar/EventDetailsDialog';
@@ -53,8 +53,10 @@ export default function Calendar() {
   const [draggedEvent, setDraggedEvent] = useState<CalendarEvent | null>(null);
   const [resizingEvent, setResizingEvent] = useState<{ event: CalendarEvent; direction: 'top' | 'bottom' } | null>(null);
   const [dragOver, setDragOver] = useState<{ employeeId: string; day: Date; slotIndex: number } | null>(null);
-  const [hoverSlot, setHoverSlot] = useState<{ employeeId: string; day: Date; slotIndex: number } | null>(null);
+  const [hoverSlot, setHoverSlot] = useState<{ employeeId: string; day: Date; slotIndex: number; startIndex: number } | null>(null);
   const [prefilledData, setPrefilledData] = useState<any>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -78,6 +80,15 @@ export default function Calendar() {
       fetchEmployees();
     }
   }, [user]);
+
+  // Update current time every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (selectedEmployees.length > 0) {
@@ -333,13 +344,13 @@ export default function Calendar() {
 
   const getEmployeeColor = (index: number) => {
     const colors = [
-      'bg-blue-50 border-blue-200',
-      'bg-green-50 border-green-200',
-      'bg-purple-50 border-purple-200',
-      'bg-orange-50 border-orange-200',
-      'bg-pink-50 border-pink-200',
-      'bg-yellow-50 border-yellow-200',
-      'bg-indigo-50 border-indigo-200',
+      'bg-accent/30 border-border',
+      'bg-accent/40 border-border',
+      'bg-accent/20 border-border',
+      'bg-muted/50 border-border',
+      'bg-accent/50 border-border',
+      'bg-muted/70 border-border',
+      'bg-accent/60 border-border',
     ];
     return colors[index % colors.length];
   };
@@ -357,6 +368,41 @@ export default function Calendar() {
   const getTimeForSlot = (slotIndex: number) => {
     const slot = timeSlots[slotIndex];
     return format(setMinutes(setHours(new Date(), slot.hour), slot.minute), 'h:mm a');
+  };
+
+  const getTimeRangeForHover = (startIndex: number, currentIndex: number) => {
+    const startSlot = timeSlots[startIndex];
+    const currentSlot = timeSlots[currentIndex];
+    const endSlot = timeSlots[currentIndex];
+    
+    const startTime = format(setMinutes(setHours(new Date(), startSlot.hour), startSlot.minute), 'h:mm a');
+    const endTime = format(setMinutes(setHours(new Date(), endSlot.hour), endSlot.minute + 15), 'h:mm a');
+    
+    return `${startTime} - ${endTime}`;
+  };
+
+  const getCurrentTimePosition = () => {
+    const now = currentTime;
+    const hour = getHours(now);
+    const minute = getMinutes(now);
+    
+    // Calendar starts at 6am (hour 6) and each slot is 15 minutes
+    if (hour < 6 || hour >= 18) return null;
+    
+    const minutesFromStart = (hour - 6) * 60 + minute;
+    const slotHeight = 48; // Height of each slot in pixels
+    const totalMinutes = 12 * 60; // 12 hours total (6am to 6pm)
+    const position = (minutesFromStart / totalMinutes) * (timeSlots.length * slotHeight);
+    
+    return position;
+  };
+
+  const handleSlotHover = (employeeId: string, day: Date, slotIndex: number, startIndex?: number) => {
+    if (startIndex === undefined) {
+      setHoverSlot({ employeeId, day, slotIndex, startIndex: slotIndex });
+    } else {
+      setHoverSlot({ employeeId, day, slotIndex, startIndex });
+    }
   };
 
   if (loading && selectedEmployees.length === 0) {
@@ -409,9 +455,9 @@ export default function Calendar() {
       </div>
 
       {selectedEmployees.length > 3 && viewMode === 'week' && (
-        <Card className="bg-yellow-50 border-yellow-200">
+        <Card className="bg-warning/10 border-warning">
           <CardContent className="p-4">
-            <p className="text-sm text-yellow-800">
+            <p className="text-sm text-warning-foreground">
               ⚠️ Week view is limited to 3 employees. Please select fewer employees or switch to Day view.
             </p>
           </CardContent>
@@ -481,7 +527,21 @@ export default function Calendar() {
                 </div>
 
                 {/* Time Grid */}
-                <div className="max-h-[600px] overflow-y-auto">
+                <div className="max-h-[600px] overflow-y-auto relative" ref={scrollContainerRef}>
+                  {/* Current Time Indicator */}
+                  {getCurrentTimePosition() !== null && (
+                    <div
+                      className="absolute left-0 right-0 z-30 pointer-events-none"
+                      style={{ top: `${getCurrentTimePosition()}px` }}
+                    >
+                      <div className="relative">
+                        <div className="absolute left-0 w-full h-0.5 bg-destructive shadow-lg">
+                          <div className="absolute -left-2 -top-1.5 w-4 h-4 bg-destructive rounded-full shadow-lg" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   {timeSlots.map((slot, slotIndex) => (
                     <div
                       key={slotIndex}
@@ -510,26 +570,37 @@ export default function Calendar() {
                               const isHoverSlot = hoverSlot?.employeeId === employee.id &&
                                                   isSameDay(hoverSlot.day, day) &&
                                                   hoverSlot.slotIndex === slotIndex;
+                              
+                              const isInHoverRange = hoverSlot?.employeeId === employee.id &&
+                                                     isSameDay(hoverSlot.day, day) &&
+                                                     slotIndex >= Math.min(hoverSlot.startIndex, hoverSlot.slotIndex) &&
+                                                     slotIndex <= Math.max(hoverSlot.startIndex, hoverSlot.slotIndex);
 
                               return (
                                 <div
                                   key={`${employee.id}-${slotIndex}`}
                                   className={`h-12 ${getEmployeeColor(empIdx)} hover:bg-accent/70 cursor-pointer transition-colors border-r last:border-r-0 relative group ${
                                     isDragOverSlot ? 'ring-2 ring-primary ring-inset' : ''
-                                  }`}
+                                  } ${isInHoverRange ? 'bg-accent/50' : ''}`}
                                   onClick={() => handleSlotClick(employee.id, day, slotIndex)}
                                   onDragOver={(e) => handleDragOver(e, employee.id, day, slotIndex)}
                                   onDragLeave={handleDragLeave}
                                   onDrop={(e) => handleDrop(e, employee.id, day, slotIndex)}
-                                  onMouseEnter={() => setHoverSlot({ employeeId: employee.id, day, slotIndex })}
+                                  onMouseDown={() => handleSlotHover(employee.id, day, slotIndex)}
+                                  onMouseEnter={() => hoverSlot && handleSlotHover(employee.id, day, slotIndex, hoverSlot.startIndex)}
                                   onMouseLeave={() => setHoverSlot(null)}
                                   onMouseMove={(e) => resizingEvent && handleResizeMove(e, employee.id, day, slotIndex)}
-                                  onMouseUp={() => resizingEvent && handleResizeEnd(employee.id, day, slotIndex)}
+                                  onMouseUp={() => {
+                                    if (resizingEvent) {
+                                      handleResizeEnd(employee.id, day, slotIndex);
+                                    }
+                                    setHoverSlot(null);
+                                  }}
                                 >
-                                  {isHoverSlot && (
+                                  {isHoverSlot && hoverSlot && (
                                     <div className="absolute inset-0 flex items-center justify-center z-[5] pointer-events-none">
-                                      <div className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-medium shadow-lg">
-                                        {getTimeForSlot(slotIndex)}
+                                      <div className="bg-primary text-primary-foreground px-3 py-1.5 rounded text-xs font-medium shadow-lg whitespace-nowrap">
+                                        {getTimeRangeForHover(hoverSlot.startIndex, slotIndex)}
                                       </div>
                                     </div>
                                   )}
@@ -611,7 +682,7 @@ export default function Calendar() {
                 ))}
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                💡 Hover over time slots to see exact time • Right-click events to copy • Drag events to move • Drag edges to resize
+                💡 Click and drag across time slots to see time ranges • Right-click events to copy • Drag events to move • Drag edges to resize
               </p>
             </div>
           )}
