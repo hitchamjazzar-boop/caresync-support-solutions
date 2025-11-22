@@ -40,33 +40,78 @@ export const EmployeeAchievementsList = () => {
     try {
       const { data, error } = await supabase
         .from('employee_achievements')
-        .select(
-          `
-          id,
-          reason,
-          awarded_date,
-          created_at,
-          achievement_types (
-            name,
-            description,
-            color,
-            category
-          ),
-          profiles:user_id (
-            full_name,
-            position,
-            photo_url
-          ),
-          awarded_by_profile:awarded_by (
-            full_name
-          )
-        `
-        )
+        .select('id, reason, awarded_date, created_at, achievement_type_id, user_id, awarded_by')
         .order('awarded_date', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setAchievements(data as any || []);
+
+      if (!data || data.length === 0) {
+        setAchievements([]);
+        return;
+      }
+
+      const achievementTypeIds = Array.from(
+        new Set(data.map((item: any) => item.achievement_type_id))
+      );
+      const userIds = Array.from(new Set(data.map((item: any) => item.user_id)));
+      const awardedByIds = Array.from(
+        new Set(data.map((item: any) => item.awarded_by).filter(Boolean))
+      );
+
+      const [typesResult, profilesResult, awardedByProfilesResult] = await Promise.all([
+        supabase
+          .from('achievement_types')
+          .select('id, name, description, color, category')
+          .in('id', achievementTypeIds),
+        supabase
+          .from('profiles')
+          .select('id, full_name, position, photo_url')
+          .in('id', userIds),
+        awardedByIds.length
+          ? supabase
+              .from('profiles')
+              .select('id, full_name')
+              .in('id', awardedByIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (typesResult.error) throw typesResult.error;
+      if (profilesResult.error) throw profilesResult.error;
+      if (awardedByProfilesResult.error) throw awardedByProfilesResult.error;
+
+      const typesMap = new Map(
+        (typesResult.data || []).map((t: any) => [t.id, t])
+      );
+      const profilesMap = new Map(
+        (profilesResult.data || []).map((p: any) => [p.id, p])
+      );
+      const awardedByMap = new Map(
+        (awardedByProfilesResult.data || []).map((p: any) => [p.id, p])
+      );
+
+      const mapped: EmployeeAchievement[] = (data as any[]).map((row) => ({
+        id: row.id,
+        reason: row.reason || '',
+        awarded_date: row.awarded_date,
+        created_at: row.created_at,
+        achievement_types: typesMap.get(row.achievement_type_id) || {
+          name: 'Unknown achievement',
+          description: '',
+          color: '#64748b',
+          category: 'General',
+        },
+        profiles: profilesMap.get(row.user_id) || {
+          full_name: 'Unknown User',
+          position: '',
+          photo_url: null,
+        },
+        awarded_by_profile: awardedByMap.get(row.awarded_by) || {
+          full_name: 'Unknown',
+        },
+      }));
+
+      setAchievements(mapped);
     } catch (error: any) {
       console.error('Error fetching achievements:', error);
       toast.error('Failed to load achievements');
