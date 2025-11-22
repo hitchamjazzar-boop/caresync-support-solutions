@@ -35,26 +35,45 @@ export const EmployeeAchievementsBadges = ({ userId }: EmployeeAchievementsBadge
     try {
       const { data, error } = await supabase
         .from('employee_achievements')
-        .select(
-          `
-          id,
-          reason,
-          awarded_date,
-          achievement_types (
-            name,
-            description,
-            color,
-            category,
-            icon
-          )
-        `
-        )
+        .select('id, reason, awarded_date, achievement_type_id')
         .eq('user_id', userId)
         .eq('is_visible', true)
         .order('awarded_date', { ascending: false });
 
       if (error) throw error;
-      setAchievements(data as any || []);
+
+      if (!data || data.length === 0) {
+        setAchievements([]);
+        return;
+      }
+
+      const achievementTypeIds = Array.from(
+        new Set(data.map((item: any) => item.achievement_type_id))
+      );
+
+      const { data: types, error: typesError } = await supabase
+        .from('achievement_types')
+        .select('id, name, description, color, category, icon')
+        .in('id', achievementTypeIds);
+
+      if (typesError) throw typesError;
+
+      const typesMap = new Map((types || []).map((t: any) => [t.id, t]));
+
+      const mapped: Achievement[] = (data as any[]).map((row) => ({
+        id: row.id,
+        reason: row.reason || '',
+        awarded_date: row.awarded_date,
+        achievement_types: typesMap.get(row.achievement_type_id) || {
+          name: 'Unknown achievement',
+          description: '',
+          color: '#64748b',
+          category: 'General',
+          icon: 'award',
+        },
+      }));
+
+      setAchievements(mapped);
     } catch (error: any) {
       console.error('Error fetching achievements:', error);
       toast.error('Failed to load achievements');
