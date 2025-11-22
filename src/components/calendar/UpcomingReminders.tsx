@@ -38,36 +38,22 @@ export function UpcomingReminders() {
 
   const fetchUpcomingItems = async () => {
     const now = new Date();
-    const nextWeek = addDays(now, 7);
+    now.setHours(0, 0, 0, 0); // Start of today
+    const tomorrow = addDays(now, 2); // End of tomorrow
 
-    console.log('📅 Fetching upcoming reminders:', {
+    console.log('📅 Fetching today/tomorrow birthdays and Christmas party:', {
       now: now.toISOString(),
-      nextWeek: nextWeek.toISOString(),
+      tomorrow: tomorrow.toISOString(),
     });
 
     try {
-      // Fetch active announcements
-      const { data: announcements, error: announcementsError } = await supabase
-        .from('announcements')
-        .select('id, title, content, created_at, expires_at, image_url, is_pinned')
-        .eq('is_active', true)
-        .or(`expires_at.is.null,expires_at.gte.${now.toISOString()}`)
-        .limit(3);
-
-      console.log('📢 Announcements query result:', {
-        count: announcements?.length || 0,
-        data: announcements,
-        error: announcementsError,
-      });
-
-      // Fetch upcoming calendar events
+      // Fetch only birthday and Christmas party events for today/tomorrow
       const { data: events, error: eventsError } = await supabase
         .from('calendar_events')
         .select('id, title, event_type, start_time, end_time')
         .gte('start_time', now.toISOString())
-        .lte('start_time', nextWeek.toISOString())
-        .order('start_time', { ascending: true })
-        .limit(5);
+        .lte('start_time', tomorrow.toISOString())
+        .order('start_time', { ascending: true });
 
       console.log('📆 Events query result:', {
         count: events?.length || 0,
@@ -83,45 +69,29 @@ export function UpcomingReminders() {
         icon: 'bell' | 'calendar' | 'birthday' | 'party' | 'gift';
       }> = [];
 
-      // Add announcements
-      announcements?.forEach(ann => {
-        const isPinned = ann.is_pinned;
-        const isBirthday = ann.title.toLowerCase().includes('birthday');
-        const isParty = ann.title.toLowerCase().includes('party') || ann.title.toLowerCase().includes('celebration');
-        
-        items.push({
-          id: ann.id,
-          title: ann.title,
-          type: 'announcement',
-          date: ann.expires_at || ann.created_at,
-          icon: isBirthday ? 'birthday' : isParty ? 'party' : 'bell',
-        });
-      });
-
-      // Add events
+      // Add only birthday and Christmas party events
       events?.forEach(event => {
         const isChristmas = event.title.toLowerCase().includes('christmas');
         const isBirthday = event.event_type === 'birthday' || event.title.toLowerCase().includes('birthday');
         
-        items.push({
-          id: event.id,
-          title: event.title,
-          type: 'event',
-          date: event.start_time,
-          icon: isChristmas ? 'gift' : isBirthday ? 'birthday' : 'calendar',
-        });
+        // Only include birthdays or Christmas party
+        if (isBirthday || isChristmas) {
+          items.push({
+            id: event.id,
+            title: event.title,
+            type: 'event',
+            date: event.start_time,
+            icon: isChristmas ? 'gift' : 'birthday',
+          });
+        }
       });
 
-      // Sort by date and take top 5
-      items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      const finalItems = items.slice(0, 5);
-      
       console.log('✅ Final upcoming items:', {
-        count: finalItems.length,
-        items: finalItems,
+        count: items.length,
+        items: items,
       });
       
-      setUpcomingItems(finalItems);
+      setUpcomingItems(items);
     } catch (error) {
       console.error('❌ Error fetching upcoming items:', error);
     }
@@ -153,7 +123,7 @@ export function UpcomingReminders() {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-              Upcoming Reminders & Events
+              Today's Celebrations
             </h3>
             <div className="space-y-2">
               {upcomingItems.map((item) => (
