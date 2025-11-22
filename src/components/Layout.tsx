@@ -94,6 +94,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Celebration Gallery', href: '/announcement-gallery', icon: ImageIcon },
     { name: 'Employee Voting', href: '/voting', icon: Vote },
     { name: 'Secret Santa', href: '/secret-santa', icon: Gift },
+    { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'My Achievements', href: '/profile#achievements', icon: Award },
     { name: 'Manage Achievements', href: '/achievements', icon: Award, adminOnly: true },
     { name: 'Memo Analytics', href: '/memo-analytics', icon: Mail, adminOnly: true },
