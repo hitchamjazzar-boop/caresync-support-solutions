@@ -294,42 +294,6 @@ export function EventDetailsDialog({
                 </div>
               </div>
             )}
-
-            {/* RSVP Section for invited users */}
-            {isInvited && (
-              <div className="border-t pt-4">
-                <h4 className="font-semibold text-sm text-muted-foreground mb-3">Your Response</h4>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={userResponse?.response_status === 'accepted' ? 'default' : 'outline'}
-                    onClick={() => handleRSVP('accepted')}
-                    disabled={loading}
-                  >
-                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                    Accept
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={userResponse?.response_status === 'tentative' ? 'default' : 'outline'}
-                    onClick={() => handleRSVP('tentative')}
-                    disabled={loading}
-                  >
-                    <AlertCircle className="h-4 w-4 mr-1" />
-                    Maybe
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={userResponse?.response_status === 'declined' ? 'destructive' : 'outline'}
-                    onClick={() => handleRSVP('declined')}
-                    disabled={loading}
-                  >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Decline
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
 
           <DialogFooter>

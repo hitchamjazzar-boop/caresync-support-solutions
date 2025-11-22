@@ -183,7 +183,7 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
         recurrencePatternStr = `weekly:${selectedDays.join(',')}`;
       }
 
-      // Ensure creator is included in target_users
+      // Ensure creator is included in target_users if this was for a specific employee
       let attendees = selectedAttendees;
       if (attendees.length > 0 && !attendees.includes(user.id)) {
         attendees = [...attendees, user.id];
@@ -467,38 +467,6 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               placeholder="Event location"
             />
-          </div>
-
-          {/* Attendees Section */}
-          <div className="space-y-2">
-            <Label>
-              <Users className="h-4 w-4 inline mr-1" />
-              Invite Attendees ({selectedAttendees.length} selected)
-            </Label>
-            <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
-              {employees.map(employee => (
-                <div
-                  key={employee.id}
-                  className="flex items-center gap-3 p-2 hover:bg-accent rounded-lg cursor-pointer"
-                  onClick={() => toggleAttendee(employee.id)}
-                >
-                  <Checkbox 
-                    checked={selectedAttendees.includes(employee.id)}
-                    onCheckedChange={() => toggleAttendee(employee.id)}
-                  />
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={employee.photo_url} />
-                    <AvatarFallback>{employee.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{employee.full_name}</div>
-                    {employee.position && (
-                      <div className="text-xs text-muted-foreground">{employee.position}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Recurring Event Section */}
