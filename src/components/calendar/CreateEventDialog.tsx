@@ -181,17 +181,19 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
         recurrencePatternStr = `weekly:${selectedDays.join(',')}`;
       }
 
-      // Ensure creator is included in target_users if this was for a specific employee
+      // Set target_users: ONLY the selected attendees, NOT the creator
+      // Events belong only to their assigned employees
       let attendees = selectedAttendees;
-      if (attendees.length > 0 && !attendees.includes(user.id)) {
-        attendees = [...attendees, user.id];
+      // If no attendees selected, assign to creator only
+      if (attendees.length === 0) {
+        attendees = [user.id];
       }
 
       const eventData: any = {
         ...formData,
         start_time: toUtcIso(formData.start_time)!,
         end_time: toUtcIso(formData.end_time)!,
-        // Make all events public by default for shared visibility
+        // Make all events public for viewing, but ownership is via target_users
         is_public: true,
         recurrence_pattern: formData.is_recurring ? recurrencePatternStr : null,
         recurrence_end_date:
@@ -200,7 +202,7 @@ export function CreateEventDialog({ open, onOpenChange, onSuccess, prefilledData
             : null,
         color: eventTypeColors[formData.event_type as keyof typeof eventTypeColors] || '#3b82f6',
         created_by: user.id,
-        target_users: attendees.length > 0 ? attendees : null,
+        target_users: attendees, // Event belongs ONLY to these users
       };
 
       const { data: newEvent, error } = await supabase

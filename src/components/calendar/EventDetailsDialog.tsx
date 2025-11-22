@@ -168,7 +168,7 @@ export function EventDetailsDialog({
     try {
       setLoading(true);
 
-      // Create a copy of the event for the target employee
+      // Create a copy of the event for the target employee ONLY
       const { error } = await supabase
         .from('calendar_events')
         .insert({
@@ -182,8 +182,8 @@ export function EventDetailsDialog({
           meeting_link: event.meeting_link,
           color: event.color,
           created_by: user.id,
-          is_public: false,
-          target_users: [selectedCopyTarget],
+          is_public: true, // Visible to all, but owned by target only
+          target_users: [selectedCopyTarget], // Event belongs ONLY to target employee
           is_recurring: event.is_recurring,
           recurrence_pattern: event.recurrence_pattern,
           recurrence_end_date: event.recurrence_end_date,
@@ -191,7 +191,7 @@ export function EventDetailsDialog({
 
       if (error) throw error;
 
-      toast.success('Event copied successfully');
+      toast.success(`Event copied to ${employees.find(e => e.id === selectedCopyTarget)?.full_name}'s calendar`);
       setCopyDialogOpen(false);
       setSelectedCopyTarget('');
       onUpdate();
@@ -404,7 +404,7 @@ export function EventDetailsDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Copy Event to Employee Calendar</AlertDialogTitle>
             <AlertDialogDescription>
-              Select an employee to copy this event to their calendar.
+              Select an employee to copy this event to their calendar. The event will be created as a separate entry that belongs only to them.
               {event.is_recurring && ' The copied event will maintain the same recurring pattern.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -434,7 +434,7 @@ export function EventDetailsDialog({
               onClick={handleCopyEvent}
               disabled={loading || !selectedCopyTarget}
             >
-              {loading ? 'Copying...' : 'Copy Event'}
+              {loading ? 'Copying...' : 'Copy to Calendar'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
