@@ -3,9 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Award, Calendar, User } from 'lucide-react';
+import { Award, Calendar, User, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAdmin } from '@/hooks/useAdmin';
 
 interface EmployeeAchievement {
   id: string;
@@ -29,8 +41,11 @@ interface EmployeeAchievement {
 }
 
 export const EmployeeAchievementsList = () => {
+  const { isAdmin } = useAdmin();
   const [achievements, setAchievements] = useState<EmployeeAchievement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [achievementToDelete, setAchievementToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAchievements();
@@ -120,6 +135,33 @@ export const EmployeeAchievementsList = () => {
     }
   };
 
+  const handleDeleteClick = (achievementId: string) => {
+    setAchievementToDelete(achievementId);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!achievementToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('employee_achievements')
+        .delete()
+        .eq('id', achievementToDelete);
+
+      if (error) throw error;
+
+      toast.success('Achievement deleted successfully');
+      fetchAchievements();
+    } catch (error: any) {
+      console.error('Error deleting achievement:', error);
+      toast.error('Failed to delete achievement');
+    } finally {
+      setDeleteDialogOpen(false);
+      setAchievementToDelete(null);
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-8">Loading achievements...</div>;
   }
@@ -133,10 +175,11 @@ export const EmployeeAchievementsList = () => {
   }
 
   return (
-    <div className="space-y-3">
-      {achievements.map((achievement) => (
-        <Card key={achievement.id} className="p-4">
-          <div className="flex items-start gap-4">
+    <>
+      <div className="space-y-3">
+        {achievements.map((achievement) => (
+          <Card key={achievement.id} className="p-4">
+            <div className="flex items-start gap-4">
             <div
               className="p-3 rounded-lg shrink-0"
               style={{ backgroundColor: `${achievement.achievement_types.color}20` }}
@@ -188,11 +231,42 @@ export const EmployeeAchievementsList = () => {
                     </Badge>
                   </div>
                 </div>
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDeleteClick(achievement.id)}
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </div>
         </Card>
       ))}
-    </div>
+      </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Achievement</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this achievement? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
