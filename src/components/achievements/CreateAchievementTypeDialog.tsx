@@ -82,7 +82,6 @@ export const CreateAchievementTypeDialog = ({
           icon: formData.icon,
           color: formData.color,
           category: formData.category,
-          created_by: user?.id,
           is_active: true,
         });
 

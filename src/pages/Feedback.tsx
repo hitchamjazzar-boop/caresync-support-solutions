@@ -133,6 +133,32 @@ export default function Feedback() {
     }
   };
 
+  const handleResolve = async (feedbackId: string) => {
+    try {
+      const { error } = await supabase
+        .from('employee_feedback')
+        .update({
+          status: 'resolved',
+        })
+        .eq('id', feedbackId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Feedback marked as resolved',
+      });
+
+      fetchFeedback();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive'> = {
       pending: 'default',
@@ -214,6 +240,17 @@ export default function Feedback() {
                   <div className="border-t pt-4">
                     <p className="text-sm font-medium mb-1">Admin Response:</p>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.admin_response}</p>
+                    {isAdmin && item.status !== 'resolved' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleResolve(item.id)}
+                        className="mt-2"
+                      >
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Mark as Resolved
+                      </Button>
+                    )}
                   </div>
                 )}
 
