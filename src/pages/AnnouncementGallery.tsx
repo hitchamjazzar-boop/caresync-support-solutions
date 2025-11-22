@@ -102,7 +102,12 @@ export default function AnnouncementGallery() {
 
       if (error) throw error;
 
-      setAnnouncements(announcementData || []);
+      // Filter out promotion announcements - they are private and only shown in notifications
+      const filteredAnnouncements = (announcementData || []).filter(
+        a => !a.title.toLowerCase().includes('promotion')
+      );
+
+      setAnnouncements(filteredAnnouncements);
 
       // Fetch profiles for featured users
       if (announcementData && announcementData.length > 0) {
