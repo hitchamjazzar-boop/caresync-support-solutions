@@ -435,6 +435,23 @@ export default function Calendar() {
     '#06B6D4', '#F97316', '#EC4899', '#14B8A6', '#6366F1', '#84CC16',
   ];
 
+  // Compute selected employee data
+  const selectedEmployeeData = employees.filter(e => selectedEmployees.includes(e.id));
+  
+  // Memoized color function to prevent infinite loops in ParticipantIndicators
+  const getEmployeeEventColor = useCallback((employeeId: string) => {
+    const employee = employees.find(e => e.id === employeeId);
+    const color = employee?.calendar_color;
+    
+    if (color) {
+      return color;
+    }
+    
+    const index = selectedEmployeeData.findIndex(e => e.id === employeeId);
+    const fallbackColor = DEFAULT_COLORS[index % DEFAULT_COLORS.length];
+    return fallbackColor;
+  }, [employees, selectedEmployeeData]);
+
   // Helper to format date for datetime-local input without timezone conversion
   const formatDateTimeLocal = (date: Date) => {
     const year = date.getFullYear();
@@ -542,21 +559,6 @@ export default function Calendar() {
     );
   }
 
-  const selectedEmployeeData = employees.filter(e => selectedEmployees.includes(e.id));
-  
-  const getEmployeeEventColor = useCallback((employeeId: string) => {
-    const employee = employees.find(e => e.id === employeeId);
-    const color = employee?.calendar_color;
-    
-    if (color) {
-      return color;
-    }
-    
-    const index = selectedEmployeeData.findIndex(e => e.id === employeeId);
-    const fallbackColor = DEFAULT_COLORS[index % DEFAULT_COLORS.length];
-    return fallbackColor;
-  }, [employees, selectedEmployeeData]);
-  
   const dateRangeText = viewMode === 'day'
     ? format(currentDate, 'MMMM d, yyyy')
     : `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
