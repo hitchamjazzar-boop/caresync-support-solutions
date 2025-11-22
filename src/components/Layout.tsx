@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift } from 'lucide-react';
+import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, type LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -23,6 +23,14 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import logo from '@/assets/logo.png';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,6 +39,13 @@ import { NotificationBell } from '@/components/announcements/NotificationBell';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 import { NavLink } from '@/components/NavLink';
 
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  adminOnly?: boolean;
+}
+
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { signOut, user } = useAuth();
   const { isAdmin } = useAdmin();
@@ -38,7 +53,6 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string>('');
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -74,7 +88,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const navigation = [
+  const navigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/', icon: BarChart3 },
     { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
     { name: 'Celebration Gallery', href: '/announcement-gallery', icon: ImageIcon },
@@ -93,9 +107,34 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   ];
 
+  const getBreadcrumbs = () => {
+    const pathSegments = location.pathname.split('/').filter(Boolean);
+    const breadcrumbs: Array<{ name: string; href: string; icon?: LucideIcon }> = [
+      { name: 'Home', href: '/', icon: Home }
+    ];
+
+    if (pathSegments.length === 0) return breadcrumbs;
+
+    let currentPath = '';
+    pathSegments.forEach((segment) => {
+      currentPath += `/${segment}`;
+      const navItem = navigation.find(item => item.href === currentPath);
+      if (navItem) {
+        breadcrumbs.push({ name: navItem.name, href: navItem.href, icon: navItem.icon });
+      } else {
+        const formattedName = segment
+          .split('-')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+        breadcrumbs.push({ name: formattedName, href: currentPath });
+      }
+    });
+
+    return breadcrumbs;
+  };
+
   const AppSidebar = () => {
-    const { state } = useSidebar();
-    const isCollapsed = state === 'collapsed';
+    const { open } = useSidebar();
 
     return (
       <Sidebar collapsible="icon" className="border-r">
@@ -103,13 +142,11 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
           <SidebarGroup>
             <SidebarGroupLabel className="px-2 py-4">
               <div className="flex items-center gap-2">
-                <img src={logo} alt="Care Sync" className="h-6 w-6" />
-                {!isCollapsed && (
-                  <div>
-                    <h2 className="text-sm font-semibold">Care Sync</h2>
-                    <p className="text-xs text-muted-foreground">Support Solutions</p>
-                  </div>
-                )}
+                <img src={logo} alt="Care Sync" className="h-6 w-6 shrink-0" />
+                <div className={`transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+                  <h2 className="text-sm font-semibold whitespace-nowrap">Care Sync</h2>
+                  <p className="text-xs text-muted-foreground whitespace-nowrap">Support Solutions</p>
+                </div>
               </div>
             </SidebarGroupLabel>
             <SidebarGroupContent>
@@ -121,10 +158,15 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                     const isActive = location.pathname === item.href;
                     return (
                       <SidebarMenuItem key={item.name}>
-                        <SidebarMenuButton asChild isActive={isActive} className="h-12 touch-manipulation">
+                        <SidebarMenuButton 
+                          asChild 
+                          isActive={isActive} 
+                          className="h-12 touch-manipulation"
+                          tooltip={item.name}
+                        >
                           <NavLink to={item.href} activeClassName="bg-accent text-accent-foreground">
                             <Icon className="h-5 w-5 shrink-0" />
-                            {!isCollapsed && <span>{item.name}</span>}
+                            <span>{item.name}</span>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -137,6 +179,8 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
       </Sidebar>
     );
   };
+
+  const breadcrumbs = getBreadcrumbs();
 
   return (
     <SidebarProvider>
@@ -187,6 +231,48 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
               </div>
             </div>
           </header>
+
+          {/* Breadcrumb Navigation */}
+          {breadcrumbs.length > 1 && (
+            <div className="border-b bg-muted/30 px-4 py-3">
+              <div className="mx-auto max-w-7xl">
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    {breadcrumbs.map((crumb, index) => {
+                      const isLast = index === breadcrumbs.length - 1;
+                      const BreadcrumbIcon = crumb.icon;
+                      
+                      return (
+                        <div key={crumb.href} className="flex items-center">
+                          {index > 0 && (
+                            <BreadcrumbSeparator>
+                              <ChevronRight className="h-4 w-4" />
+                            </BreadcrumbSeparator>
+                          )}
+                          <BreadcrumbItem>
+                            {isLast ? (
+                              <BreadcrumbPage className="flex items-center gap-1.5">
+                                {BreadcrumbIcon && <BreadcrumbIcon className="h-4 w-4" />}
+                                <span className="max-w-[150px] truncate sm:max-w-none">{crumb.name}</span>
+                              </BreadcrumbPage>
+                            ) : (
+                              <BreadcrumbLink 
+                                href={crumb.href}
+                                className="flex items-center gap-1.5 hover:text-foreground transition-colors"
+                              >
+                                {BreadcrumbIcon && <BreadcrumbIcon className="h-4 w-4" />}
+                                <span className="max-w-[150px] truncate sm:max-w-none">{crumb.name}</span>
+                              </BreadcrumbLink>
+                            )}
+                          </BreadcrumbItem>
+                        </div>
+                      );
+                    })}
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </div>
+          )}
 
           {/* Main Content */}
           <main className="flex-1 p-4 sm:p-6 overflow-x-hidden">
