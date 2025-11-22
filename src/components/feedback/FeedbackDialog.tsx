@@ -34,12 +34,22 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
     setLoading(true);
 
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData, error: authError } = await supabase.auth.getUser();
+
+      if (authError || !userData.user) {
+        toast({
+          title: 'Authentication Required',
+          description: 'You must be logged in to submit feedback',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
 
       const { error } = await supabase
         .from('employee_feedback')
         .insert({
-          user_id: userData.user?.id,
+          user_id: userData.user.id,
           subject: subject.trim(),
           message: message.trim(),
         });
