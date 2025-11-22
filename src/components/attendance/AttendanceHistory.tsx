@@ -171,17 +171,17 @@ export const AttendanceHistory = () => {
             <p>No attendance records found for this period</p>
           </div>
         ) : (
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Clock In</TableHead>
-                  <TableHead>Clock Out</TableHead>
-                  <TableHead>Lunch</TableHead>
-                  <TableHead>Total Hours</TableHead>
-                  <TableHead>Status</TableHead>
-                  {isAdmin && <TableHead>Actions</TableHead>}
+                  <TableHead className="whitespace-nowrap">Date</TableHead>
+                  <TableHead className="whitespace-nowrap">Clock In</TableHead>
+                  <TableHead className="whitespace-nowrap">Clock Out</TableHead>
+                  <TableHead className="whitespace-nowrap">Lunch</TableHead>
+                  <TableHead className="whitespace-nowrap">Total Hours</TableHead>
+                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                  {isAdmin && <TableHead className="whitespace-nowrap">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
