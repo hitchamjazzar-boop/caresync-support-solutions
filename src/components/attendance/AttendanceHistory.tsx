@@ -12,12 +12,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar, Clock, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AttendanceRecord {
   id: string;
+  user_id: string;
   clock_in: string;
   clock_out: string | null;
   lunch_start: string | null;
@@ -25,6 +27,9 @@ interface AttendanceRecord {
   total_hours: number | null;
   status: string;
   created_at: string;
+  profiles?: {
+    full_name: string;
+  };
 }
 
 export const AttendanceHistory = () => {
@@ -33,6 +38,8 @@ export const AttendanceHistory = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>('week');
+  const [employees, setEmployees] = useState<Array<{ id: string; full_name: string }>>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
 
   useEffect(() => {
     if (!user) return;
@@ -50,6 +57,16 @@ export const AttendanceHistory = () => {
 
       setIsAdmin(!!roleData);
 
+      // Fetch employee list if admin
+      if (roleData) {
+        const { data: employeeData } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .order('full_name');
+        
+        setEmployees(employeeData || []);
+      }
+
       // Calculate date range based on selected period
       const now = new Date();
       let startDate: Date;
@@ -62,16 +79,18 @@ export const AttendanceHistory = () => {
         startDate.setDate(now.getDate() - 30);
       }
 
-      // Fetch attendance records
-      const query = supabase
+      // Fetch attendance records with profile info
+      let query = supabase
         .from('attendance')
-        .select('*')
+        .select('*, profiles(full_name)')
         .gte('clock_in', startDate.toISOString())
         .order('clock_in', { ascending: false });
 
       // If not admin, filter to own records
       if (!roleData) {
-        query.eq('user_id', user.id);
+        query = query.eq('user_id', user.id);
+      } else if (selectedEmployee !== 'all') {
+        query = query.eq('user_id', selectedEmployee);
       }
 
       const { data, error } = await query;
@@ -87,7 +106,7 @@ export const AttendanceHistory = () => {
     };
 
     fetchData();
-  }, [user, selectedPeriod]);
+  }, [user, selectedPeriod, selectedEmployee]);
 
   const formatTime = (dateString: string | null) => {
     if (!dateString) return '-';
@@ -146,7 +165,7 @@ export const AttendanceHistory = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5" />
@@ -156,12 +175,29 @@ export const AttendanceHistory = () => {
               Total Hours: <span className="font-semibold text-foreground">{getTotalHours()}</span>
             </p>
           </div>
-          <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as 'week' | 'month')}>
-            <TabsList>
-              <TabsTrigger value="week">This Week</TabsTrigger>
-              <TabsTrigger value="month">This Month</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex flex-col sm:flex-row gap-2">
+            {isAdmin && (
+              <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectValue placeholder="All Employees" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Employees</SelectItem>
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as 'week' | 'month')}>
+              <TabsList>
+                <TabsTrigger value="week">This Week</TabsTrigger>
+                <TabsTrigger value="month">This Month</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -175,6 +211,7 @@ export const AttendanceHistory = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {isAdmin && <TableHead>Employee</TableHead>}
                   <TableHead>Date</TableHead>
                   <TableHead>Clock In</TableHead>
                   <TableHead>Clock Out</TableHead>
@@ -187,6 +224,11 @@ export const AttendanceHistory = () => {
               <TableBody>
                 {records.map((record) => (
                   <TableRow key={record.id}>
+                    {isAdmin && (
+                      <TableCell className="font-medium">
+                        {record.profiles?.full_name || 'Unknown'}
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{formatDate(record.clock_in)}</TableCell>
                     <TableCell>{formatTime(record.clock_in)}</TableCell>
                     <TableCell>{formatTime(record.clock_out)}</TableCell>
