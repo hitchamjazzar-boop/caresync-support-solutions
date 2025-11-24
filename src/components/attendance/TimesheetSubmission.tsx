@@ -23,20 +23,23 @@ export const TimesheetSubmission = () => {
       const today = new Date();
       const dayOfMonth = today.getDate();
       
-      // Check if today is 1st or 15th
-      const isSubmissionDay = dayOfMonth === 1 || dayOfMonth === 15;
-      setCanSubmit(isSubmissionDay);
+      // Allow submissions within a wider window for testing
+      // Can submit for second half (16-30/31) anytime after the 16th
+      // Can submit for first half (1-15) anytime after the 1st until the 20th
+      const canSubmitSecondHalf = dayOfMonth >= 16;
+      const canSubmitFirstHalf = dayOfMonth >= 1 && dayOfMonth <= 20;
+      const isSubmissionWindow = canSubmitSecondHalf || canSubmitFirstHalf;
+      setCanSubmit(isSubmissionWindow);
 
-      // Determine period
+      // Determine period based on current date
       let periodStart: Date;
       let periodEnd: Date;
 
-      if (dayOfMonth === 1) {
-        // Previous month's second half (16th to end)
-        const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 16);
-        periodStart = prevMonth;
-        periodEnd = endOfMonth(prevMonth);
-      } else if (dayOfMonth === 15) {
+      if (canSubmitSecondHalf) {
+        // Current month's second half (16th to end)
+        periodStart = new Date(today.getFullYear(), today.getMonth(), 16);
+        periodEnd = endOfMonth(today);
+      } else if (canSubmitFirstHalf) {
         // Current month's first half (1st to 15th)
         periodStart = startOfMonth(today);
         periodEnd = new Date(today.getFullYear(), today.getMonth(), 15);
@@ -118,7 +121,7 @@ export const TimesheetSubmission = () => {
             Timesheet Submission
           </CardTitle>
           <CardDescription>
-            Timesheets can be submitted on the 1st and 15th of each month
+            Submit your timesheet for the current period
           </CardDescription>
         </CardHeader>
         <CardContent>
