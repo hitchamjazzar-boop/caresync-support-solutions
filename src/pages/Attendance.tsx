@@ -1,7 +1,12 @@
 import { ClockInOut } from '@/components/attendance/ClockInOut';
 import { AttendanceHistory } from '@/components/attendance/AttendanceHistory';
+import { TimesheetSubmission } from '@/components/attendance/TimesheetSubmission';
+import { TimesheetReview } from '@/components/attendance/TimesheetReview';
+import { useAdmin } from '@/hooks/useAdmin';
 
 export default function Attendance() {
+  const { isAdmin } = useAdmin();
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
@@ -12,13 +17,18 @@ export default function Attendance() {
       </div>
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 space-y-4 sm:space-y-6">
           <ClockInOut />
+          {!isAdmin && <TimesheetSubmission />}
         </div>
         <div className="lg:col-span-2">
           <AttendanceHistory />
         </div>
       </div>
+
+      {isAdmin && (
+        <TimesheetReview />
+      )}
     </div>
   );
 }
