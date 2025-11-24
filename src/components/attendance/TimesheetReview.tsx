@@ -18,9 +18,6 @@ interface TimesheetSubmission {
   status: string;
   submitted_at: string;
   admin_notes: string | null;
-  profiles: {
-    full_name: string;
-  };
 }
 
 export const TimesheetReview = () => {
@@ -30,6 +27,7 @@ export const TimesheetReview = () => {
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
   const [totalHours, setTotalHours] = useState(0);
+  const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchSubmissions();
@@ -37,9 +35,22 @@ export const TimesheetReview = () => {
 
   const fetchSubmissions = async () => {
     try {
+      // Fetch profiles for name mapping
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name');
+      
+      if (profilesData) {
+        const map = profilesData.reduce((acc, profile) => {
+          acc[profile.id] = profile.full_name;
+          return acc;
+        }, {} as Record<string, string>);
+        setProfilesMap(map);
+      }
+
       const { data, error } = await supabase
         .from('timesheet_submissions')
-        .select('*, profiles(full_name)')
+        .select('*')
         .order('submitted_at', { ascending: false });
 
       if (error) throw error;
@@ -148,7 +159,7 @@ export const TimesheetReview = () => {
                   {submissions.map((submission) => (
                     <TableRow key={submission.id}>
                       <TableCell className="font-medium">
-                        {submission.profiles?.full_name || 'Unknown'}
+                        {profilesMap[submission.user_id] || 'Unknown'}
                       </TableCell>
                       <TableCell>
                         {format(new Date(submission.period_start), 'MMM d')} - {format(new Date(submission.period_end), 'MMM d, yyyy')}
@@ -182,7 +193,7 @@ export const TimesheetReview = () => {
             <DialogDescription>
               {selectedSubmission && (
                 <>
-                  {selectedSubmission.profiles?.full_name}'s timesheet for{' '}
+                  {profilesMap[selectedSubmission.user_id] || 'Unknown'}'s timesheet for{' '}
                   {format(new Date(selectedSubmission.period_start), 'MMM d')} -{' '}
                   {format(new Date(selectedSubmission.period_end), 'MMM d, yyyy')}
                 </>
