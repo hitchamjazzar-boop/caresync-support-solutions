@@ -27,9 +27,6 @@ interface AttendanceRecord {
   total_hours: number | null;
   status: string;
   created_at: string;
-  profiles?: {
-    full_name: string;
-  };
 }
 
 export const AttendanceHistory = () => {
@@ -40,6 +37,7 @@ export const AttendanceHistory = () => {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>('week');
   const [employees, setEmployees] = useState<Array<{ id: string; full_name: string }>>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+  const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -57,14 +55,21 @@ export const AttendanceHistory = () => {
 
       setIsAdmin(!!roleData);
 
-      // Fetch employee list if admin
-      if (roleData) {
-        const { data: employeeData } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .order('full_name');
+      // Fetch all profiles for name mapping
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name');
+      
+      if (profilesData) {
+        const map = profilesData.reduce((acc, profile) => {
+          acc[profile.id] = profile.full_name;
+          return acc;
+        }, {} as Record<string, string>);
+        setProfilesMap(map);
         
-        setEmployees(employeeData || []);
+        if (roleData) {
+          setEmployees(profilesData);
+        }
       }
 
       // Calculate date range based on selected period
@@ -79,10 +84,10 @@ export const AttendanceHistory = () => {
         startDate.setDate(now.getDate() - 30);
       }
 
-      // Fetch attendance records with profile info
+      // Fetch attendance records without join
       let query = supabase
         .from('attendance')
-        .select('*, profiles(full_name)')
+        .select('*')
         .gte('clock_in', startDate.toISOString())
         .order('clock_in', { ascending: false });
 
@@ -226,7 +231,7 @@ export const AttendanceHistory = () => {
                   <TableRow key={record.id}>
                     {isAdmin && (
                       <TableCell className="font-medium">
-                        {record.profiles?.full_name || 'Unknown'}
+                        {profilesMap[record.user_id] || 'Unknown'}
                       </TableCell>
                     )}
                     <TableCell className="font-medium">{formatDate(record.clock_in)}</TableCell>
