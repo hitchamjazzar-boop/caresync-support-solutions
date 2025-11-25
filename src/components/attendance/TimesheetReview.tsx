@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ interface TimesheetSubmission {
 }
 
 export const TimesheetReview = () => {
+  const { user } = useAuth();
   const [submissions, setSubmissions] = useState<TimesheetSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<TimesheetSubmission | null>(null);
@@ -82,7 +84,7 @@ export const TimesheetReview = () => {
   };
 
   const handleReview = async (approved: boolean) => {
-    if (!selectedSubmission) return;
+    if (!selectedSubmission || !user) return;
 
     try {
       const { error } = await supabase
@@ -90,18 +92,25 @@ export const TimesheetReview = () => {
         .update({
           status: approved ? 'approved' : 'rejected',
           reviewed_at: new Date().toISOString(),
-          admin_notes: adminNotes || null
+          reviewed_by: user.id,
+          admin_notes: adminNotes?.trim() || null
         })
         .eq('id', selectedSubmission.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Timesheet review error:', error);
+        throw error;
+      }
 
       toast.success(`Timesheet ${approved ? 'approved' : 'rejected'}`);
       setReviewDialogOpen(false);
+      setSelectedSubmission(null);
+      setAdminNotes('');
+      setTotalHours(0);
       fetchSubmissions();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error reviewing timesheet:', error);
-      toast.error('Failed to update timesheet');
+      toast.error(error.message || 'Failed to update timesheet');
     }
   };
 

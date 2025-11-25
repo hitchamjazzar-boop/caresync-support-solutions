@@ -41,15 +41,17 @@ export const EODReportForm = () => {
   const checkTodayAttendanceAndReport = async () => {
     if (!user) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-    // Check for today's attendance
+    // Check for today's attendance (clocked in today)
     const { data: attendance } = await supabase
       .from('attendance')
       .select('id')
       .eq('user_id', user.id)
-      .gte('clock_in', `${today}T00:00:00`)
-      .lte('clock_in', `${today}T23:59:59`)
+      .gte('clock_in', startOfDay.toISOString())
+      .lte('clock_in', endOfDay.toISOString())
       .order('clock_in', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -65,6 +67,8 @@ export const EODReportForm = () => {
         .maybeSingle();
 
       setHasSubmittedToday(!!report);
+    } else {
+      setAttendanceId(null);
     }
   };
 
