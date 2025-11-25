@@ -84,17 +84,26 @@ export const TimesheetReview = () => {
   };
 
   const handleReview = async (approved: boolean) => {
-    if (!selectedSubmission || !user) return;
+    if (!selectedSubmission || !user) {
+      console.error('Missing data for review:', { selectedSubmission, user });
+      return;
+    }
 
+    console.log('Reviewing with user ID:', user.id);
+    
     try {
+      const updateData = {
+        status: approved ? 'approved' : 'rejected',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user.id,
+        admin_notes: adminNotes?.trim() || null
+      };
+      
+      console.log('Update data:', updateData);
+      
       const { error } = await supabase
         .from('timesheet_submissions')
-        .update({
-          status: approved ? 'approved' : 'rejected',
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: user.id,
-          admin_notes: adminNotes?.trim() || null
-        })
+        .update(updateData)
         .eq('id', selectedSubmission.id);
 
       if (error) {
