@@ -41,25 +41,23 @@ export const EODReportForm = () => {
   const checkTodayAttendanceAndReport = async () => {
     if (!user) return;
 
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, '0');
-    const day = String(today.getDate()).padStart(2, '0');
-    const todayDate = `${year}-${month}-${day}`;
-
-    // Check for today's attendance (clocked in today)
-    // Using date comparison to avoid timezone issues
-    const { data: attendanceRecords } = await supabase
+    // Find the latest open attendance record for this user (currently clocked in)
+    const { data: attendanceRecords, error } = await supabase
       .from('attendance')
-      .select('id, clock_in')
+      .select('id, clock_in, clock_out')
       .eq('user_id', user.id)
-      .gte('clock_in', `${todayDate}T00:00:00`)
-      .lt('clock_in', `${year}-${month}-${String(today.getDate() + 1).padStart(2, '0')}T00:00:00`)
+      .is('clock_out', null)
       .order('clock_in', { ascending: false })
       .limit(1);
 
+    if (error) {
+      console.error('Error fetching attendance for EOD:', error);
+      setAttendanceId(null);
+      return;
+    }
+
     const attendance = attendanceRecords?.[0] || null;
+
 
     if (attendance) {
       setAttendanceId(attendance.id);
