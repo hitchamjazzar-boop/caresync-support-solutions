@@ -106,6 +106,12 @@ export default function Employees() {
                   <span className="text-muted-foreground">Email: </span>
                   <span className="break-all">{employee.contact_email}</span>
                 </div>
+                {isAdmin && employee.address && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Address: </span>
+                    <span className="break-words">{employee.address}</span>
+                  </div>
+                )}
                 <div className="text-sm">
                   <span className="text-muted-foreground">Start Date: </span>
                   <span>{new Date(employee.start_date).toLocaleDateString()}</span>
