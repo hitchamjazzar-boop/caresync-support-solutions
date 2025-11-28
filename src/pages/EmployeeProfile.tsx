@@ -46,6 +46,7 @@ interface Profile {
   department: string | null;
   contact_email: string | null;
   contact_phone: string | null;
+  address: string | null;
   start_date: string;
   hourly_rate: number | null;
   monthly_salary: number | null;
@@ -392,6 +393,14 @@ export default function EmployeeProfile() {
                     {profile.contact_phone || 'Not provided'}
                   </p>
                 </div>
+                {isAdmin && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Address</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {profile.address || 'Not provided'}
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Start Date</Label>
                   <p className="text-sm text-muted-foreground">
