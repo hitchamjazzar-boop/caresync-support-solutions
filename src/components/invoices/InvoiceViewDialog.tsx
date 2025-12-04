@@ -520,7 +520,7 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
           {/* Balance Due */}
           <div className="bg-red-900 flex justify-between items-center px-5 py-4">
             <span className="font-bold tracking-wide text-white">BALANCE DUE</span>
-            <span className="text-2xl font-bold text-red-300">{formatCurrency(invoice.balance_due)}</span>
+            <span className="text-2xl font-bold text-white">{formatCurrency(invoice.balance_due)}</span>
           </div>
 
           {/* Footer */}
