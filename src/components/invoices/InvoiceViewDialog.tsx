@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { Download, Printer, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Printer, CheckCircle, Clock, XCircle } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 interface AdditionalItem {
@@ -55,11 +55,23 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
   if (!invoice) return null;
 
   const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
-
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
+    const additionalItemsData = typeof invoice.additional_items === 'string' 
+      ? JSON.parse(invoice.additional_items || '[]') 
+      : (invoice.additional_items || []);
+
+    const additionalItemsRows = additionalItemsData.map((item: AdditionalItem) => `
+      <tr>
+        <td class="addition">${item.description}</td>
+        <td class="text-center">${item.quantity}</td>
+        <td class="text-right addition">₱${item.rate.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+        <td class="text-right addition">+₱${item.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+      </tr>
+    `).join('');
+
+    const additionalItemsTotal = additionalItemsData.reduce((sum: number, item: AdditionalItem) => sum + item.total, 0);
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -70,168 +82,200 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body { 
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-              padding: 40px; 
+              padding: 40px 50px; 
               max-width: 800px; 
               margin: 0 auto; 
               background: #fff;
-              color: #1a1a1a;
+              color: #333;
+              font-size: 14px;
             }
+            
+            /* Header */
             .header { 
               display: flex; 
               justify-content: space-between; 
               align-items: flex-start; 
               margin-bottom: 40px;
-              padding-bottom: 30px;
-              border-bottom: 3px solid #2563eb;
             }
-            .logo-section { display: flex; flex-direction: column; }
-            .logo { height: 50px; margin-bottom: 10px; }
+            .logo-section { }
+            .logo { height: 45px; margin-bottom: 8px; }
             .company-name { 
-              font-size: 24px; 
+              font-size: 22px; 
               font-weight: 700; 
               color: #2563eb;
-              letter-spacing: -0.5px;
             }
             .company-tagline { 
               font-size: 12px; 
               color: #666; 
-              margin-top: 4px;
+              margin-top: 2px;
             }
             .invoice-header { text-align: right; }
             .invoice-title { 
-              font-size: 36px; 
+              font-size: 32px; 
               font-weight: 700; 
               color: #2563eb;
-              letter-spacing: -1px;
+              letter-spacing: 2px;
             }
             .invoice-number { 
-              font-size: 14px; 
+              font-size: 13px; 
               color: #666; 
               margin-top: 5px;
             }
             .invoice-date { 
               font-size: 13px; 
-              margin-top: 10px;
+              margin-top: 8px;
               color: #444;
             }
             .status-badge {
               display: inline-block;
-              padding: 6px 14px;
-              border-radius: 20px;
-              font-size: 12px;
+              padding: 4px 12px;
+              border-radius: 4px;
+              font-size: 11px;
               font-weight: 600;
               text-transform: uppercase;
               margin-top: 10px;
+              letter-spacing: 0.5px;
             }
-            .status-pending { background: #fef3c7; color: #92400e; }
-            .status-paid { background: #d1fae5; color: #065f46; }
-            .status-cancelled { background: #fee2e2; color: #991b1b; }
+            .status-pending { background: #fff7ed; color: #ea580c; border: 1px solid #fdba74; }
+            .status-paid { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
+            .status-cancelled { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
+            
+            /* Bill Section */
             .bill-section { 
               display: flex; 
               justify-content: space-between; 
-              margin-bottom: 30px;
-              background: #f8fafc;
-              padding: 20px;
-              border-radius: 8px;
+              margin: 30px 0;
+              padding: 20px 0;
+              border-top: 1px solid #e5e7eb;
+              border-bottom: 1px solid #e5e7eb;
             }
             .section-title { 
-              font-size: 11px; 
+              font-size: 10px; 
               font-weight: 600; 
-              color: #666; 
+              color: #9ca3af; 
               text-transform: uppercase;
               letter-spacing: 0.5px;
               margin-bottom: 8px;
             }
-            .employee-name { font-size: 18px; font-weight: 600; color: #1a1a1a; }
-            .employee-position { font-size: 13px; color: #666; }
-            .pay-period { font-size: 14px; font-weight: 500; }
+            .employee-name { 
+              font-size: 18px; 
+              font-weight: 600; 
+              color: #1f2937; 
+            }
+            .employee-position { 
+              font-size: 13px; 
+              color: #2563eb; 
+              margin-top: 2px;
+            }
+            .pay-period { 
+              font-size: 14px; 
+              font-weight: 500;
+              color: #374151;
+            }
+            
+            /* Table */
             table { 
               width: 100%; 
               border-collapse: collapse; 
-              margin: 25px 0; 
+              margin: 20px 0; 
             }
             th { 
-              padding: 14px 12px; 
+              padding: 12px 8px; 
               text-align: left; 
-              background: #2563eb;
-              color: white;
               font-weight: 600;
-              font-size: 12px;
+              font-size: 11px;
               text-transform: uppercase;
               letter-spacing: 0.5px;
+              color: #6b7280;
+              border-bottom: 2px solid #e5e7eb;
             }
-            th:first-child { border-radius: 8px 0 0 0; }
-            th:last-child { border-radius: 0 8px 0 0; }
             td { 
-              padding: 14px 12px; 
-              border-bottom: 1px solid #e5e7eb; 
-              font-size: 14px;
+              padding: 14px 8px; 
+              border-bottom: 1px solid #f3f4f6; 
+              font-size: 13px;
+              color: #374151;
             }
-            tr:last-child td { border-bottom: none; }
             .text-right { text-align: right; }
-            .text-center { text-center: center; }
+            .text-center { text-align: center; }
             .deduction { color: #dc2626; }
             .addition { color: #16a34a; }
+            
+            /* Totals */
             .totals-section {
               display: flex;
               justify-content: flex-end;
               margin-top: 20px;
             }
             .totals-box {
-              width: 280px;
-              background: #f8fafc;
-              border-radius: 8px;
-              padding: 20px;
+              width: 250px;
             }
             .total-row {
               display: flex;
               justify-content: space-between;
               padding: 8px 0;
-              font-size: 14px;
+              font-size: 13px;
+              color: #6b7280;
+            }
+            .total-row span:last-child {
+              color: #374151;
+              font-weight: 500;
+            }
+            .total-row.deduction span:last-child {
+              color: #dc2626;
             }
             .total-row.final {
-              border-top: 2px solid #2563eb;
-              margin-top: 10px;
-              padding-top: 15px;
-              font-size: 20px;
+              border-top: 1px solid #e5e7eb;
+              margin-top: 8px;
+              padding-top: 12px;
+            }
+            .balance-label {
+              font-size: 14px;
+              color: #2563eb;
+              font-weight: 600;
+            }
+            .balance-amount {
+              font-size: 18px;
               font-weight: 700;
               color: #2563eb;
             }
+            
+            /* Notes */
             .notes-section {
               background: #fffbeb;
-              border-left: 4px solid #f59e0b;
-              padding: 15px 20px;
-              margin-top: 30px;
-              border-radius: 0 8px 8px 0;
+              border-left: 3px solid #f59e0b;
+              padding: 12px 16px;
+              margin-top: 25px;
+              font-size: 12px;
             }
             .notes-title { 
               font-weight: 600; 
-              font-size: 13px;
               color: #92400e;
-              margin-bottom: 8px;
+              margin-bottom: 4px;
             }
-            .notes-content { font-size: 13px; color: #78350f; line-height: 1.5; }
+            .notes-content { color: #78350f; line-height: 1.5; }
+            
+            /* Footer */
             .footer {
               text-align: center;
               margin-top: 50px;
-              padding-top: 30px;
+              padding-top: 25px;
               border-top: 1px solid #e5e7eb;
             }
-            .footer-text { font-size: 14px; color: #666; }
+            .footer-text { font-size: 13px; color: #6b7280; }
             .footer-company { 
-              font-size: 16px; 
+              font-size: 14px; 
               font-weight: 600; 
               color: #2563eb;
-              margin-top: 5px;
+              margin-top: 4px;
             }
             .footer-contact {
-              font-size: 12px;
-              color: #999;
-              margin-top: 10px;
+              font-size: 11px;
+              color: #9ca3af;
+              margin-top: 8px;
             }
+            
             @media print {
-              body { padding: 20px; }
-              .header { border-bottom-width: 2px; }
+              body { padding: 20px 30px; }
             }
           </style>
         </head>
@@ -246,7 +290,7 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
               <div class="invoice-title">INVOICE</div>
               <div class="invoice-number">${invoice.invoice_number}</div>
               <div class="invoice-date">Date: ${format(new Date(invoice.invoice_date), 'MMMM d, yyyy')}</div>
-              <div class="status-badge status-${invoice.status}">${invoice.status}</div>
+              <div class="status-badge status-${invoice.status}">${invoice.status.toUpperCase()}</div>
             </div>
           </div>
 
@@ -266,47 +310,35 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
             <thead>
               <tr>
                 <th>Description</th>
-                <th style="text-align: center;">Qty</th>
-                <th style="text-align: right;">Rate</th>
-                <th style="text-align: right;">Amount</th>
+                <th class="text-center">Qty</th>
+                <th class="text-right">Rate</th>
+                <th class="text-right">Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>Base Salary (Pay Period)</td>
-                <td style="text-align: center;">1</td>
-                <td style="text-align: right;">₱${invoice.base_salary.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                <td style="text-align: right;">₱${invoice.base_salary.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                <td class="text-center">1</td>
+                <td class="text-right">₱${invoice.base_salary.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                <td class="text-right">₱${invoice.base_salary.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
               </tr>
               ${invoice.deductions > 0 ? `
-              <tr class="deduction">
-                <td>Deductions${invoice.deduction_notes ? ` (${invoice.deduction_notes})` : ''}</td>
-                <td style="text-align: center;">1</td>
-                <td style="text-align: right;">-₱${invoice.deductions.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                <td style="text-align: right;">-₱${invoice.deductions.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+              <tr>
+                <td class="deduction">Deductions${invoice.deduction_notes ? ` (${invoice.deduction_notes})` : ''}</td>
+                <td class="text-center">1</td>
+                <td class="text-right deduction">-₱${invoice.deductions.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                <td class="text-right deduction">-₱${invoice.deductions.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
               </tr>
               ` : ''}
               ${invoice.absent_days > 0 ? `
-              <tr class="deduction">
-                <td>LWOP / Absent Deduction</td>
-                <td style="text-align: center;">${invoice.absent_days} days</td>
-                <td style="text-align: right;">-₱${(invoice.absent_deduction / invoice.absent_days).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                <td style="text-align: right;">-₱${invoice.absent_deduction.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+              <tr>
+                <td class="deduction">LWOP / Absent Deduction</td>
+                <td class="text-center">${invoice.absent_days} days</td>
+                <td class="text-right deduction">-₱${(invoice.absent_deduction / invoice.absent_days).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                <td class="text-right deduction">-₱${invoice.absent_deduction.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
               </tr>
               ` : ''}
-              ${(() => {
-                const items = typeof invoice.additional_items === 'string' 
-                  ? JSON.parse(invoice.additional_items || '[]') 
-                  : (invoice.additional_items || []);
-                return items.map((item: AdditionalItem) => `
-                  <tr class="addition">
-                    <td>${item.description}</td>
-                    <td style="text-align: center;">${item.quantity}</td>
-                    <td style="text-align: right;">₱${item.rate.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                    <td style="text-align: right;">+₱${item.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                  </tr>
-                `).join('');
-              })()}
+              ${additionalItemsRows}
             </tbody>
           </table>
 
@@ -322,9 +354,15 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
                 <span>-₱${(invoice.deductions + invoice.absent_deduction).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
               </div>
               ` : ''}
+              ${additionalItemsTotal > 0 ? `
+              <div class="total-row">
+                <span>Additions</span>
+                <span style="color: #16a34a;">+₱${additionalItemsTotal.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+              </div>
+              ` : ''}
               <div class="total-row final">
-                <span>Balance Due</span>
-                <span>₱${invoice.balance_due.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                <span class="balance-label">Balance Due</span>
+                <span class="balance-amount">₱${invoice.balance_due.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
@@ -353,14 +391,14 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
   };
 
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: 'default' | 'secondary' | 'destructive'; icon: React.ReactNode }> = {
-      pending: { variant: 'secondary', icon: <Clock className="h-3 w-3 mr-1" /> },
-      paid: { variant: 'default', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
-      cancelled: { variant: 'destructive', icon: <XCircle className="h-3 w-3 mr-1" /> },
+    const config: Record<string, { variant: 'default' | 'secondary' | 'destructive'; icon: React.ReactNode; className: string }> = {
+      pending: { variant: 'secondary', icon: <Clock className="h-3 w-3 mr-1" />, className: 'bg-orange-100 text-orange-600 border-orange-200' },
+      paid: { variant: 'default', icon: <CheckCircle className="h-3 w-3 mr-1" />, className: 'bg-green-100 text-green-600 border-green-200' },
+      cancelled: { variant: 'destructive', icon: <XCircle className="h-3 w-3 mr-1" />, className: 'bg-red-100 text-red-600 border-red-200' },
     };
-    const { variant, icon } = config[status] || { variant: 'secondary' as const, icon: null };
+    const { icon, className } = config[status] || { icon: null, className: '' };
     return (
-      <Badge variant={variant} className="capitalize flex items-center">
+      <Badge variant="outline" className={`capitalize flex items-center ${className}`}>
         {icon}
         {status}
       </Badge>
@@ -393,8 +431,8 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
               <p className="text-sm text-muted-foreground">Support Solutions</p>
             </div>
             <div className="text-right">
-              <h2 className="text-2xl font-bold text-primary">INVOICE</h2>
-              <p className="text-muted-foreground">{invoice.invoice_number}</p>
+              <h2 className="text-2xl font-bold text-primary tracking-wide">INVOICE</h2>
+              <p className="text-muted-foreground text-sm">{invoice.invoice_number}</p>
               <p className="text-sm mt-2">
                 Date: {format(new Date(invoice.invoice_date), 'MMMM d, yyyy')}
               </p>
@@ -407,14 +445,14 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
           <Separator />
 
           {/* Bill To */}
-          <div className="grid md:grid-cols-2 gap-6 bg-muted/30 p-4 rounded-lg">
+          <div className="grid md:grid-cols-2 gap-6 py-4 border-y">
             <div>
-              <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wider mb-2">Bill To:</h3>
-              <p className="font-medium text-lg">{invoice.profiles?.full_name}</p>
-              <p className="text-muted-foreground">{invoice.profiles?.position || 'Employee'}</p>
+              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Bill To</h3>
+              <p className="font-semibold text-lg">{invoice.profiles?.full_name}</p>
+              <p className="text-primary text-sm">{invoice.profiles?.position || 'Employee'}</p>
             </div>
             <div className="text-right">
-              <h3 className="font-semibold text-muted-foreground text-xs uppercase tracking-wider mb-2">Pay Period:</h3>
+              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pay Period</h3>
               <p className="font-medium">
                 {format(new Date(invoice.pay_period_start), 'MMMM d')} -{' '}
                 {format(new Date(invoice.pay_period_end), 'MMMM d, yyyy')}
@@ -426,58 +464,58 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="bg-primary text-primary-foreground">
-                  <th className="py-3 px-4 text-left font-semibold text-sm rounded-tl-lg">Description</th>
-                  <th className="py-3 px-4 text-center font-semibold text-sm">Qty</th>
-                  <th className="py-3 px-4 text-right font-semibold text-sm">Rate</th>
-                  <th className="py-3 px-4 text-right font-semibold text-sm rounded-tr-lg">Amount</th>
+                <tr className="border-b-2">
+                  <th className="py-3 px-2 text-left font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">Description</th>
+                  <th className="py-3 px-2 text-center font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">Qty</th>
+                  <th className="py-3 px-2 text-right font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">Rate</th>
+                  <th className="py-3 px-2 text-right font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {/* Base Salary */}
                 <tr className="border-b">
-                  <td className="py-3 px-4">Base Salary (Pay Period)</td>
-                  <td className="py-3 px-4 text-center">1</td>
-                  <td className="py-3 px-4 text-right">{formatCurrency(invoice.base_salary)}</td>
-                  <td className="py-3 px-4 text-right">{formatCurrency(invoice.base_salary)}</td>
+                  <td className="py-3 px-2 text-sm">Base Salary (Pay Period)</td>
+                  <td className="py-3 px-2 text-center text-sm">1</td>
+                  <td className="py-3 px-2 text-right text-sm">{formatCurrency(invoice.base_salary)}</td>
+                  <td className="py-3 px-2 text-right text-sm">{formatCurrency(invoice.base_salary)}</td>
                 </tr>
 
                 {/* Deductions */}
                 {invoice.deductions > 0 && (
-                  <tr className="border-b text-destructive">
-                    <td className="py-3 px-4">
+                  <tr className="border-b">
+                    <td className="py-3 px-2 text-sm text-red-600">
                       Deductions
                       {invoice.deduction_notes && (
-                        <span className="block text-sm text-muted-foreground">
+                        <span className="block text-xs text-muted-foreground">
                           ({invoice.deduction_notes})
                         </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-center">1</td>
-                    <td className="py-3 px-4 text-right">-{formatCurrency(invoice.deductions)}</td>
-                    <td className="py-3 px-4 text-right">-{formatCurrency(invoice.deductions)}</td>
+                    <td className="py-3 px-2 text-center text-sm">1</td>
+                    <td className="py-3 px-2 text-right text-sm text-red-600">-{formatCurrency(invoice.deductions)}</td>
+                    <td className="py-3 px-2 text-right text-sm text-red-600">-{formatCurrency(invoice.deductions)}</td>
                   </tr>
                 )}
 
                 {/* Absent Deduction */}
                 {invoice.absent_days > 0 && (
-                  <tr className="border-b text-destructive">
-                    <td className="py-3 px-4">LWOP / Absent Deduction</td>
-                    <td className="py-3 px-4 text-center">{invoice.absent_days} days</td>
-                    <td className="py-3 px-4 text-right">
+                  <tr className="border-b">
+                    <td className="py-3 px-2 text-sm text-red-600">LWOP / Absent Deduction</td>
+                    <td className="py-3 px-2 text-center text-sm">{invoice.absent_days} days</td>
+                    <td className="py-3 px-2 text-right text-sm text-red-600">
                       -{formatCurrency(invoice.absent_deduction / invoice.absent_days)}
                     </td>
-                    <td className="py-3 px-4 text-right">-{formatCurrency(invoice.absent_deduction)}</td>
+                    <td className="py-3 px-2 text-right text-sm text-red-600">-{formatCurrency(invoice.absent_deduction)}</td>
                   </tr>
                 )}
 
                 {/* Additional Items */}
                 {additionalItems.map((item: AdditionalItem, index: number) => (
-                  <tr key={index} className="border-b text-green-600">
-                    <td className="py-3 px-4">{item.description}</td>
-                    <td className="py-3 px-4 text-center">{item.quantity}</td>
-                    <td className="py-3 px-4 text-right">{formatCurrency(item.rate)}</td>
-                    <td className="py-3 px-4 text-right">+{formatCurrency(item.total)}</td>
+                  <tr key={index} className="border-b">
+                    <td className="py-3 px-2 text-sm text-green-600">{item.description}</td>
+                    <td className="py-3 px-2 text-center text-sm">{item.quantity}</td>
+                    <td className="py-3 px-2 text-right text-sm text-green-600">{formatCurrency(item.rate)}</td>
+                    <td className="py-3 px-2 text-right text-sm text-green-600">+{formatCurrency(item.total)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -486,35 +524,35 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
 
           {/* Total */}
           <div className="flex justify-end">
-            <div className="w-72 bg-muted/30 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between py-2 border-b">
+            <div className="w-64 space-y-2">
+              <div className="flex justify-between py-2 text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
                 <span>{formatCurrency(invoice.base_salary)}</span>
               </div>
               {(invoice.deductions > 0 || invoice.absent_deduction > 0) && (
-                <div className="flex justify-between py-2 border-b text-destructive">
-                  <span>Total Deductions</span>
-                  <span>-{formatCurrency(invoice.deductions + invoice.absent_deduction)}</span>
+                <div className="flex justify-between py-2 text-sm">
+                  <span className="text-muted-foreground">Total Deductions</span>
+                  <span className="text-red-600">-{formatCurrency(invoice.deductions + invoice.absent_deduction)}</span>
                 </div>
               )}
-              <div className="flex justify-between py-3 text-xl font-bold border-t-2 border-primary mt-2">
-                <span>Balance Due</span>
-                <span className="text-primary">{formatCurrency(invoice.balance_due)}</span>
+              <div className="flex justify-between py-3 border-t mt-2">
+                <span className="text-primary font-semibold">Balance Due</span>
+                <span className="text-lg font-bold text-primary">{formatCurrency(invoice.balance_due)}</span>
               </div>
             </div>
           </div>
 
           {/* Notes */}
           {invoice.notes && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border-l-4 border-amber-500 p-4 rounded-r-lg">
-              <h4 className="font-semibold mb-2 text-amber-800 dark:text-amber-200">Notes:</h4>
-              <p className="text-amber-700 dark:text-amber-300 whitespace-pre-wrap">{invoice.notes}</p>
+            <div className="bg-amber-50 dark:bg-amber-950/20 border-l-3 border-amber-500 p-4">
+              <h4 className="font-semibold mb-1 text-amber-800 dark:text-amber-200 text-sm">Notes:</h4>
+              <p className="text-amber-700 dark:text-amber-300 text-sm whitespace-pre-wrap">{invoice.notes}</p>
             </div>
           )}
 
           {/* Footer */}
           <div className="text-center text-sm text-muted-foreground pt-6 border-t">
-            <p className="font-medium">Thank you for your hard work!</p>
+            <p>Thank you for your hard work!</p>
             <p className="mt-1 text-primary font-semibold">Care Sync Support Solutions</p>
             <p className="mt-2 text-xs">For questions about this invoice, please contact HR</p>
           </div>
