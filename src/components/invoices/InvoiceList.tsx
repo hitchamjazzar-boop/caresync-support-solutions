@@ -4,9 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
-import { Eye, Download, FileText } from 'lucide-react';
+import { Eye, FileText, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { InvoiceViewDialog } from './InvoiceViewDialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface Invoice {
   id: string;
@@ -42,6 +44,7 @@ export const InvoiceList = ({ userId, showAllEmployees = false }: InvoiceListPro
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchInvoices();
@@ -87,13 +90,47 @@ export const InvoiceList = ({ userId, showAllEmployees = false }: InvoiceListPro
     setLoading(false);
   };
 
+  const updateInvoiceStatus = async (invoiceId: string, newStatus: string) => {
+    const updateData: any = { status: newStatus };
+    
+    // If marking as paid, set payment date to now
+    if (newStatus === 'paid') {
+      updateData.updated_at = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+      .from('employee_invoices')
+      .update(updateData)
+      .eq('id', invoiceId);
+
+    if (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update invoice status',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Success',
+        description: `Invoice marked as ${newStatus}`,
+      });
+      fetchInvoices();
+    }
+  };
+
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
-      pending: 'secondary',
-      paid: 'default',
-      cancelled: 'destructive',
+    const config: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {
+      pending: { variant: 'secondary', icon: <Clock className="h-3 w-3 mr-1" /> },
+      paid: { variant: 'default', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
+      cancelled: { variant: 'destructive', icon: <XCircle className="h-3 w-3 mr-1" /> },
     };
-    return <Badge variant={variants[status] || 'outline'}>{status}</Badge>;
+    const { variant, icon } = config[status] || { variant: 'outline' as const, icon: null };
+    return (
+      <Badge variant={variant} className="capitalize flex items-center w-fit">
+        {icon}
+        {status}
+      </Badge>
+    );
   };
 
   if (loading) {
@@ -161,7 +198,40 @@ export const InvoiceList = ({ userId, showAllEmployees = false }: InvoiceListPro
                     <TableCell className="text-right font-medium">
                       ₱{invoice.total_amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                     </TableCell>
-                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                    <TableCell>
+                      {showAllEmployees ? (
+                        <Select
+                          value={invoice.status}
+                          onValueChange={(value) => updateInvoiceStatus(invoice.id, value)}
+                        >
+                          <SelectTrigger className="w-[130px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">
+                              <span className="flex items-center">
+                                <Clock className="h-3 w-3 mr-2" />
+                                Pending
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="paid">
+                              <span className="flex items-center">
+                                <CheckCircle className="h-3 w-3 mr-2" />
+                                Paid
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="cancelled">
+                              <span className="flex items-center">
+                                <XCircle className="h-3 w-3 mr-2" />
+                                Cancelled
+                              </span>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        getStatusBadge(invoice.status)
+                      )}
+                    </TableCell>
                     <TableCell>{format(new Date(invoice.invoice_date), 'MMM d, yyyy')}</TableCell>
                     <TableCell className="text-right">
                       <Button
