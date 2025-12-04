@@ -195,14 +195,19 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
                 )}
 
                 {/* Additional Items */}
-                {invoice.additional_items?.map((item: AdditionalItem, index: number) => (
-                  <tr key={index} className="border-b text-green-600">
-                    <td className="py-3 px-4">{item.description}</td>
-                    <td className="py-3 px-4 text-center">{item.quantity}</td>
-                    <td className="py-3 px-4 text-right">{formatCurrency(item.rate)}</td>
-                    <td className="py-3 px-4 text-right">+{formatCurrency(item.total)}</td>
-                  </tr>
-                ))}
+                {(() => {
+                  const items = typeof invoice.additional_items === 'string' 
+                    ? JSON.parse(invoice.additional_items || '[]') 
+                    : (invoice.additional_items || []);
+                  return items.map((item: AdditionalItem, index: number) => (
+                    <tr key={index} className="border-b text-green-600">
+                      <td className="py-3 px-4">{item.description}</td>
+                      <td className="py-3 px-4 text-center">{item.quantity}</td>
+                      <td className="py-3 px-4 text-right">{formatCurrency(item.rate)}</td>
+                      <td className="py-3 px-4 text-right">+{formatCurrency(item.total)}</td>
+                    </tr>
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
