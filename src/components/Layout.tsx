@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, type LucideIcon } from 'lucide-react';
+import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, Receipt, type LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -99,6 +99,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'EOD Reports', href: '/reports', icon: FileText },
     { name: 'Payroll', href: '/payroll', icon: DollarSign },
+    { name: 'Employee Invoices', href: '/invoices', icon: Receipt, adminOnly: true },
     { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
     { name: 'Celebration Gallery', href: '/announcement-gallery', icon: ImageIcon },
     { name: 'Employee Voting', href: '/voting', icon: Vote },

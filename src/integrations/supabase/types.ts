@@ -492,6 +492,72 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_invoices: {
+        Row: {
+          absent_days: number | null
+          absent_deduction: number | null
+          additional_items: Json | null
+          balance_due: number
+          base_salary: number
+          created_at: string
+          created_by: string
+          deduction_notes: string | null
+          deductions: number | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          notes: string | null
+          pay_period_end: string
+          pay_period_start: string
+          status: string
+          total_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          absent_days?: number | null
+          absent_deduction?: number | null
+          additional_items?: Json | null
+          balance_due: number
+          base_salary: number
+          created_at?: string
+          created_by: string
+          deduction_notes?: string | null
+          deductions?: number | null
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          notes?: string | null
+          pay_period_end: string
+          pay_period_start: string
+          status?: string
+          total_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          absent_days?: number | null
+          absent_deduction?: number | null
+          additional_items?: Json | null
+          balance_due?: number
+          base_salary?: number
+          created_at?: string
+          created_by?: string
+          deduction_notes?: string | null
+          deductions?: number | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          notes?: string | null
+          pay_period_end?: string
+          pay_period_start?: string
+          status?: string
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       employee_nominations: {
         Row: {
           comment: string | null

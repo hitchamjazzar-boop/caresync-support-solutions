@@ -30,6 +30,7 @@ import SecretSanta from "./pages/SecretSanta";
 import Calendar from "./pages/Calendar";
 import CalendarSettings from "./pages/CalendarSettings";
 import Notifications from "./pages/Notifications";
+import EmployeeInvoices from "./pages/EmployeeInvoices";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -267,6 +268,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Notifications />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/invoices"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <EmployeeInvoices />
                   </Layout>
                 </ProtectedRoute>
               }
