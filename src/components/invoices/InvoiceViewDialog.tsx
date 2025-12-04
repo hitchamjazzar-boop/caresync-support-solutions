@@ -64,14 +64,12 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
 
     const additionalItemsRows = additionalItemsData.map((item: AdditionalItem) => `
       <tr>
-        <td class="addition">${item.description}</td>
+        <td>${item.description}</td>
         <td class="text-center">${item.quantity}</td>
-        <td class="text-right addition">₱${item.rate.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-        <td class="text-right addition">+₱${item.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+        <td class="text-right">₱${item.rate.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+        <td class="text-right">₱${item.total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
       </tr>
     `).join('');
-
-    const additionalItemsTotal = additionalItemsData.reduce((sum: number, item: AdditionalItem) => sum + item.total, 0);
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -81,96 +79,56 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
           <style>
             * { box-sizing: border-box; margin: 0; padding: 0; }
             body { 
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+              font-family: Arial, sans-serif; 
               padding: 40px 50px; 
               max-width: 800px; 
               margin: 0 auto; 
               background: #fff;
               color: #333;
-              font-size: 14px;
+              font-size: 13px;
             }
             
             /* Header */
-            .header { 
-              display: flex; 
-              justify-content: space-between; 
-              align-items: flex-start; 
-              margin-bottom: 40px;
-            }
-            .logo-section { }
-            .logo { height: 45px; margin-bottom: 8px; }
-            .company-name { 
-              font-size: 22px; 
-              font-weight: 700; 
-              color: #2563eb;
-            }
-            .company-tagline { 
-              font-size: 12px; 
-              color: #666; 
-              margin-top: 2px;
-            }
-            .invoice-header { text-align: right; }
             .invoice-title { 
-              font-size: 32px; 
-              font-weight: 700; 
-              color: #2563eb;
+              font-size: 36px; 
+              font-weight: 900; 
+              color: #000;
+              text-decoration: underline;
+              margin-bottom: 25px;
               letter-spacing: 2px;
             }
-            .invoice-number { 
-              font-size: 13px; 
-              color: #666; 
-              margin-top: 5px;
-            }
-            .invoice-date { 
-              font-size: 13px; 
-              margin-top: 8px;
-              color: #444;
-            }
-            .status-badge {
-              display: inline-block;
-              padding: 4px 12px;
-              border-radius: 4px;
-              font-size: 11px;
-              font-weight: 600;
-              text-transform: uppercase;
-              margin-top: 10px;
-              letter-spacing: 0.5px;
-            }
-            .status-pending { background: #fff7ed; color: #ea580c; border: 1px solid #fdba74; }
-            .status-paid { background: #f0fdf4; color: #16a34a; border: 1px solid #86efac; }
-            .status-cancelled { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
             
-            /* Bill Section */
-            .bill-section { 
-              display: flex; 
-              justify-content: space-between; 
-              margin: 30px 0;
-              padding: 20px 0;
-              border-top: 1px solid #e5e7eb;
-              border-bottom: 1px solid #e5e7eb;
+            /* Info Section */
+            .info-section {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 25px;
             }
-            .section-title { 
-              font-size: 10px; 
-              font-weight: 600; 
-              color: #9ca3af; 
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              margin-bottom: 8px;
+            .info-column { }
+            .info-label {
+              font-size: 12px;
+              font-weight: 700;
+              color: #c45c26;
+              margin-bottom: 3px;
             }
-            .employee-name { 
-              font-size: 18px; 
-              font-weight: 600; 
-              color: #1f2937; 
+            .info-value {
+              font-size: 13px;
+              color: #333;
+              font-weight: 600;
             }
-            .employee-position { 
-              font-size: 13px; 
-              color: #2563eb; 
-              margin-top: 2px;
+            .info-sub {
+              font-size: 12px;
+              color: #666;
             }
-            .pay-period { 
-              font-size: 14px; 
+            .info-right .info-row {
+              margin-bottom: 3px;
+            }
+            .info-right .info-label {
+              display: inline;
+            }
+            .info-right .info-value {
+              display: inline;
               font-weight: 500;
-              color: #374151;
             }
             
             /* Table */
@@ -180,98 +138,98 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
               margin: 20px 0; 
             }
             th { 
-              padding: 12px 8px; 
+              padding: 10px 12px; 
               text-align: left; 
+              background: #c62828;
+              color: white;
               font-weight: 600;
-              font-size: 11px;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              color: #6b7280;
-              border-bottom: 2px solid #e5e7eb;
+              font-size: 12px;
             }
+            th:first-child { }
+            th:last-child { }
             td { 
-              padding: 14px 8px; 
-              border-bottom: 1px solid #f3f4f6; 
+              padding: 12px; 
+              border-bottom: 1px solid #e5e5e5; 
               font-size: 13px;
-              color: #374151;
+              color: #333;
             }
             .text-right { text-align: right; }
             .text-center { text-align: center; }
-            .deduction { color: #dc2626; }
-            .addition { color: #16a34a; }
+            .deduction { color: #c62828; }
             
             /* Totals */
             .totals-section {
               display: flex;
-              justify-content: flex-end;
-              margin-top: 20px;
+              justify-content: space-between;
+              margin-top: 30px;
+            }
+            .notes-box {
+              flex: 1;
+            }
+            .notes-label {
+              font-weight: 700;
+              color: #333;
+              margin-bottom: 5px;
+            }
+            .notes-content {
+              font-size: 12px;
+              color: #666;
+              line-height: 1.5;
             }
             .totals-box {
-              width: 250px;
+              width: 280px;
             }
             .total-row {
               display: flex;
               justify-content: space-between;
-              padding: 8px 0;
+              padding: 5px 0;
               font-size: 13px;
-              color: #6b7280;
             }
-            .total-row span:last-child {
-              color: #374151;
-              font-weight: 500;
+            .total-row .label {
+              color: #666;
             }
-            .total-row.deduction span:last-child {
-              color: #dc2626;
+            .total-row .value {
+              color: #333;
+              text-align: right;
             }
-            .total-row.final {
-              border-top: 1px solid #e5e7eb;
-              margin-top: 8px;
-              padding-top: 12px;
-            }
-            .balance-label {
-              font-size: 14px;
-              color: #2563eb;
-              font-weight: 600;
-            }
-            .balance-amount {
-              font-size: 18px;
-              font-weight: 700;
-              color: #2563eb;
+            .total-row.deduction .value {
+              color: #c62828;
             }
             
-            /* Notes */
-            .notes-section {
-              background: #fffbeb;
-              border-left: 3px solid #f59e0b;
-              padding: 12px 16px;
-              margin-top: 25px;
-              font-size: 12px;
+            /* Balance Due */
+            .balance-due-section {
+              background: #8b1a1a;
+              color: white;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              padding: 15px 20px;
+              margin-top: 20px;
             }
-            .notes-title { 
-              font-weight: 600; 
-              color: #92400e;
-              margin-bottom: 4px;
+            .balance-label {
+              font-size: 16px;
+              font-weight: 700;
+              letter-spacing: 1px;
             }
-            .notes-content { color: #78350f; line-height: 1.5; }
+            .balance-amount {
+              font-size: 24px;
+              font-weight: 700;
+              color: #ff6b6b;
+            }
             
             /* Footer */
             .footer {
               text-align: center;
-              margin-top: 50px;
-              padding-top: 25px;
-              border-top: 1px solid #e5e7eb;
+              margin-top: 40px;
+              padding-top: 20px;
+              border-top: 1px solid #e5e5e5;
             }
-            .footer-text { font-size: 13px; color: #6b7280; }
+            .footer-text { font-size: 12px; color: #666; }
             .footer-company { 
-              font-size: 14px; 
+              font-size: 13px; 
               font-weight: 600; 
-              color: #2563eb;
-              margin-top: 4px;
-            }
-            .footer-contact {
-              font-size: 11px;
-              color: #9ca3af;
-              margin-top: 8px;
+              color: #8b1a1a;
+              margin-top: 3px;
             }
             
             @media print {
@@ -280,29 +238,32 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
           </style>
         </head>
         <body>
-          <div class="header">
-            <div class="logo-section">
-              <img src="${logo}" alt="Care Sync" class="logo" />
-              <div class="company-name">Care Sync</div>
-              <div class="company-tagline">Support Solutions</div>
+          <div class="invoice-title">INVOICE</div>
+          
+          <div class="info-section">
+            <div class="info-column">
+              <div class="info-label">INVOICE FROM:</div>
+              <div class="info-value">${invoice.profiles?.full_name || 'Employee'}</div>
+              <div class="info-sub">${invoice.profiles?.position || 'Staff'}</div>
             </div>
-            <div class="invoice-header">
-              <div class="invoice-title">INVOICE</div>
-              <div class="invoice-number">${invoice.invoice_number}</div>
-              <div class="invoice-date">Date: ${format(new Date(invoice.invoice_date), 'MMMM d, yyyy')}</div>
-              <div class="status-badge status-${invoice.status}">${invoice.status.toUpperCase()}</div>
+            <div class="info-column">
+              <div class="info-label">BILL TO:</div>
+              <div class="info-value">CARE SYNC</div>
+              <div class="info-sub">Support Solutions</div>
             </div>
-          </div>
-
-          <div class="bill-section">
-            <div>
-              <div class="section-title">Bill To</div>
-              <div class="employee-name">${invoice.profiles?.full_name || 'Employee'}</div>
-              <div class="employee-position">${invoice.profiles?.position || 'Staff'}</div>
-            </div>
-            <div style="text-align: right;">
-              <div class="section-title">Pay Period</div>
-              <div class="pay-period">${format(new Date(invoice.pay_period_start), 'MMMM d')} - ${format(new Date(invoice.pay_period_end), 'MMMM d, yyyy')}</div>
+            <div class="info-column info-right">
+              <div class="info-row">
+                <span class="info-label">NUMBER: </span>
+                <span class="info-value">${invoice.invoice_number}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Date: </span>
+                <span class="info-value">${format(new Date(invoice.invoice_date), 'MMM. d, yyyy')}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Status: </span>
+                <span class="info-value" style="text-transform: uppercase;">${invoice.status}</span>
+              </div>
             </div>
           </div>
 
@@ -310,21 +271,27 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
             <thead>
               <tr>
                 <th>Description</th>
-                <th class="text-center">Qty</th>
-                <th class="text-right">Rate</th>
+                <th class="text-center">Quantity</th>
+                <th class="text-right">Unit Price</th>
                 <th class="text-right">Amount</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Base Salary (Pay Period)</td>
+                <td>
+                  <strong>Base Salary - Pay Period Service</strong><br/>
+                  <span style="color: #666; font-size: 12px;">Period Service: ${format(new Date(invoice.pay_period_start), 'MMM. d')} to ${format(new Date(invoice.pay_period_end), 'MMM. d, yyyy')}</span>
+                </td>
                 <td class="text-center">1</td>
                 <td class="text-right">₱${invoice.base_salary.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                 <td class="text-right">₱${invoice.base_salary.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
               </tr>
               ${invoice.deductions > 0 ? `
               <tr>
-                <td class="deduction">Deductions${invoice.deduction_notes ? ` (${invoice.deduction_notes})` : ''}</td>
+                <td class="deduction">
+                  <strong>Deductions</strong>
+                  ${invoice.deduction_notes ? `<br/><span style="font-size: 12px;">${invoice.deduction_notes}</span>` : ''}
+                </td>
                 <td class="text-center">1</td>
                 <td class="text-right deduction">-₱${invoice.deductions.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                 <td class="text-right deduction">-₱${invoice.deductions.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
@@ -332,8 +299,11 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
               ` : ''}
               ${invoice.absent_days > 0 ? `
               <tr>
-                <td class="deduction">LWOP / Absent Deduction</td>
-                <td class="text-center">${invoice.absent_days} days</td>
+                <td class="deduction">
+                  <strong>LWOP / Absent Deduction</strong><br/>
+                  <span style="font-size: 12px;">${invoice.absent_days} day(s) absent</span>
+                </td>
+                <td class="text-center">${invoice.absent_days}</td>
                 <td class="text-right deduction">-₱${(invoice.absent_deduction / invoice.absent_days).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                 <td class="text-right deduction">-₱${invoice.absent_deduction.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
               </tr>
@@ -343,41 +313,36 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
           </table>
 
           <div class="totals-section">
+            <div class="notes-box">
+              ${invoice.notes ? `
+                <div class="notes-label">Notes:</div>
+                <div class="notes-content">${invoice.notes}</div>
+              ` : ''}
+            </div>
             <div class="totals-box">
               <div class="total-row">
-                <span>Subtotal</span>
-                <span>₱${invoice.base_salary.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                <span class="label">SUBTOTAL:</span>
+                <span class="value">₱${invoice.base_salary.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
               </div>
-              ${(invoice.deductions > 0 || invoice.absent_deduction > 0) ? `
               <div class="total-row deduction">
-                <span>Total Deductions</span>
-                <span>-₱${(invoice.deductions + invoice.absent_deduction).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                <span class="label">DEDUCTION:</span>
+                <span class="value">${(invoice.deductions + invoice.absent_deduction) > 0 ? `-₱${(invoice.deductions + invoice.absent_deduction).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : ''}</span>
               </div>
-              ` : ''}
-              ${additionalItemsTotal > 0 ? `
               <div class="total-row">
-                <span>Additions</span>
-                <span style="color: #16a34a;">+₱${additionalItemsTotal.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-              </div>
-              ` : ''}
-              <div class="total-row final">
-                <span class="balance-label">Balance Due</span>
-                <span class="balance-amount">₱${invoice.balance_due.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                <span class="label">TOTAL:</span>
+                <span class="value">₱${invoice.balance_due.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
               </div>
             </div>
           </div>
 
-          ${invoice.notes ? `
-          <div class="notes-section">
-            <div class="notes-title">Notes</div>
-            <div class="notes-content">${invoice.notes}</div>
+          <div class="balance-due-section">
+            <span class="balance-label">BALANCE DUE</span>
+            <span class="balance-amount">₱${invoice.balance_due.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
           </div>
-          ` : ''}
 
           <div class="footer">
             <div class="footer-text">Thank you for your hard work!</div>
             <div class="footer-company">Care Sync Support Solutions</div>
-            <div class="footer-contact">For questions about this invoice, please contact HR</div>
           </div>
         </body>
       </html>
@@ -391,10 +356,10 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
   };
 
   const getStatusBadge = (status: string) => {
-    const config: Record<string, { variant: 'default' | 'secondary' | 'destructive'; icon: React.ReactNode; className: string }> = {
-      pending: { variant: 'secondary', icon: <Clock className="h-3 w-3 mr-1" />, className: 'bg-orange-100 text-orange-600 border-orange-200' },
-      paid: { variant: 'default', icon: <CheckCircle className="h-3 w-3 mr-1" />, className: 'bg-green-100 text-green-600 border-green-200' },
-      cancelled: { variant: 'destructive', icon: <XCircle className="h-3 w-3 mr-1" />, className: 'bg-red-100 text-red-600 border-red-200' },
+    const config: Record<string, { icon: React.ReactNode; className: string }> = {
+      pending: { icon: <Clock className="h-3 w-3 mr-1" />, className: 'bg-orange-100 text-orange-600 border-orange-200' },
+      paid: { icon: <CheckCircle className="h-3 w-3 mr-1" />, className: 'bg-green-100 text-green-600 border-green-200' },
+      cancelled: { icon: <XCircle className="h-3 w-3 mr-1" />, className: 'bg-red-100 text-red-600 border-red-200' },
     };
     const { icon, className } = config[status] || { icon: null, className: '' };
     return (
@@ -424,39 +389,33 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
 
         <div ref={printRef} className="space-y-6 p-4">
           {/* Header */}
-          <div className="flex justify-between items-start">
+          <h2 className="text-3xl font-black underline tracking-wide">INVOICE</h2>
+
+          {/* Info Section */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
-              <img src={logo} alt="Care Sync" className="h-12 mb-2" />
-              <p className="font-semibold text-primary">Care Sync</p>
+              <p className="text-xs font-bold text-orange-600">INVOICE FROM:</p>
+              <p className="font-semibold">{invoice.profiles?.full_name}</p>
+              <p className="text-sm text-muted-foreground">{invoice.profiles?.position || 'Employee'}</p>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-orange-600">BILL TO:</p>
+              <p className="font-semibold">CARE SYNC</p>
               <p className="text-sm text-muted-foreground">Support Solutions</p>
             </div>
-            <div className="text-right">
-              <h2 className="text-2xl font-bold text-primary tracking-wide">INVOICE</h2>
-              <p className="text-muted-foreground text-sm">{invoice.invoice_number}</p>
-              <p className="text-sm mt-2">
-                Date: {format(new Date(invoice.invoice_date), 'MMMM d, yyyy')}
+            <div className="text-right space-y-1">
+              <p>
+                <span className="text-xs font-bold text-orange-600">NUMBER: </span>
+                <span className="text-sm">{invoice.invoice_number}</span>
               </p>
-              <div className="mt-2">
+              <p>
+                <span className="text-xs font-bold text-orange-600">Date: </span>
+                <span className="text-sm">{format(new Date(invoice.invoice_date), 'MMM. d, yyyy')}</span>
+              </p>
+              <div className="flex items-center justify-end gap-2">
+                <span className="text-xs font-bold text-orange-600">Status: </span>
                 {getStatusBadge(invoice.status)}
               </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Bill To */}
-          <div className="grid md:grid-cols-2 gap-6 py-4 border-y">
-            <div>
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Bill To</h3>
-              <p className="font-semibold text-lg">{invoice.profiles?.full_name}</p>
-              <p className="text-primary text-sm">{invoice.profiles?.position || 'Employee'}</p>
-            </div>
-            <div className="text-right">
-              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Pay Period</h3>
-              <p className="font-medium">
-                {format(new Date(invoice.pay_period_start), 'MMMM d')} -{' '}
-                {format(new Date(invoice.pay_period_end), 'MMMM d, yyyy')}
-              </p>
             </div>
           </div>
 
@@ -464,97 +423,110 @@ export const InvoiceViewDialog = ({ invoice, open, onOpenChange }: InvoiceViewDi
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b-2">
-                  <th className="py-3 px-2 text-left font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">Description</th>
-                  <th className="py-3 px-2 text-center font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">Qty</th>
-                  <th className="py-3 px-2 text-right font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">Rate</th>
-                  <th className="py-3 px-2 text-right font-semibold text-[11px] uppercase tracking-wider text-muted-foreground">Amount</th>
+                <tr className="bg-red-700 text-white">
+                  <th className="py-2.5 px-3 text-left font-semibold text-sm">Description</th>
+                  <th className="py-2.5 px-3 text-center font-semibold text-sm">Quantity</th>
+                  <th className="py-2.5 px-3 text-right font-semibold text-sm">Unit Price</th>
+                  <th className="py-2.5 px-3 text-right font-semibold text-sm">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {/* Base Salary */}
                 <tr className="border-b">
-                  <td className="py-3 px-2 text-sm">Base Salary (Pay Period)</td>
-                  <td className="py-3 px-2 text-center text-sm">1</td>
-                  <td className="py-3 px-2 text-right text-sm">{formatCurrency(invoice.base_salary)}</td>
-                  <td className="py-3 px-2 text-right text-sm">{formatCurrency(invoice.base_salary)}</td>
+                  <td className="py-3 px-3">
+                    <p className="font-medium">Base Salary - Pay Period Service</p>
+                    <p className="text-xs text-muted-foreground">
+                      Period Service: {format(new Date(invoice.pay_period_start), 'MMM. d')} to {format(new Date(invoice.pay_period_end), 'MMM. d, yyyy')}
+                    </p>
+                  </td>
+                  <td className="py-3 px-3 text-center">1</td>
+                  <td className="py-3 px-3 text-right">{formatCurrency(invoice.base_salary)}</td>
+                  <td className="py-3 px-3 text-right">{formatCurrency(invoice.base_salary)}</td>
                 </tr>
 
                 {/* Deductions */}
                 {invoice.deductions > 0 && (
                   <tr className="border-b">
-                    <td className="py-3 px-2 text-sm text-red-600">
-                      Deductions
+                    <td className="py-3 px-3 text-red-700">
+                      <p className="font-medium">Deductions</p>
                       {invoice.deduction_notes && (
-                        <span className="block text-xs text-muted-foreground">
-                          ({invoice.deduction_notes})
-                        </span>
+                        <p className="text-xs">{invoice.deduction_notes}</p>
                       )}
                     </td>
-                    <td className="py-3 px-2 text-center text-sm">1</td>
-                    <td className="py-3 px-2 text-right text-sm text-red-600">-{formatCurrency(invoice.deductions)}</td>
-                    <td className="py-3 px-2 text-right text-sm text-red-600">-{formatCurrency(invoice.deductions)}</td>
+                    <td className="py-3 px-3 text-center">1</td>
+                    <td className="py-3 px-3 text-right text-red-700">-{formatCurrency(invoice.deductions)}</td>
+                    <td className="py-3 px-3 text-right text-red-700">-{formatCurrency(invoice.deductions)}</td>
                   </tr>
                 )}
 
                 {/* Absent Deduction */}
                 {invoice.absent_days > 0 && (
                   <tr className="border-b">
-                    <td className="py-3 px-2 text-sm text-red-600">LWOP / Absent Deduction</td>
-                    <td className="py-3 px-2 text-center text-sm">{invoice.absent_days} days</td>
-                    <td className="py-3 px-2 text-right text-sm text-red-600">
+                    <td className="py-3 px-3 text-red-700">
+                      <p className="font-medium">LWOP / Absent Deduction</p>
+                      <p className="text-xs">{invoice.absent_days} day(s) absent</p>
+                    </td>
+                    <td className="py-3 px-3 text-center">{invoice.absent_days}</td>
+                    <td className="py-3 px-3 text-right text-red-700">
                       -{formatCurrency(invoice.absent_deduction / invoice.absent_days)}
                     </td>
-                    <td className="py-3 px-2 text-right text-sm text-red-600">-{formatCurrency(invoice.absent_deduction)}</td>
+                    <td className="py-3 px-3 text-right text-red-700">-{formatCurrency(invoice.absent_deduction)}</td>
                   </tr>
                 )}
 
                 {/* Additional Items */}
                 {additionalItems.map((item: AdditionalItem, index: number) => (
                   <tr key={index} className="border-b">
-                    <td className="py-3 px-2 text-sm text-green-600">{item.description}</td>
-                    <td className="py-3 px-2 text-center text-sm">{item.quantity}</td>
-                    <td className="py-3 px-2 text-right text-sm text-green-600">{formatCurrency(item.rate)}</td>
-                    <td className="py-3 px-2 text-right text-sm text-green-600">+{formatCurrency(item.total)}</td>
+                    <td className="py-3 px-3 font-medium">{item.description}</td>
+                    <td className="py-3 px-3 text-center">{item.quantity}</td>
+                    <td className="py-3 px-3 text-right">{formatCurrency(item.rate)}</td>
+                    <td className="py-3 px-3 text-right">{formatCurrency(item.total)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          {/* Total */}
-          <div className="flex justify-end">
-            <div className="w-64 space-y-2">
-              <div className="flex justify-between py-2 text-sm">
-                <span className="text-muted-foreground">Subtotal</span>
+          {/* Totals Section */}
+          <div className="flex justify-between gap-8">
+            <div className="flex-1">
+              {invoice.notes && (
+                <>
+                  <p className="font-bold text-sm">Notes:</p>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{invoice.notes}</p>
+                </>
+              )}
+            </div>
+            <div className="w-64 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">SUBTOTAL:</span>
                 <span>{formatCurrency(invoice.base_salary)}</span>
               </div>
-              {(invoice.deductions > 0 || invoice.absent_deduction > 0) && (
-                <div className="flex justify-between py-2 text-sm">
-                  <span className="text-muted-foreground">Total Deductions</span>
-                  <span className="text-red-600">-{formatCurrency(invoice.deductions + invoice.absent_deduction)}</span>
-                </div>
-              )}
-              <div className="flex justify-between py-3 border-t mt-2">
-                <span className="text-primary font-semibold">Balance Due</span>
-                <span className="text-lg font-bold text-primary">{formatCurrency(invoice.balance_due)}</span>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">DEDUCTION:</span>
+                <span className="text-red-700">
+                  {(invoice.deductions + invoice.absent_deduction) > 0 
+                    ? `-${formatCurrency(invoice.deductions + invoice.absent_deduction)}` 
+                    : ''}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">TOTAL:</span>
+                <span>{formatCurrency(invoice.balance_due)}</span>
               </div>
             </div>
           </div>
 
-          {/* Notes */}
-          {invoice.notes && (
-            <div className="bg-amber-50 dark:bg-amber-950/20 border-l-3 border-amber-500 p-4">
-              <h4 className="font-semibold mb-1 text-amber-800 dark:text-amber-200 text-sm">Notes:</h4>
-              <p className="text-amber-700 dark:text-amber-300 text-sm whitespace-pre-wrap">{invoice.notes}</p>
-            </div>
-          )}
+          {/* Balance Due */}
+          <div className="bg-red-900 text-white flex justify-between items-center px-5 py-4">
+            <span className="font-bold tracking-wide">BALANCE DUE</span>
+            <span className="text-2xl font-bold text-red-400">{formatCurrency(invoice.balance_due)}</span>
+          </div>
 
           {/* Footer */}
-          <div className="text-center text-sm text-muted-foreground pt-6 border-t">
+          <div className="text-center text-sm text-muted-foreground pt-4">
             <p>Thank you for your hard work!</p>
-            <p className="mt-1 text-primary font-semibold">Care Sync Support Solutions</p>
-            <p className="mt-2 text-xs">For questions about this invoice, please contact HR</p>
+            <p className="font-semibold text-red-900">Care Sync Support Solutions</p>
           </div>
         </div>
       </DialogContent>
