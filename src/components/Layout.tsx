@@ -99,7 +99,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'EOD Reports', href: '/reports', icon: FileText },
     { name: 'Payroll', href: '/payroll', icon: DollarSign },
-    { name: 'Employee Invoices', href: '/invoices', icon: Receipt, adminOnly: true },
+    { name: 'My Invoices', href: '/invoices', icon: Receipt },
     { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
     { name: 'Celebration Gallery', href: '/announcement-gallery', icon: ImageIcon },
     { name: 'Employee Voting', href: '/voting', icon: Vote },
