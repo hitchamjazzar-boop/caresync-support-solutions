@@ -1,0 +1,191 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
+import { Eye, Download, FileText } from 'lucide-react';
+import { InvoiceViewDialog } from './InvoiceViewDialog';
+
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  invoice_date: string;
+  pay_period_start: string;
+  pay_period_end: string;
+  base_salary: number;
+  deductions: number;
+  deduction_notes: string | null;
+  absent_days: number;
+  absent_deduction: number;
+  additional_items: any[];
+  notes: string | null;
+  total_amount: number;
+  balance_due: number;
+  status: string;
+  created_at: string;
+  user_id: string;
+  profiles?: {
+    full_name: string;
+    position: string | null;
+    monthly_salary: number | null;
+  } | null;
+}
+
+interface InvoiceListProps {
+  userId?: string;
+  showAllEmployees?: boolean;
+}
+
+export const InvoiceList = ({ userId, showAllEmployees = false }: InvoiceListProps) => {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+
+  useEffect(() => {
+    fetchInvoices();
+  }, [userId, showAllEmployees]);
+
+  const fetchInvoices = async () => {
+    setLoading(true);
+    
+    // First fetch invoices
+    let query = supabase
+      .from('employee_invoices')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (userId && !showAllEmployees) {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data: invoicesData, error } = await query;
+
+    if (invoicesData && invoicesData.length > 0) {
+      // Get unique user IDs
+      const userIds = [...new Set(invoicesData.map(inv => inv.user_id))];
+      
+      // Fetch profiles for these users
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, position, monthly_salary')
+        .in('id', userIds);
+
+      // Map profiles to invoices
+      const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+      
+      const invoicesWithProfiles = invoicesData.map(inv => ({
+        ...inv,
+        profiles: profilesMap.get(inv.user_id) || null,
+      }));
+
+      setInvoices(invoicesWithProfiles as Invoice[]);
+    } else {
+      setInvoices([]);
+    }
+    setLoading(false);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const variants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+      pending: 'secondary',
+      paid: 'default',
+      cancelled: 'destructive',
+    };
+    return <Badge variant={variants[status] || 'outline'}>{status}</Badge>;
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (invoices.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="font-semibold text-lg">No Invoices Found</h3>
+          <p className="text-muted-foreground">
+            {showAllEmployees ? 'No invoices have been created yet.' : 'You have no invoices yet.'}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            {showAllEmployees ? 'All Employee Invoices' : 'My Invoices'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice #</TableHead>
+                  {showAllEmployees && <TableHead>Employee</TableHead>}
+                  <TableHead>Pay Period</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoices.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
+                    {showAllEmployees && (
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{invoice.profiles?.full_name}</p>
+                          <p className="text-sm text-muted-foreground">{invoice.profiles?.position}</p>
+                        </div>
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      {format(new Date(invoice.pay_period_start), 'MMM d')} -{' '}
+                      {format(new Date(invoice.pay_period_end), 'MMM d, yyyy')}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      ₱{invoice.total_amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                    <TableCell>{format(new Date(invoice.invoice_date), 'MMM d, yyyy')}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedInvoice(invoice)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <InvoiceViewDialog
+        invoice={selectedInvoice}
+        open={!!selectedInvoice}
+        onOpenChange={(open) => !open && setSelectedInvoice(null)}
+      />
+    </>
+  );
+};
