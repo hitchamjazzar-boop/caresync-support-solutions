@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle, Clock } from 'lucide-react';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface Nominee {
@@ -17,6 +18,7 @@ interface Nominee {
     photo_url: string | null;
   };
   nomination_count: number;
+  is_approved: boolean;
 }
 
 interface VotingFormProps {
@@ -38,10 +40,12 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
 
   const fetchNominees = async () => {
     try {
+      // Only fetch approved nominations
       const { data, error } = await supabase
         .from('employee_nominations')
-        .select('nominated_user_id')
-        .eq('voting_period_id', votingPeriodId);
+        .select('nominated_user_id, is_approved')
+        .eq('voting_period_id', votingPeriodId)
+        .eq('is_approved', true);
 
       if (error) throw error;
 
@@ -73,6 +77,7 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
           photo_url: profile.photo_url,
         },
         nomination_count: nomineeMap.get(profile.id) || 1,
+        is_approved: true,
       })) || [];
 
       setNominees(nomineesWithProfiles);
@@ -109,6 +114,8 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
       console.error('Error submitting vote:', error);
       if (error.message.includes('duplicate')) {
         toast.error('You have already voted in this period');
+      } else if (error.message.includes('row-level security')) {
+        toast.error('This nominee has not been approved for voting yet');
       } else {
         toast.error('Failed to submit vote');
       }
@@ -123,8 +130,14 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
 
   if (nominees.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        No nominations yet. Be the first to nominate someone!
+      <div className="text-center py-8 space-y-2">
+        <Clock className="h-12 w-12 mx-auto text-muted-foreground/50" />
+        <p className="text-muted-foreground">
+          No approved nominees yet.
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Nominations need to be approved by an admin before voting can begin.
+        </p>
       </div>
     );
   }
@@ -132,6 +145,7 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
   if (hasVoted) {
     return (
       <div className="text-center py-8">
+        <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-3" />
         <p className="text-muted-foreground">
           Thank you for voting! Your vote has been recorded.
         </p>
@@ -144,7 +158,13 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 py-4">
-      <Label>Vote for Employee of the Month</Label>
+      <div className="flex items-center justify-between">
+        <Label>Vote for your choice</Label>
+        <Badge variant="outline">
+          {nominees.length} approved {nominees.length === 1 ? 'nominee' : 'nominees'}
+        </Badge>
+      </div>
+      
       <RadioGroup value={selectedNominee} onValueChange={setSelectedNominee}>
         <div className="space-y-3">
           {nominees.map((nominee) => (
