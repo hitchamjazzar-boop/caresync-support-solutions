@@ -181,7 +181,8 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
             : `👋 Welcome Our New Team Members!`,
           content: welcomeMessage || defaultMessage,
           created_by: user.id,
-          featured_user_id: selectedEmployees[0], // First selected employee
+          featured_user_id: selectedEmployees[0],
+          featured_user_ids: selectedEmployees,
           is_pinned: true,
           target_type: 'all',
           expires_at: expiresAt.toISOString(),

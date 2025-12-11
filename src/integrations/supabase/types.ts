@@ -188,6 +188,7 @@ export type Database = {
           created_by: string
           expires_at: string | null
           featured_user_id: string | null
+          featured_user_ids: string[] | null
           id: string
           image_url: string | null
           is_active: boolean
@@ -205,6 +206,7 @@ export type Database = {
           created_by: string
           expires_at?: string | null
           featured_user_id?: string | null
+          featured_user_ids?: string[] | null
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -222,6 +224,7 @@ export type Database = {
           created_by?: string
           expires_at?: string | null
           featured_user_id?: string | null
+          featured_user_ids?: string[] | null
           id?: string
           image_url?: string | null
           is_active?: boolean

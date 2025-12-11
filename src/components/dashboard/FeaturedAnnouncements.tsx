@@ -16,11 +16,13 @@ interface Announcement {
   content: string;
   image_url: string | null;
   featured_user_id: string | null;
+  featured_user_ids: string[] | null;
   created_at: string;
   is_pinned: boolean;
 }
 
 interface Profile {
+  id: string;
   full_name: string;
   photo_url: string | null;
   position: string | null;
@@ -78,17 +80,26 @@ export function FeaturedAnnouncements() {
 
       setAnnouncements(filteredAnnouncements);
 
-      // Fetch profiles for featured users
+      // Fetch profiles for all featured users (including arrays)
       if (announcementData && announcementData.length > 0) {
-        const userIds = announcementData
-          .map(a => a.featured_user_id)
-          .filter(Boolean) as string[];
+        const userIds = new Set<string>();
         
-        if (userIds.length > 0) {
+        announcementData.forEach(a => {
+          // Add from featured_user_id (for backward compatibility)
+          if (a.featured_user_id) {
+            userIds.add(a.featured_user_id);
+          }
+          // Add from featured_user_ids array
+          if (a.featured_user_ids && Array.isArray(a.featured_user_ids)) {
+            a.featured_user_ids.forEach((id: string) => userIds.add(id));
+          }
+        });
+        
+        if (userIds.size > 0) {
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('*')
-            .in('id', userIds);
+            .select('id, full_name, photo_url, position, department, birthday')
+            .in('id', Array.from(userIds));
 
           if (profileData) {
             const profilesMap = new Map(profileData.map(p => [p.id, p]));
@@ -128,9 +139,16 @@ export function FeaturedAnnouncements() {
       </div>
 
       {announcements.map((announcement) => {
-        const profile = announcement.featured_user_id 
-          ? profiles.get(announcement.featured_user_id) 
-          : null;
+        // Get all featured profiles - prefer featured_user_ids array, fallback to single featured_user_id
+        const featuredUserIds = announcement.featured_user_ids && announcement.featured_user_ids.length > 0
+          ? announcement.featured_user_ids
+          : announcement.featured_user_id 
+            ? [announcement.featured_user_id]
+            : [];
+        
+        const featuredProfiles = featuredUserIds
+          .map(id => profiles.get(id))
+          .filter((p): p is Profile => p !== undefined);
 
         const isBirthday = announcement.title.toLowerCase().includes('birthday');
 
@@ -153,26 +171,50 @@ export function FeaturedAnnouncements() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col md:flex-row gap-4">
-                {/* Employee Info */}
-                {profile && (
-                  <div className="flex items-center gap-3 md:w-1/3">
-                    <Avatar className="h-20 w-20">
-                      <AvatarImage src={profile.photo_url || undefined} />
-                      <AvatarFallback className="text-2xl">
-                        {profile.full_name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-semibold text-lg">{profile.full_name}</p>
-                      <p className="text-sm text-muted-foreground">{profile.position || 'N/A'}</p>
-                      <p className="text-xs text-muted-foreground">{profile.department || 'N/A'}</p>
-                    </div>
+                {/* Employee Info - Show all featured employees */}
+                {featuredProfiles.length > 0 && (
+                  <div className={featuredProfiles.length === 1 ? 'md:w-1/3' : 'w-full'}>
+                    {featuredProfiles.length === 1 ? (
+                      // Single employee layout
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-20 w-20">
+                          <AvatarImage src={featuredProfiles[0].photo_url || undefined} />
+                          <AvatarFallback className="text-2xl">
+                            {featuredProfiles[0].full_name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-semibold text-lg">{featuredProfiles[0].full_name}</p>
+                          <p className="text-sm text-muted-foreground">{featuredProfiles[0].position || 'N/A'}</p>
+                          <p className="text-xs text-muted-foreground">{featuredProfiles[0].department || 'N/A'}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      // Multiple employees layout
+                      <div className="flex flex-wrap gap-4">
+                        {featuredProfiles.map((profile) => (
+                          <div key={profile.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                            <Avatar className="h-14 w-14">
+                              <AvatarImage src={profile.photo_url || undefined} />
+                              <AvatarFallback className="text-lg">
+                                {profile.full_name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-semibold">{profile.full_name}</p>
+                              <p className="text-sm text-muted-foreground">{profile.position || 'N/A'}</p>
+                              <p className="text-xs text-muted-foreground">{profile.department || 'N/A'}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Featured Image */}
                 {announcement.image_url && (
-                  <div className="md:w-2/3">
+                  <div className={featuredProfiles.length === 1 ? 'md:w-2/3' : 'w-full'}>
                     <img
                       src={announcement.image_url}
                       alt={announcement.title}

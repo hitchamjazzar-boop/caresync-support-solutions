@@ -166,6 +166,7 @@ export function EmployeeOfMonthDialog({ open, onOpenChange, onSuccess }: Employe
           is_pinned: true,
           image_url: imageUrl,
           featured_user_id: selectedEmployees[0],
+          featured_user_ids: selectedEmployees,
         });
 
       if (error) throw error;
