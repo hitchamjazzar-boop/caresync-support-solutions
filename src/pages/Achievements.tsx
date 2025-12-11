@@ -68,65 +68,65 @@ const Achievements = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Award className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <Award className="h-6 sm:h-8 w-6 sm:w-8 text-primary" />
             Employee Achievements
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
             Manage custom badges and awards for employees
           </p>
         </div>
       </div>
 
       <Tabs defaultValue="award" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="award" className="flex items-center gap-2">
-            <Award className="h-4 w-4" />
-            Award Badges
+        <TabsList className="w-full grid grid-cols-3 h-auto">
+          <TabsTrigger value="award" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+            <Award className="h-3 sm:h-4 w-3 sm:w-4" />
+            <span className="hidden sm:inline">Award </span>Badges
           </TabsTrigger>
-          <TabsTrigger value="types" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Manage Types
+          <TabsTrigger value="types" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+            <Settings className="h-3 sm:h-4 w-3 sm:w-4" />
+            <span className="hidden sm:inline">Manage </span>Types
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2">
-            <Award className="h-4 w-4" />
-            Achievement History
+          <TabsTrigger value="history" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+            <Award className="h-3 sm:h-4 w-3 sm:w-4" />
+            History
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="award" className="space-y-4">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle>Award Achievement to Employee</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Award Achievement to Employee</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
                     Recognize outstanding employees with custom badges and awards
                   </CardDescription>
                 </div>
-                <Button onClick={() => setAwardDialogOpen(true)}>
+                <Button onClick={() => setAwardDialogOpen(true)} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   Award Badge
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <CardContent className="p-4 sm:p-6 pt-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {achievementTypes.filter(type => type.is_active).map((type) => (
-                  <Card key={type.id} className="p-4 hover:shadow-md transition-shadow">
+                  <Card key={type.id} className="p-3 sm:p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start gap-3">
                       <div
-                        className="p-3 rounded-lg"
+                        className="p-2 sm:p-3 rounded-lg shrink-0"
                         style={{ backgroundColor: `${type.color}20` }}
                       >
-                        <Award className="h-6 w-6" style={{ color: type.color }} />
+                        <Award className="h-5 sm:h-6 w-5 sm:w-6" style={{ color: type.color }} />
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{type.name}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base truncate">{type.name}</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">
                           {type.description}
                         </p>
                         <Badge variant="secondary" className="mt-2 text-xs">
@@ -143,21 +143,21 @@ const Achievements = () => {
 
         <TabsContent value="types">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                  <CardTitle>Achievement Types</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Achievement Types</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
                     Create and manage custom achievement badges
                   </CardDescription>
                 </div>
-                <Button onClick={() => setCreateDialogOpen(true)}>
+                <Button onClick={() => setCreateDialogOpen(true)} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   Create New Type
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               <AchievementTypesList
                 achievementTypes={achievementTypes}
                 onUpdate={fetchAchievementTypes}
@@ -168,13 +168,13 @@ const Achievements = () => {
 
         <TabsContent value="history">
           <Card>
-            <CardHeader>
-              <CardTitle>Achievement History</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Achievement History</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 View all achievements awarded to employees
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6 pt-0">
               <EmployeeAchievementsList />
             </CardContent>
           </Card>

@@ -216,7 +216,7 @@ export default function AnnouncementGallery() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -224,17 +224,18 @@ export default function AnnouncementGallery() {
           onClick={() => navigate('/')}
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
+          <span className="hidden sm:inline">Back to Dashboard</span>
+          <span className="sm:hidden">Back</span>
         </Button>
       </div>
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Calendar className="h-8 w-8" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Calendar className="h-6 sm:h-8 w-6 sm:w-8" />
             Announcement Timeline
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Browse all Employee of the Month and Birthday celebrations
           </p>
         </div>
@@ -244,7 +245,7 @@ export default function AnnouncementGallery() {
             size="sm"
             onClick={markAllAsRead}
             disabled={markingAllRead || announcements.every(a => readAnnouncementIds.has(a.id))}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             {markingAllRead ? (
               <>
@@ -263,24 +264,24 @@ export default function AnnouncementGallery() {
 
       {Object.keys(groupedAnnouncements).length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Award className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium">No announcements yet</p>
-            <p className="text-sm text-muted-foreground">
+          <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12">
+            <Award className="h-10 sm:h-12 w-10 sm:w-12 text-muted-foreground mb-4" />
+            <p className="text-base sm:text-lg font-medium">No announcements yet</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Featured announcements will appear here
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {Object.entries(groupedAnnouncements).map(([monthYear, monthAnnouncements]) => (
-            <div key={monthYear} className="space-y-4">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold">{monthYear}</h2>
-                <Badge variant="secondary">{monthAnnouncements.length} announcements</Badge>
+            <div key={monthYear} className="space-y-3 sm:space-y-4">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h2 className="text-lg sm:text-xl font-semibold">{monthYear}</h2>
+                <Badge variant="secondary" className="text-xs">{monthAnnouncements.length} announcements</Badge>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
                 {monthAnnouncements.map((announcement) => {
                   // Get all featured profiles - prefer featured_user_ids array, fallback to single featured_user_id
                   const featuredUserIds = announcement.featured_user_ids && announcement.featured_user_ids.length > 0
@@ -305,10 +306,10 @@ export default function AnnouncementGallery() {
                       }`}
                       ref={isHighlighted ? highlightedRef : null}
                     >
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="gap-1">
+                      <CardHeader className="pb-3 p-4 sm:p-6">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline" className="gap-1 text-xs">
                               {isBirthday ? (
                                 <>
                                   <Cake className="h-3 w-3" />
@@ -322,14 +323,15 @@ export default function AnnouncementGallery() {
                               ) : (
                                 <>
                                   <Award className="h-3 w-3" />
-                                  Employee of Month
+                                  <span className="hidden sm:inline">Employee of Month</span>
+                                  <span className="sm:hidden">EOM</span>
                                 </>
                               )}
                             </Badge>
                             {!readAnnouncementIds.has(announcement.id) && (
                               <Badge 
                                 variant="default" 
-                                className="gap-1 bg-primary text-primary-foreground animate-pulse"
+                                className="gap-1 bg-primary text-primary-foreground animate-pulse text-xs"
                               >
                                 New
                               </Badge>
@@ -339,9 +341,9 @@ export default function AnnouncementGallery() {
                             {format(new Date(announcement.created_at), 'MMM dd, yyyy')}
                           </span>
                         </div>
-                        <CardTitle className="text-lg">{announcement.title}</CardTitle>
+                        <CardTitle className="text-base sm:text-lg">{announcement.title}</CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-4 p-4 sm:p-6 pt-0">
                         {/* Employee Info - Show all featured employees */}
                         {featuredProfiles.length > 0 && (
                           <div className={featuredProfiles.length === 1 ? '' : 'flex flex-wrap gap-3'}>
