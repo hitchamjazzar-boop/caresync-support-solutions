@@ -14,7 +14,11 @@ interface ShoutoutRequest {
   message: string | null;
   status: string;
   created_at: string;
+  target_user_id: string | null;
   admin_profile?: {
+    full_name: string;
+  };
+  target_profile?: {
     full_name: string;
   };
 }
@@ -23,7 +27,7 @@ export function ShoutoutRequestCard() {
   const { user } = useAuth();
   const [requests, setRequests] = useState<ShoutoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<ShoutoutRequest | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -65,18 +69,22 @@ export function ShoutoutRequestCard() {
     if (error) {
       console.error('Error fetching requests:', error);
     } else {
-      // Fetch admin profiles separately
+      // Fetch admin and target profiles separately
       const adminIds = [...new Set(data?.map(r => r.admin_id) || [])];
-      if (adminIds.length > 0) {
+      const targetIds = [...new Set(data?.filter(r => r.target_user_id).map(r => r.target_user_id) || [])];
+      const allIds = [...new Set([...adminIds, ...targetIds])];
+      
+      if (allIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name')
-          .in('id', adminIds);
+          .in('id', allIds);
 
         const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
         const enrichedData = data?.map(r => ({
           ...r,
           admin_profile: profileMap.get(r.admin_id),
+          target_profile: r.target_user_id ? profileMap.get(r.target_user_id) : undefined,
         })) || [];
         setRequests(enrichedData);
       } else {
@@ -118,6 +126,9 @@ export function ShoutoutRequestCard() {
               <div className="space-y-1">
                 <p className="text-sm font-medium">
                   {request.admin_profile?.full_name || 'Admin'} asked you to give a shout out
+                  {request.target_profile && (
+                    <span className="text-primary"> to {request.target_profile.full_name}</span>
+                  )}
                 </p>
                 {request.message && (
                   <p className="text-sm text-muted-foreground">{request.message}</p>
@@ -126,7 +137,7 @@ export function ShoutoutRequestCard() {
                   {format(new Date(request.created_at), 'MMM dd, yyyy')}
                 </Badge>
               </div>
-              <Button size="sm" onClick={() => setSelectedRequest(request.id)}>
+              <Button size="sm" onClick={() => setSelectedRequest(request)}>
                 Give Shout Out
               </Button>
             </div>
@@ -137,7 +148,8 @@ export function ShoutoutRequestCard() {
       <SubmitShoutoutDialog
         open={!!selectedRequest}
         onOpenChange={(open) => !open && setSelectedRequest(null)}
-        requestId={selectedRequest || ''}
+        requestId={selectedRequest?.id || ''}
+        targetUserId={selectedRequest?.target_user_id}
         onSuccess={fetchRequests}
       />
     </>

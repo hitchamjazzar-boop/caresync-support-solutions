@@ -42,6 +42,7 @@ export function SendShoutoutRequestDialog({
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [adminName, setAdminName] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(preselectedEmployeeId || '');
+  const [targetEmployee, setTargetEmployee] = useState('');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -109,6 +110,7 @@ export function SendShoutoutRequestDialog({
         .insert({
           admin_id: user.id,
           recipient_id: selectedEmployee,
+          target_user_id: targetEmployee || null,
           message: message || null,
           status: 'pending',
         });
@@ -124,6 +126,7 @@ export function SendShoutoutRequestDialog({
       });
       setOpen(false);
       setSelectedEmployee('');
+      setTargetEmployee('');
       setMessage('');
     } catch (error) {
       console.error('Error sending request:', error);
@@ -153,13 +156,30 @@ export function SendShoutoutRequestDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="employee">Select Employee</Label>
+            <Label htmlFor="employee">Who should give the shout out? *</Label>
             <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
               <SelectTrigger>
-                <SelectValue placeholder="Choose an employee" />
+                <SelectValue placeholder="Choose an employee to write the shout out" />
               </SelectTrigger>
               <SelectContent>
                 {employees.map((emp) => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="target">Who should receive the shout out? (optional)</Label>
+            <Select value={targetEmployee} onValueChange={setTargetEmployee}>
+              <SelectTrigger>
+                <SelectValue placeholder="Let them choose, or select a specific employee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Let them choose</SelectItem>
+                {employees.filter(emp => emp.id !== selectedEmployee).map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
                     {emp.full_name}
                   </SelectItem>

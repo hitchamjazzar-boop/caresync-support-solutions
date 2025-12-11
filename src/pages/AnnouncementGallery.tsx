@@ -294,9 +294,25 @@ export default function AnnouncementGallery() {
                     .map(id => profiles.get(id))
                     .filter((p): p is Profile => p !== undefined);
 
-                  const isBirthday = announcement.title.toLowerCase().includes('birthday');
-                  const isPromotion = announcement.title.toLowerCase().includes('promotion');
+                  const titleLower = announcement.title.toLowerCase();
+                  const isBirthday = titleLower.includes('birthday');
+                  const isPromotion = titleLower.includes('promotion');
+                  const isNewEmployee = titleLower.includes('welcome') || titleLower.includes('new team member') || titleLower.includes('new employee');
+                  const isShoutout = titleLower.includes('shout out') || titleLower.includes('shoutout');
+                  const isEmployeeOfMonth = titleLower.includes('employee of the month') || titleLower.includes('employee of month');
                   const isHighlighted = searchParams.get('highlight') === announcement.id;
+
+                  const getAnnouncementType = () => {
+                    if (isBirthday) return { icon: Cake, label: 'Birthday', shortLabel: 'Birthday' };
+                    if (isPromotion) return { icon: Award, label: 'Promotion', shortLabel: 'Promotion' };
+                    if (isNewEmployee) return { icon: Award, label: 'New Employee', shortLabel: 'New' };
+                    if (isShoutout) return { icon: Award, label: 'Shout Out', shortLabel: 'Shoutout' };
+                    if (isEmployeeOfMonth) return { icon: Award, label: 'Employee of Month', shortLabel: 'EOM' };
+                    return { icon: Award, label: 'Announcement', shortLabel: 'Ann.' };
+                  };
+
+                  const announcementType = getAnnouncementType();
+                  const TypeIcon = announcementType.icon;
 
                   return (
                     <Card 
@@ -310,23 +326,9 @@ export default function AnnouncementGallery() {
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline" className="gap-1 text-xs">
-                              {isBirthday ? (
-                                <>
-                                  <Cake className="h-3 w-3" />
-                                  Birthday
-                                </>
-                              ) : isPromotion ? (
-                                <>
-                                  <Award className="h-3 w-3" />
-                                  Promotion
-                                </>
-                              ) : (
-                                <>
-                                  <Award className="h-3 w-3" />
-                                  <span className="hidden sm:inline">Employee of Month</span>
-                                  <span className="sm:hidden">EOM</span>
-                                </>
-                              )}
+                              <TypeIcon className="h-3 w-3" />
+                              <span className="hidden sm:inline">{announcementType.label}</span>
+                              <span className="sm:hidden">{announcementType.shortLabel}</span>
                             </Badge>
                             {!readAnnouncementIds.has(announcement.id) && (
                               <Badge 

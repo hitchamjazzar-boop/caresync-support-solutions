@@ -732,6 +732,7 @@ export type Database = {
           message: string | null
           recipient_id: string
           status: string
+          target_user_id: string | null
         }
         Insert: {
           admin_id: string
@@ -741,6 +742,7 @@ export type Database = {
           message?: string | null
           recipient_id: string
           status?: string
+          target_user_id?: string | null
         }
         Update: {
           admin_id?: string
@@ -750,8 +752,17 @@ export type Database = {
           message?: string | null
           recipient_id?: string
           status?: string
+          target_user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feedback_requests_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       memo_replies: {
         Row: {
@@ -1292,6 +1303,7 @@ export type Database = {
           message: string | null
           recipient_id: string
           status: string
+          target_user_id: string | null
         }
         Insert: {
           admin_id: string
@@ -1301,6 +1313,7 @@ export type Database = {
           message?: string | null
           recipient_id: string
           status?: string
+          target_user_id?: string | null
         }
         Update: {
           admin_id?: string
@@ -1310,8 +1323,17 @@ export type Database = {
           message?: string | null
           recipient_id?: string
           status?: string
+          target_user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "shoutout_requests_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shoutouts: {
         Row: {

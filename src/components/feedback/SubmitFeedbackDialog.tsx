@@ -13,6 +13,7 @@ interface SubmitFeedbackDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
+  targetUserName?: string;
   onSuccess?: () => void;
 }
 
@@ -20,6 +21,7 @@ export function SubmitFeedbackDialog({
   open,
   onOpenChange,
   requestId,
+  targetUserName,
   onSuccess,
 }: SubmitFeedbackDialogProps) {
   const { user } = useAuth();
@@ -86,10 +88,18 @@ export function SubmitFeedbackDialog({
         <DialogHeader>
           <DialogTitle>Submit Feedback</DialogTitle>
           <DialogDescription>
-            Share your thoughts, suggestions, or concerns with the admin team
+            {targetUserName 
+              ? `Share your feedback about ${targetUserName}`
+              : 'Share your thoughts, suggestions, or concerns with the admin team'
+            }
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
+          {targetUserName && (
+            <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
+              Admin has requested feedback specifically about <strong>{targetUserName}</strong>.
+            </p>
+          )}
           <p className="text-sm text-muted-foreground">
             Your feedback will be submitted for admin review. Your identity will be visible only to administrators.
           </p>
