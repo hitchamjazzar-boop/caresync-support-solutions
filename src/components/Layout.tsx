@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, Receipt, Heart, Shield, type LucideIcon } from 'lucide-react';
+import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, Receipt, Heart, Shield, Bell, type LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -35,10 +35,12 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Badge } from '@/components/ui/badge';
 import logo from '@/assets/logo.png';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/hooks/useAdmin';
+import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { NotificationBell } from '@/components/announcements/NotificationBell';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 import { NavLink } from '@/components/NavLink';
@@ -56,6 +58,7 @@ interface NavigationItem {
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { signOut, user } = useAuth();
   const { isAdmin, hasPermission } = useAdmin();
+  const { unreadCount } = useNotificationCount();
   const location = useLocation();
   const navigate = useNavigate();
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -97,6 +100,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const mainNavigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/', icon: Home },
+    { name: 'Notifications', href: '/notifications', icon: Bell },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'My Achievements', href: '/profile#achievements', icon: Award },
     { name: 'Attendance', href: '/attendance', icon: Clock },
@@ -180,6 +184,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                 {filteredMainNav.map((item) => {
                   const Icon = item.icon;
                   const isActive = location.pathname === item.href;
+                  const showBadge = item.href === '/notifications' && unreadCount > 0;
                   return (
                     <SidebarMenuItem key={item.name}>
                       <SidebarMenuButton 
@@ -188,9 +193,16 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                         className="h-12 touch-manipulation data-[active=true]:bg-primary data-[active=true]:text-primary-foreground data-[active=true]:font-semibold hover:bg-accent hover:text-accent-foreground transition-colors"
                         tooltip={item.name}
                       >
-                        <NavLink to={item.href}>
-                          <Icon className="h-5 w-5 shrink-0" />
-                          <span>{item.name}</span>
+                        <NavLink to={item.href} className="flex items-center justify-between w-full">
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-5 w-5 shrink-0" />
+                            <span>{item.name}</span>
+                          </div>
+                          {showBadge && (
+                            <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center text-xs px-1.5">
+                              {unreadCount > 9 ? '9+' : unreadCount}
+                            </Badge>
+                          )}
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
