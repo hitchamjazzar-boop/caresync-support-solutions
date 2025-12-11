@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Award, Cake, Loader2 } from 'lucide-react';
+import { Award, Cake, Loader2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { AnnouncementComments } from '@/components/announcements/AnnouncementComments';
 import { AnnouncementReactions } from '@/components/announcements/AnnouncementReactions';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
+import { useAdmin } from '@/hooks/useAdmin';
+import { useToast } from '@/hooks/use-toast';
 
 interface Announcement {
   id: string;
@@ -35,6 +37,31 @@ export function FeaturedAnnouncements() {
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
+  const { toast } = useToast();
+
+  const handleUnpin = async (announcementId: string) => {
+    try {
+      const { error } = await supabase
+        .from('announcements')
+        .update({ is_pinned: false })
+        .eq('id', announcementId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Removed from dashboard',
+        description: 'The announcement is still available in the announcements page.',
+      });
+    } catch (error) {
+      console.error('Error unpinning announcement:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove announcement from dashboard.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -163,9 +190,22 @@ export function FeaturedAnnouncements() {
                   )}
                   {announcement.title}
                 </CardTitle>
-                <Badge variant="secondary">
-                  {format(new Date(announcement.created_at), 'MMM dd, yyyy')}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    {format(new Date(announcement.created_at), 'MMM dd, yyyy')}
+                  </Badge>
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleUnpin(announcement.id)}
+                      title="Remove from dashboard"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
