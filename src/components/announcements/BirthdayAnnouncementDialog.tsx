@@ -228,6 +228,7 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
                 >
                   <Checkbox 
                     checked={selectedEmployees.includes(employee.id)}
+                    onClick={(e) => e.stopPropagation()}
                     onCheckedChange={() => toggleEmployee(employee.id)}
                   />
                   <Avatar className="h-8 w-8">
