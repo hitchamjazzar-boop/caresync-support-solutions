@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Trophy, Medal } from 'lucide-react';
 import { CertificateGenerator } from '@/components/voting/CertificateGenerator';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface VoteResult {
   nominated_user_id: string;
@@ -115,10 +115,12 @@ export const VotingResults = ({ votingPeriodId, isAdmin, status }: VotingResults
                   <div>
                     <h3 className="text-xl font-bold">Winner</h3>
                     <div className="flex items-center gap-3 mt-2">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={winner.profiles.photo_url || ''} />
-                        <AvatarFallback>{winner.profiles.full_name[0]}</AvatarFallback>
-                      </Avatar>
+                      <ProfileAvatarWithBadges
+                        userId={winner.nominated_user_id}
+                        photoUrl={winner.profiles.photo_url}
+                        fullName={winner.profiles.full_name}
+                        className="h-16 w-16"
+                      />
                       <div>
                         <div className="font-semibold text-lg">{winner.profiles.full_name}</div>
                         <div className="text-sm text-muted-foreground">{winner.profiles.position}</div>
@@ -148,10 +150,12 @@ export const VotingResults = ({ votingPeriodId, isAdmin, status }: VotingResults
                         {index === 2 && <Medal className="h-6 w-6 text-amber-600" />}
                       </div>
                     )}
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={result.profiles.photo_url || ''} />
-                      <AvatarFallback>{result.profiles.full_name[0]}</AvatarFallback>
-                    </Avatar>
+                    <ProfileAvatarWithBadges
+                      userId={result.nominated_user_id}
+                      photoUrl={result.profiles.photo_url}
+                      fullName={result.profiles.full_name}
+                      className="h-12 w-12"
+                    />
                     <div>
                       <div className="font-medium">{result.profiles.full_name}</div>
                       <div className="text-sm text-muted-foreground">{result.profiles.position}</div>

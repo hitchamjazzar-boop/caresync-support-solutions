@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Award, Cake, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -9,6 +8,7 @@ import { AnnouncementComments } from '@/components/announcements/AnnouncementCom
 import { AnnouncementReactions } from '@/components/announcements/AnnouncementReactions';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface Announcement {
   id: string;
@@ -177,12 +177,12 @@ export function FeaturedAnnouncements() {
                     {featuredProfiles.length === 1 ? (
                       // Single employee layout
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-20 w-20">
-                          <AvatarImage src={featuredProfiles[0].photo_url || undefined} />
-                          <AvatarFallback className="text-2xl">
-                            {featuredProfiles[0].full_name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <ProfileAvatarWithBadges
+                          userId={featuredProfiles[0].id}
+                          photoUrl={featuredProfiles[0].photo_url}
+                          fullName={featuredProfiles[0].full_name}
+                          className="h-20 w-20"
+                        />
                         <div>
                           <p className="font-semibold text-lg">{featuredProfiles[0].full_name}</p>
                           <p className="text-sm text-muted-foreground">{featuredProfiles[0].position || 'N/A'}</p>
@@ -194,12 +194,12 @@ export function FeaturedAnnouncements() {
                       <div className="flex flex-wrap gap-4">
                         {featuredProfiles.map((profile) => (
                           <div key={profile.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                            <Avatar className="h-14 w-14">
-                              <AvatarImage src={profile.photo_url || undefined} />
-                              <AvatarFallback className="text-lg">
-                                {profile.full_name.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
+                            <ProfileAvatarWithBadges
+                              userId={profile.id}
+                              photoUrl={profile.photo_url}
+                              fullName={profile.full_name}
+                              className="h-14 w-14"
+                            />
                             <div>
                               <p className="font-semibold">{profile.full_name}</p>
                               <p className="text-sm text-muted-foreground">{profile.position || 'N/A'}</p>

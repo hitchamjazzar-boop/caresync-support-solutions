@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Users, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface ParticipantsListProps {
   eventId: string;
@@ -69,21 +69,18 @@ export function ParticipantsList({ eventId }: ParticipantsListProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {participants.map((participant) => {
               const profile = participant.profile;
-              const initials = profile?.full_name
-                ?.split(' ')
-                .map((n: string) => n[0])
-                .join('')
-                .toUpperCase() || '?';
 
               return (
                 <div
                   key={participant.id}
                   className="flex items-center gap-3 p-3 border rounded-lg bg-card"
                 >
-                  <Avatar>
-                    <AvatarImage src={profile?.photo_url} />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
+                  <ProfileAvatarWithBadges
+                    userId={profile?.id}
+                    photoUrl={profile?.photo_url}
+                    fullName={profile?.full_name || 'Unknown'}
+                    className="h-10 w-10"
+                  />
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{profile?.full_name}</p>
                     {profile?.department && (
