@@ -108,6 +108,9 @@ export function GiveShoutoutDialog({ trigger }: GiveShoutoutDialogProps) {
             <Heart className="h-5 w-5 text-primary" />
             Give a Shout Out
           </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Your recognition will be submitted for admin review and published anonymously.
+          </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

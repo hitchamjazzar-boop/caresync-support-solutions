@@ -107,7 +107,7 @@ export function ShoutoutsList() {
         .from('announcements')
         .insert({
           title: `🎉 Shout Out to ${shoutout.to_profile?.full_name}!`,
-          content: `${shoutout.from_profile?.full_name} says: "${shoutout.message}"`,
+          content: `A colleague says: "${shoutout.message}"`,
           created_by: user.id,
           is_active: true,
           is_pinned: true,
