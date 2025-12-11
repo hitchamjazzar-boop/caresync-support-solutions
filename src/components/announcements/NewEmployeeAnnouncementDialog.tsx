@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus, Upload, X, Image } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Select,
@@ -41,10 +41,14 @@ interface NewEmployeeAnnouncementDialogProps {
 export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }: NewEmployeeAnnouncementDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('');
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [expiresInDays, setExpiresInDays] = useState<string>('14');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -70,6 +74,46 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please select an image file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image under 5MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -91,6 +135,29 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      let imageUrl: string | null = null;
+
+      // Upload image if selected
+      if (imageFile) {
+        setUploading(true);
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `new-employee-${Date.now()}.${fileExt}`;
+        const filePath = `announcements/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('profile-photos')
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('profile-photos')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+        setUploading(false);
+      }
+
       // Calculate expiry date
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + parseInt(expiresInDays));
@@ -108,6 +175,7 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
           is_pinned: true,
           target_type: 'all',
           expires_at: expiresAt.toISOString(),
+          image_url: imageUrl,
         });
 
       if (announcementError) throw announcementError;
@@ -128,6 +196,7 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
       });
     } finally {
       setLoading(false);
+      setUploading(false);
     }
   };
 
@@ -135,13 +204,15 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
     setSelectedEmployee('');
     setWelcomeMessage('');
     setExpiresInDays('14');
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const selectedEmployeeData = employees.find((e) => e.id === selectedEmployee);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
@@ -198,6 +269,47 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
           )}
 
           <div className="space-y-2">
+            <Label>Announcement Image (Optional)</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            {imagePreview ? (
+              <div className="relative">
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  className="w-full h-40 object-cover rounded-lg border"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8"
+                  onClick={removeImage}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-24 border-dashed"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Image className="h-6 w-6 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Click to upload an image</span>
+                </div>
+              </Button>
+            )}
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="welcomeMessage">Welcome Message (Optional)</Label>
             <Textarea
               id="welcomeMessage"
@@ -229,9 +341,9 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Announcement
+            <Button type="submit" disabled={loading || uploading}>
+              {(loading || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {uploading ? 'Uploading...' : 'Create Announcement'}
             </Button>
           </DialogFooter>
         </form>
