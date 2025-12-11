@@ -61,15 +61,14 @@ export function FeaturedAnnouncements() {
 
   const fetchData = async () => {
     try {
-      // Fetch featured announcements (Employee of the Month & Birthdays - excluding promotions)
+      // Fetch all pinned announcements (celebrations, employee of the month, birthdays, etc.)
       const { data: announcementData, error: announcementError } = await supabase
         .from('announcements')
         .select('*')
         .eq('is_active', true)
         .eq('is_pinned', true)
-        .not('featured_user_id', 'is', null)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
 
       if (announcementError) throw announcementError;
 
