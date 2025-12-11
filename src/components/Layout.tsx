@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, Receipt, Heart, type LucideIcon } from 'lucide-react';
+import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, Receipt, Heart, Shield, type LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -43,16 +43,19 @@ import { NotificationBell } from '@/components/announcements/NotificationBell';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 import { NavLink } from '@/components/NavLink';
 
+import type { AdminPermission } from '@/hooks/useAdmin';
+
 interface NavigationItem {
   name: string;
   href: string;
   icon: LucideIcon;
   adminOnly?: boolean;
+  permission?: AdminPermission;
 }
 
 export const Layout = ({ children }: { children: React.ReactNode }) => {
   const { signOut, user } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, hasPermission } = useAdmin();
   const location = useLocation();
   const navigate = useNavigate();
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
@@ -96,26 +99,27 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'My Achievements', href: '/profile#achievements', icon: Award },
-    { name: 'Attendance', href: '/attendance', icon: Clock },
+    { name: 'Attendance', href: '/attendance', icon: Clock, permission: 'attendance' },
     { name: 'EOD Reports', href: '/reports', icon: FileText },
-    { name: 'Payroll', href: '/payroll', icon: DollarSign },
+    { name: 'Payroll', href: '/payroll', icon: DollarSign, permission: 'payroll' },
     { name: 'My Invoices', href: '/invoices', icon: Receipt },
-    { name: 'Announcements', href: '/announcements', icon: Megaphone, adminOnly: true },
+    { name: 'Announcements', href: '/announcements', icon: Megaphone, permission: 'announcements' },
     { name: 'Celebration Gallery', href: '/announcement-gallery', icon: ImageIcon },
     { name: 'Employee Voting', href: '/voting', icon: Vote },
     { name: 'Secret Santa', href: '/secret-santa', icon: Gift },
     { name: 'Org Chart', href: '/org-chart', icon: Network },
-    { name: 'Employees', href: '/employees', icon: Users, adminOnly: true },
+    { name: 'Employees', href: '/employees', icon: Users, permission: 'employees' },
     { name: 'My Memos', href: '/memos', icon: Mail },
-    { name: 'Shout Outs', href: '/shoutouts', icon: Heart },
-    { name: 'Schedules', href: '/schedules', icon: Calendar },
-    { name: 'Feedback', href: '/feedback', icon: MessageSquare },
+    { name: 'Shout Outs', href: '/shoutouts', icon: Heart, permission: 'shoutouts' },
+    { name: 'Schedules', href: '/schedules', icon: Calendar, permission: 'schedules' },
+    { name: 'Feedback', href: '/feedback', icon: MessageSquare, permission: 'feedback' },
   ];
 
   const settingsNavigation: NavigationItem[] = [
-    { name: 'Calendar Settings', href: '/calendar/settings', icon: Settings, adminOnly: true },
-    { name: 'Manage Achievements', href: '/achievements', icon: Award, adminOnly: true },
-    { name: 'Memo Analytics', href: '/memo-analytics', icon: BarChart3, adminOnly: true },
+    { name: 'Admin Management', href: '/admin-management', icon: Shield, adminOnly: true },
+    { name: 'Calendar Settings', href: '/calendar/settings', icon: Settings, permission: 'calendar' },
+    { name: 'Manage Achievements', href: '/achievements', icon: Award, permission: 'achievements' },
+    { name: 'Memo Analytics', href: '/memo-analytics', icon: BarChart3, permission: 'memos' },
   ];
 
   const allNavigation = [...mainNavigation, ...settingsNavigation];
@@ -153,8 +157,16 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
       return settingsNavigation.some(item => location.pathname === item.href);
     });
 
-    const filteredMainNav = mainNavigation.filter((item) => !item.adminOnly || isAdmin);
-    const filteredSettingsNav = settingsNavigation.filter((item) => !item.adminOnly || isAdmin);
+    const filteredMainNav = mainNavigation.filter((item) => {
+      if (item.adminOnly) return isAdmin;
+      if (item.permission) return hasPermission(item.permission);
+      return true;
+    });
+    const filteredSettingsNav = settingsNavigation.filter((item) => {
+      if (item.adminOnly) return isAdmin;
+      if (item.permission) return hasPermission(item.permission);
+      return true;
+    });
     const hasSettingsItems = filteredSettingsNav.length > 0;
 
     return (
