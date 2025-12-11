@@ -79,13 +79,14 @@ export function SendShoutoutRequestDialog({
     }
   };
 
-  const sendNotification = async (recipientId: string) => {
+  const sendNotification = async (recipientId: string, targetId?: string) => {
     try {
       const { error } = await supabase.functions.invoke('send-shoutout-notification', {
         body: {
           recipientId,
           adminName,
           message: message || undefined,
+          targetUserId: targetId || undefined,
         },
       });
       
@@ -118,7 +119,7 @@ export function SendShoutoutRequestDialog({
       if (error) throw error;
 
       // Send email notification (non-blocking)
-      sendNotification(selectedEmployee);
+      sendNotification(selectedEmployee, targetEmployee || undefined);
 
       toast({
         title: 'Request sent',

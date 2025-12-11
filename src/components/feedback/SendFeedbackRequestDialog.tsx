@@ -76,6 +76,7 @@ export function SendFeedbackRequestDialog() {
             recipientId: selectedEmployee,
             adminName: adminProfile?.full_name || 'Admin',
             message: message.trim() || null,
+            targetUserId: targetEmployee || null,
           },
         });
       } catch (emailError) {

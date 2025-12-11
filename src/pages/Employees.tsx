@@ -9,10 +9,11 @@ import { AddEmployeeDialog } from '@/components/employees/AddEmployeeDialog';
 import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog';
 import { DeleteEmployeeDialog } from '@/components/employees/DeleteEmployeeDialog';
 import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
+import { AdminPermissionsDialog } from '@/components/employees/AdminPermissionsDialog';
 import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
 import { SendShoutoutRequestDialog } from '@/components/shoutouts/SendShoutoutRequestDialog';
 import { Button } from '@/components/ui/button';
-import { Send, Megaphone } from 'lucide-react';
+import { Send, Megaphone, Shield } from 'lucide-react';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 export default function Employees() {
@@ -22,6 +23,8 @@ export default function Employees() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [memoDialogOpen, setMemoDialogOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; full_name: string } | null>(null);
 
   const fetchEmployees = async () => {
     if (!user) return;
@@ -55,6 +58,11 @@ export default function Employees() {
   useEffect(() => {
     fetchEmployees();
   }, [user, isAdmin]);
+
+  const handleManagePermissions = (employee: { id: string; full_name: string }) => {
+    setSelectedEmployee(employee);
+    setPermissionsDialogOpen(true);
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -159,6 +167,18 @@ export default function Employees() {
                       }
                     />
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleManagePermissions({ id: employee.id, full_name: employee.full_name });
+                    }}
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Admin Permissions
+                  </Button>
                   <DeleteEmployeeDialog
                     employeeId={employee.id}
                     employeeName={employee.full_name}
@@ -175,6 +195,13 @@ export default function Employees() {
         open={memoDialogOpen}
         onOpenChange={setMemoDialogOpen}
         preSelectedEmployeeId={selectedEmployeeId}
+      />
+
+      <AdminPermissionsDialog
+        open={permissionsDialogOpen}
+        onOpenChange={setPermissionsDialogOpen}
+        employee={selectedEmployee}
+        onSuccess={fetchEmployees}
       />
     </div>
   );

@@ -14,6 +14,7 @@ import { FeaturedAnnouncements } from '@/components/dashboard/FeaturedAnnounceme
 import { BirthdayReminders } from '@/components/dashboard/BirthdayReminders';
 import { ShoutoutRequestCard } from '@/components/shoutouts/ShoutoutRequestCard';
 import { FeedbackRequestCard } from '@/components/feedback/FeedbackRequestCard';
+import { PendingRequestsWidget } from '@/components/dashboard/PendingRequestsWidget';
 import { GiveShoutoutDialog } from '@/components/shoutouts/GiveShoutoutDialog';
 import { SecretSantaAssignment } from '@/components/dashboard/SecretSantaAssignment';
 import { format } from 'date-fns';
@@ -242,6 +243,9 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="space-y-4 sm:space-y-6">
+          {/* Pending Requests Widget */}
+          <PendingRequestsWidget />
+
           {/* Shout Out Requests */}
           <ShoutoutRequestCard />
 
