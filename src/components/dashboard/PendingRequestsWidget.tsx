@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Megaphone, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { playRequestNotificationSound } from '@/lib/sounds';
+import { sendBrowserNotification } from '@/hooks/useBrowserNotifications';
 
 export function PendingRequestsWidget() {
   const { user } = useAuth();
@@ -13,6 +15,7 @@ export function PendingRequestsWidget() {
   const [shoutoutCount, setShoutoutCount] = useState(0);
   const [feedbackCount, setFeedbackCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const previousTotalRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -21,6 +24,25 @@ export function PendingRequestsWidget() {
       // Set up real-time subscriptions
       const shoutoutChannel = supabase
         .channel('pending-shoutouts-count')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'shoutout_requests',
+            filter: `recipient_id=eq.${user.id}`,
+          },
+          (payload) => {
+            fetchCounts();
+            // Play sound and show notification for new shoutout request
+            playRequestNotificationSound();
+            sendBrowserNotification(
+              'New Shout Out Request',
+              'You have a new shout out request to complete!',
+              'shoutout-request'
+            );
+          }
+        )
         .on(
           'postgres_changes',
           {
@@ -35,6 +57,25 @@ export function PendingRequestsWidget() {
 
       const feedbackChannel = supabase
         .channel('pending-feedback-count')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'feedback_requests',
+            filter: `recipient_id=eq.${user.id}`,
+          },
+          (payload) => {
+            fetchCounts();
+            // Play sound and show notification for new feedback request
+            playRequestNotificationSound();
+            sendBrowserNotification(
+              'New Feedback Request',
+              'You have a new feedback request to complete!',
+              'feedback-request'
+            );
+          }
+        )
         .on(
           'postgres_changes',
           {
