@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Award, Cake } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { triggerBirthdayConfetti } from '@/lib/confetti';
+import { isPast } from 'date-fns';
 
 interface ProfileAvatarWithBadgesProps {
   userId: string;
@@ -73,23 +74,28 @@ export const ProfileAvatarWithBadges = ({
 
   const checkUserStatus = async () => {
     try {
-      // Check for most recent achievement
+      // Check for most recent active achievement (visible and not expired)
       const { data: achievements } = await supabase
         .from('employee_achievements')
-        .select('id, achievement_type_id, awarded_date')
+        .select('id, achievement_type_id, awarded_date, expires_at')
         .eq('user_id', userId)
         .eq('is_visible', true)
-        .order('awarded_date', { ascending: false })
-        .limit(1);
+        .order('awarded_date', { ascending: false });
 
       let latestAchievementColor: string | undefined;
 
-      if (achievements && achievements.length > 0) {
+      // Filter out expired achievements
+      const activeAchievements = (achievements || []).filter((a: any) => {
+        if (!a.expires_at) return true;
+        return !isPast(new Date(a.expires_at));
+      });
+
+      if (activeAchievements.length > 0) {
         // Fetch the achievement type to get the color
         const { data: achievementType } = await supabase
           .from('achievement_types')
           .select('color')
-          .eq('id', achievements[0].achievement_type_id)
+          .eq('id', activeAchievements[0].achievement_type_id)
           .single();
 
         latestAchievementColor = achievementType?.color;
@@ -107,7 +113,7 @@ export const ProfileAvatarWithBadges = ({
         : false;
 
       setStatus({
-        hasAchievements: (achievements?.length || 0) > 0,
+        hasAchievements: activeAchievements.length > 0,
         isBirthday,
         latestAchievementColor,
       });

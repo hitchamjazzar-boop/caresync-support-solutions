@@ -398,6 +398,7 @@ export type Database = {
           awarded_by: string
           awarded_date: string
           created_at: string
+          expires_at: string | null
           id: string
           is_visible: boolean
           notes: string | null
@@ -410,6 +411,7 @@ export type Database = {
           awarded_by: string
           awarded_date?: string
           created_at?: string
+          expires_at?: string | null
           id?: string
           is_visible?: boolean
           notes?: string | null
@@ -422,6 +424,7 @@ export type Database = {
           awarded_by?: string
           awarded_date?: string
           created_at?: string
+          expires_at?: string | null
           id?: string
           is_visible?: boolean
           notes?: string | null

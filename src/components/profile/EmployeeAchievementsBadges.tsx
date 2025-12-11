@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Award, Calendar, Share2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isPast } from 'date-fns';
 import { toast } from 'sonner';
 import { ShareAchievementDialog } from '@/components/achievements/ShareAchievementDialog';
 
@@ -43,7 +43,7 @@ export const EmployeeAchievementsBadges = ({ userId }: EmployeeAchievementsBadge
     try {
       const { data, error } = await supabase
         .from('employee_achievements')
-        .select('id, reason, awarded_date, achievement_type_id')
+        .select('id, reason, awarded_date, achievement_type_id, expires_at')
         .eq('user_id', userId)
         .eq('is_visible', true)
         .order('awarded_date', { ascending: false });
@@ -55,8 +55,19 @@ export const EmployeeAchievementsBadges = ({ userId }: EmployeeAchievementsBadge
         return;
       }
 
+      // Filter out expired achievements
+      const activeData = (data as any[]).filter((item) => {
+        if (!item.expires_at) return true;
+        return !isPast(new Date(item.expires_at));
+      });
+
+      if (activeData.length === 0) {
+        setAchievements([]);
+        return;
+      }
+
       const achievementTypeIds = Array.from(
-        new Set(data.map((item: any) => item.achievement_type_id))
+        new Set(activeData.map((item: any) => item.achievement_type_id))
       );
 
       const { data: types, error: typesError } = await supabase
@@ -68,7 +79,7 @@ export const EmployeeAchievementsBadges = ({ userId }: EmployeeAchievementsBadge
 
       const typesMap = new Map((types || []).map((t: any) => [t.id, t]));
 
-      const mapped: Achievement[] = (data as any[]).map((row) => ({
+      const mapped: Achievement[] = activeData.map((row) => ({
         id: row.id,
         reason: row.reason || '',
         awarded_date: row.awarded_date,

@@ -64,6 +64,7 @@ export const AwardAchievementDialog = ({
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [reason, setReason] = useState('');
   const [awardedDate, setAwardedDate] = useState<Date>(new Date());
+  const [expiresAt, setExpiresAt] = useState<Date | undefined>(undefined);
 
   useEffect(() => {
     if (open) {
@@ -104,6 +105,7 @@ export const AwardAchievementDialog = ({
           reason: reason.trim(),
           awarded_date: format(awardedDate, 'yyyy-MM-dd'),
           is_visible: true,
+          expires_at: expiresAt ? expiresAt.toISOString() : null,
         });
 
       if (error) throw error;
@@ -112,6 +114,7 @@ export const AwardAchievementDialog = ({
       setSelectedEmployee('');
       setReason('');
       setAwardedDate(new Date());
+      setExpiresAt(undefined);
       onSuccess();
     } catch (error: any) {
       console.error('Error awarding achievement:', error);
@@ -212,6 +215,45 @@ export const AwardAchievementDialog = ({
                 />
               </PopoverContent>
             </Popover>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="expires-at">Expiration Date (Optional)</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    'w-full justify-start text-left font-normal',
+                    !expiresAt && 'text-muted-foreground'
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {expiresAt ? format(expiresAt, 'PPP') : <span>No expiration</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={expiresAt}
+                  onSelect={setExpiresAt}
+                  disabled={(date) => date < new Date()}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {expiresAt && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setExpiresAt(undefined)}
+                className="text-xs"
+              >
+                Clear expiration
+              </Button>
+            )}
           </div>
 
           <div className="space-y-2">

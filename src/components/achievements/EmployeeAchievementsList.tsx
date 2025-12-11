@@ -14,16 +14,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Award, Calendar, User, Trash2 } from 'lucide-react';
-import { format } from 'date-fns';
+import { Award, Calendar, User, Trash2, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { format, isPast } from 'date-fns';
 import { useAdmin } from '@/hooks/useAdmin';
+import { cn } from '@/lib/utils';
 
 interface EmployeeAchievement {
   id: string;
   reason: string;
   awarded_date: string;
   created_at: string;
+  is_visible: boolean;
+  expires_at: string | null;
   achievement_types: {
     name: string;
     description: string;
@@ -40,12 +50,15 @@ interface EmployeeAchievement {
   };
 }
 
+type FilterType = 'all' | 'active' | 'inactive';
+
 export const EmployeeAchievementsList = () => {
   const { isAdmin } = useAdmin();
   const [achievements, setAchievements] = useState<EmployeeAchievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [achievementToDelete, setAchievementToDelete] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterType>('all');
 
   useEffect(() => {
     fetchAchievements();
@@ -55,7 +68,7 @@ export const EmployeeAchievementsList = () => {
     try {
       const { data, error } = await supabase
         .from('employee_achievements')
-        .select('id, reason, awarded_date, created_at, achievement_type_id, user_id, awarded_by')
+        .select('id, reason, awarded_date, created_at, achievement_type_id, user_id, awarded_by, is_visible, expires_at')
         .order('awarded_date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -110,6 +123,8 @@ export const EmployeeAchievementsList = () => {
         reason: row.reason || '',
         awarded_date: row.awarded_date,
         created_at: row.created_at,
+        is_visible: row.is_visible,
+        expires_at: row.expires_at,
         achievement_types: typesMap.get(row.achievement_type_id) || {
           name: 'Unknown achievement',
           description: '',
@@ -162,6 +177,35 @@ export const EmployeeAchievementsList = () => {
     }
   };
 
+  const toggleVisibility = async (achievementId: string, currentVisibility: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('employee_achievements')
+        .update({ is_visible: !currentVisibility })
+        .eq('id', achievementId);
+
+      if (error) throw error;
+
+      toast.success(currentVisibility ? 'Badge deactivated' : 'Badge activated');
+      fetchAchievements();
+    } catch (error: any) {
+      console.error('Error updating achievement:', error);
+      toast.error('Failed to update achievement');
+    }
+  };
+
+  const isAchievementActive = (achievement: EmployeeAchievement): boolean => {
+    if (!achievement.is_visible) return false;
+    if (achievement.expires_at && isPast(new Date(achievement.expires_at))) return false;
+    return true;
+  };
+
+  const filteredAchievements = achievements.filter((achievement) => {
+    if (filter === 'all') return true;
+    const isActive = isAchievementActive(achievement);
+    return filter === 'active' ? isActive : !isActive;
+  });
+
   if (loading) {
     return <div className="text-center py-8">Loading achievements...</div>;
   }
@@ -176,76 +220,128 @@ export const EmployeeAchievementsList = () => {
 
   return (
     <>
-      <div className="space-y-3">
-        {achievements.map((achievement) => (
-          <Card key={achievement.id} className="p-4">
-            <div className="flex items-start gap-4">
-            <div
-              className="p-3 rounded-lg shrink-0"
-              style={{ backgroundColor: `${achievement.achievement_types.color}20` }}
-            >
-              <Award
-                className="h-6 w-6"
-                style={{ color: achievement.achievement_types.color }}
-              />
-            </div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredAchievements.length} of {achievements.length} achievements
+        </div>
+        <Select value={filter} onValueChange={(value: FilterType) => setFilter(value)}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Filter" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="active">Active Only</SelectItem>
+            <SelectItem value="inactive">Inactive Only</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">
-                    {achievement.achievement_types.name}
-                  </h3>
-                  <div className="flex items-center gap-4 mt-2">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={achievement.profiles.photo_url || ''} />
-                        <AvatarFallback>
-                          {achievement.profiles.full_name[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <div className="font-medium text-sm">
-                          {achievement.profiles.full_name}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {achievement.profiles.position}
+      <div className="space-y-3">
+        {filteredAchievements.map((achievement) => {
+          const isActive = isAchievementActive(achievement);
+          const isExpired = achievement.expires_at && isPast(new Date(achievement.expires_at));
+
+          return (
+            <Card
+              key={achievement.id}
+              className={cn('p-4', !isActive && 'opacity-60 bg-muted/50')}
+            >
+              <div className="flex items-start gap-4">
+                <div
+                  className={cn('p-3 rounded-lg shrink-0', !isActive && 'grayscale')}
+                  style={{ backgroundColor: `${achievement.achievement_types.color}20` }}
+                >
+                  <Award
+                    className="h-6 w-6"
+                    style={{ color: achievement.achievement_types.color }}
+                  />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-lg">
+                          {achievement.achievement_types.name}
+                        </h3>
+                        {isActive ? (
+                          <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-500/20">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-muted text-muted-foreground">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            {isExpired ? 'Expired' : 'Inactive'}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-4 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={achievement.profiles.photo_url || ''} />
+                            <AvatarFallback>
+                              {achievement.profiles.full_name[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-sm">
+                              {achievement.profiles.full_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {achievement.profiles.position}
+                            </div>
+                          </div>
                         </div>
                       </div>
+                      <p className="text-sm text-muted-foreground mt-3">
+                        {achievement.reason}
+                      </p>
+                      <div className="flex items-center flex-wrap gap-4 mt-3 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(achievement.awarded_date), 'MMM d, yyyy')}
+                        </div>
+                        {achievement.expires_at && (
+                          <div className={cn('flex items-center gap-1', isExpired && 'text-destructive')}>
+                            <Clock className="h-3 w-3" />
+                            {isExpired ? 'Expired' : 'Expires'}: {format(new Date(achievement.expires_at), 'MMM d, yyyy')}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          Awarded by {achievement.awarded_by_profile.full_name}
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {achievement.achievement_types.category}
+                        </Badge>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-3">
-                    {achievement.reason}
-                  </p>
-                  <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {format(new Date(achievement.awarded_date), 'MMM d, yyyy')}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <User className="h-3 w-3" />
-                      Awarded by {achievement.awarded_by_profile.full_name}
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {achievement.achievement_types.category}
-                    </Badge>
+                    {isAdmin && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant={isActive ? 'outline' : 'default'}
+                          size="sm"
+                          onClick={() => toggleVisibility(achievement.id, achievement.is_visible)}
+                        >
+                          {achievement.is_visible ? 'Deactivate' : 'Activate'}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(achievement.id)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
-                {isAdmin && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteClick(achievement.id)}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
               </div>
-            </div>
-          </div>
-        </Card>
-      ))}
+            </Card>
+          );
+        })}
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
