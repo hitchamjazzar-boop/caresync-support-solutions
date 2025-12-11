@@ -40,12 +40,14 @@ export function SendShoutoutRequestDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Profile[]>([]);
+  const [adminName, setAdminName] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState(preselectedEmployeeId || '');
   const [message, setMessage] = useState('');
 
   useEffect(() => {
     if (open) {
       fetchEmployees();
+      fetchAdminName();
       if (preselectedEmployeeId) {
         setSelectedEmployee(preselectedEmployeeId);
       }
@@ -60,6 +62,39 @@ export function SendShoutoutRequestDialog({
     
     if (data) {
       setEmployees(data);
+    }
+  };
+
+  const fetchAdminName = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+    
+    if (data) {
+      setAdminName(data.full_name);
+    }
+  };
+
+  const sendNotification = async (recipientId: string) => {
+    try {
+      const { error } = await supabase.functions.invoke('send-shoutout-notification', {
+        body: {
+          recipientId,
+          adminName,
+          message: message || undefined,
+        },
+      });
+      
+      if (error) {
+        console.error('Error sending notification:', error);
+      } else {
+        console.log('Notification sent successfully');
+      }
+    } catch (err) {
+      console.error('Failed to send notification:', err);
     }
   };
 
@@ -79,6 +114,9 @@ export function SendShoutoutRequestDialog({
         });
 
       if (error) throw error;
+
+      // Send email notification (non-blocking)
+      sendNotification(selectedEmployee);
 
       toast({
         title: 'Request sent',
