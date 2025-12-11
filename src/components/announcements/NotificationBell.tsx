@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Bell } from 'lucide-react';
+import { Bell, Megaphone, MessageSquare } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,17 +14,14 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 
-interface Announcement {
+interface NotificationItem {
   id: string;
+  type: 'announcement' | 'shoutout_request' | 'feedback_request';
   title: string;
   content: string;
   created_at: string;
-  is_pinned: boolean;
-  target_type: string;
-  target_users: string[] | null;
-  target_roles: string[] | null;
-  target_departments: string[] | null;
-  expires_at?: string | null;
+  is_pinned?: boolean;
+  is_read: boolean;
 }
 
 export function NotificationBell() {
@@ -32,19 +29,18 @@ export function NotificationBell() {
   const { canSeeAnnouncement } = useAnnouncementVisibility();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [recentAnnouncements, setRecentAnnouncements] = useState<Announcement[]>([]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [readAnnouncementIds, setReadAnnouncementIds] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
-    fetchUnreadCount();
-    fetchRecentAnnouncements();
+    fetchNotifications();
 
-    // Set up realtime subscriptions for both announcements and reads
+    // Set up realtime subscriptions
     const channel = supabase
-      .channel('announcements-bell')
+      .channel('notifications-bell')
       .on(
         'postgres_changes',
         {
@@ -52,10 +48,7 @@ export function NotificationBell() {
           schema: 'public',
           table: 'announcements'
         },
-        () => {
-          fetchUnreadCount();
-          fetchRecentAnnouncements();
-        }
+        () => fetchNotifications()
       )
       .on(
         'postgres_changes',
@@ -65,10 +58,27 @@ export function NotificationBell() {
           table: 'announcement_reads',
           filter: `user_id=eq.${user.id}`
         },
-        () => {
-          fetchUnreadCount();
-          fetchRecentAnnouncements();
-        }
+        () => fetchNotifications()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shoutout_requests',
+          filter: `recipient_id=eq.${user.id}`
+        },
+        () => fetchNotifications()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'feedback_requests',
+          filter: `recipient_id=eq.${user.id}`
+        },
+        () => fetchNotifications()
       )
       .subscribe();
 
@@ -80,12 +90,11 @@ export function NotificationBell() {
   // Refetch when popover opens
   useEffect(() => {
     if (open && user) {
-      fetchUnreadCount();
-      fetchRecentAnnouncements();
+      fetchNotifications();
     }
   }, [open, user]);
 
-  const fetchUnreadCount = async () => {
+  const fetchNotifications = async () => {
     if (!user) return;
 
     try {
@@ -110,47 +119,17 @@ export function NotificationBell() {
       const readIds = readAnnouncements?.map(a => a.announcement_id) || [];
       setReadAnnouncementIds(readIds);
 
-      // Get active announcements
-      const { data: announcements, error } = await supabase
-        .from('announcements')
-        .select('id, expires_at, target_type, target_users, target_roles, target_departments')
-        .eq('is_active', true);
-
-      if (error) throw error;
-
-      // Filter announcements: not expired, not dismissed, not acknowledged, not read, and user can see
-      const now = new Date();
-      const unreadAnnouncements = (announcements || []).filter(
-        (announcement) => {
-          const isNotExpired = !announcement.expires_at || new Date(announcement.expires_at) > now;
-          const isNotDismissed = !dismissedIds.includes(announcement.id);
-          const isNotAcknowledged = !acknowledgedIds.includes(announcement.id);
-          const isNotRead = !readIds.includes(announcement.id);
-          const canSee = canSeeAnnouncement(announcement);
-          return isNotExpired && isNotDismissed && isNotAcknowledged && isNotRead && canSee;
-        }
-      );
-
-      setUnreadCount(unreadAnnouncements.length);
-    } catch (error) {
-      console.error('Error fetching unread count:', error);
-    }
-  };
-
-  const fetchRecentAnnouncements = async () => {
-    try {
-      const { data, error } = await supabase
+      // Fetch announcements
+      const { data: announcementData } = await supabase
         .from('announcements')
         .select('id, title, content, created_at, is_pinned, target_type, target_users, target_roles, target_departments, expires_at')
         .eq('is_active', true)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-
       // Filter announcements: not expired and user can see
       const now = new Date();
-      const activeAnnouncements = (data || []).filter(
+      const activeAnnouncements = (announcementData || []).filter(
         (announcement: any) => {
           const isNotExpired = !announcement.expires_at || new Date(announcement.expires_at) > now;
           const canSee = canSeeAnnouncement(announcement);
@@ -158,9 +137,64 @@ export function NotificationBell() {
         }
       );
 
-      setRecentAnnouncements(activeAnnouncements);
+      const announcementNotifications: NotificationItem[] = activeAnnouncements.map((a: any) => ({
+        id: a.id,
+        type: 'announcement' as const,
+        title: a.title,
+        content: a.content,
+        created_at: a.created_at,
+        is_pinned: a.is_pinned,
+        is_read: readIds.includes(a.id) || dismissedIds.includes(a.id) || acknowledgedIds.includes(a.id),
+      }));
+
+      // Fetch pending shoutout requests
+      const { data: shoutoutData } = await supabase
+        .from('shoutout_requests')
+        .select('id, message, created_at')
+        .eq('recipient_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      const shoutoutNotifications: NotificationItem[] = (shoutoutData || []).map((s: any) => ({
+        id: s.id,
+        type: 'shoutout_request' as const,
+        title: 'Shout Out Request',
+        content: s.message || 'You have been asked to give a shout out to a colleague.',
+        created_at: s.created_at,
+        is_read: false,
+      }));
+
+      // Fetch pending feedback requests
+      const { data: feedbackData } = await supabase
+        .from('feedback_requests')
+        .select('id, message, created_at')
+        .eq('recipient_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      const feedbackNotifications: NotificationItem[] = (feedbackData || []).map((f: any) => ({
+        id: f.id,
+        type: 'feedback_request' as const,
+        title: 'Feedback Request',
+        content: f.message || 'You have been asked to provide feedback.',
+        created_at: f.created_at,
+        is_read: false,
+      }));
+
+      // Combine and sort all notifications
+      const allNotifications = [
+        ...shoutoutNotifications,
+        ...feedbackNotifications,
+        ...announcementNotifications,
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setNotifications(allNotifications);
+
+      // Calculate unread count
+      const unread = allNotifications.filter(n => !n.is_read).length;
+      setUnreadCount(unread);
     } catch (error) {
-      console.error('Error fetching recent announcements:', error);
+      console.error('Error fetching notifications:', error);
     }
   };
 
@@ -169,11 +203,10 @@ export function NotificationBell() {
     navigate('/notifications');
   };
 
-  const markAsRead = async (announcementId: string) => {
+  const markAnnouncementAsRead = async (announcementId: string) => {
     if (!user) return;
 
     try {
-      // Insert read status
       const { error } = await supabase
         .from('announcement_reads')
         .insert({
@@ -182,28 +215,53 @@ export function NotificationBell() {
           read_at: new Date().toISOString(),
         });
 
-      if (error) {
+      if (error && !error.message.includes('duplicate')) {
         console.error('Error marking announcement as read:', error);
         return;
       }
 
-      // Optimistically update local state
       setReadAnnouncementIds((prev) =>
         prev.includes(announcementId) ? prev : [...prev, announcementId]
       );
       
-      // Refresh counts after marking as read
-      await fetchUnreadCount();
-      await fetchRecentAnnouncements();
+      await fetchNotifications();
     } catch (error) {
       console.error('Error marking as read:', error);
     }
   };
 
-  const handleAnnouncementClick = async (announcementId: string) => {
-    await markAsRead(announcementId);
+  const handleNotificationClick = async (notification: NotificationItem) => {
     setOpen(false);
-    navigate(`/announcement-gallery?highlight=${announcementId}`);
+    
+    if (notification.type === 'announcement') {
+      await markAnnouncementAsRead(notification.id);
+      navigate(`/announcement-gallery?highlight=${notification.id}`);
+    } else if (notification.type === 'shoutout_request') {
+      navigate('/shoutouts');
+    } else if (notification.type === 'feedback_request') {
+      navigate('/feedback');
+    }
+  };
+
+  const getNotificationIcon = (notification: NotificationItem) => {
+    if (notification.type === 'shoutout_request') {
+      return (
+        <div className="p-1.5 rounded-full bg-amber-500/20 shrink-0">
+          <Megaphone className="h-4 w-4 text-amber-500" />
+        </div>
+      );
+    }
+    if (notification.type === 'feedback_request') {
+      return (
+        <div className="p-1.5 rounded-full bg-blue-500/20 shrink-0">
+          <MessageSquare className="h-4 w-4 text-blue-500" />
+        </div>
+      );
+    }
+    if (notification.is_pinned) {
+      return <span className="text-lg" title="Pinned">📌</span>;
+    }
+    return null;
   };
 
   return (
@@ -231,58 +289,50 @@ export function NotificationBell() {
           )}
         </div>
         <ScrollArea className="h-[300px] sm:h-[500px] max-h-[60vh]">
-          {recentAnnouncements.length === 0 ? (
+          {notifications.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              No announcements
+              No notifications
             </div>
           ) : (
             <div className="divide-y">
-              {recentAnnouncements.map((announcement) => {
-                const isUnread = !readAnnouncementIds.includes(announcement.id);
-
-                return (
-                  <div
-                    key={announcement.id}
-                    className={`p-4 cursor-pointer transition-colors ${
-                      isUnread ? 'bg-accent/40 hover:bg-accent' : 'hover:bg-accent'
-                    }`}
-                    onClick={() => handleAnnouncementClick(announcement.id)}
-                  >
-                    <div className="flex items-start gap-2">
-                      {announcement.is_pinned && (
-                        <span className="text-lg" title="Pinned">
-                          📌
-                        </span>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4
-                            className={`text-sm truncate ${
-                              isUnread ? 'font-semibold' : 'font-medium text-muted-foreground'
-                            }`}
+              {notifications.map((notification) => (
+                <div
+                  key={`${notification.type}-${notification.id}`}
+                  className={`p-4 cursor-pointer transition-colors ${
+                    !notification.is_read ? 'bg-accent/40 hover:bg-accent' : 'hover:bg-accent'
+                  }`}
+                  onClick={() => handleNotificationClick(notification)}
+                >
+                  <div className="flex items-start gap-2">
+                    {getNotificationIcon(notification)}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4
+                          className={`text-sm truncate ${
+                            !notification.is_read ? 'font-semibold' : 'font-medium text-muted-foreground'
+                          }`}
+                        >
+                          {notification.title}
+                        </h4>
+                        {!notification.is_read && (
+                          <Badge
+                            variant="default"
+                            className="text-[10px] px-1.5 py-0 h-5 leading-none"
                           >
-                            {announcement.title}
-                          </h4>
-                          {isUnread && (
-                            <Badge
-                              variant="default"
-                              className="text-[10px] px-1.5 py-0 h-5 leading-none"
-                            >
-                              New
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                          {announcement.content}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {formatDistanceToNow(new Date(announcement.created_at), { addSuffix: true })}
-                        </p>
+                            New
+                          </Badge>
+                        )}
                       </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                        {notification.content}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                      </p>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </ScrollArea>
