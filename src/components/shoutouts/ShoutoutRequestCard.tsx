@@ -28,6 +28,27 @@ export function ShoutoutRequestCard() {
   useEffect(() => {
     if (user) {
       fetchRequests();
+
+      // Set up real-time subscription for new requests
+      const channel = supabase
+        .channel('shoutout-requests-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'shoutout_requests',
+            filter: `recipient_id=eq.${user.id}`,
+          },
+          () => {
+            fetchRequests();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [user]);
 

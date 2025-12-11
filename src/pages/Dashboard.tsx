@@ -13,6 +13,7 @@ import { MemoAlert } from '@/components/memos/MemoAlert';
 import { FeaturedAnnouncements } from '@/components/dashboard/FeaturedAnnouncements';
 import { BirthdayReminders } from '@/components/dashboard/BirthdayReminders';
 import { ShoutoutRequestCard } from '@/components/shoutouts/ShoutoutRequestCard';
+import { FeedbackRequestCard } from '@/components/feedback/FeedbackRequestCard';
 import { GiveShoutoutDialog } from '@/components/shoutouts/GiveShoutoutDialog';
 import { SecretSantaAssignment } from '@/components/dashboard/SecretSantaAssignment';
 import { format } from 'date-fns';
@@ -243,6 +244,9 @@ export default function Dashboard() {
         <div className="space-y-4 sm:space-y-6">
           {/* Shout Out Requests */}
           <ShoutoutRequestCard />
+
+          {/* Feedback Requests */}
+          <FeedbackRequestCard />
 
           {/* Secret Santa Assignment */}
           <SecretSantaAssignment />
