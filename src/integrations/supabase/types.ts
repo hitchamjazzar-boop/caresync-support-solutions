@@ -1253,6 +1253,74 @@ export type Database = {
           },
         ]
       }
+      shoutout_requests: {
+        Row: {
+          admin_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          message: string | null
+          recipient_id: string
+          status: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          recipient_id: string
+          status?: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          recipient_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      shoutouts: {
+        Row: {
+          created_at: string
+          from_user_id: string
+          id: string
+          is_published: boolean
+          message: string
+          request_id: string | null
+          to_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_user_id: string
+          id?: string
+          is_published?: boolean
+          message: string
+          request_id?: string | null
+          to_user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          is_published?: boolean
+          message?: string
+          request_id?: string | null
+          to_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shoutouts_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "shoutout_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timesheet_submissions: {
         Row: {
           admin_notes: string | null

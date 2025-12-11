@@ -10,8 +10,9 @@ import { EditEmployeeDialog } from '@/components/employees/EditEmployeeDialog';
 import { DeleteEmployeeDialog } from '@/components/employees/DeleteEmployeeDialog';
 import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
 import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
+import { SendShoutoutRequestDialog } from '@/components/shoutouts/SendShoutoutRequestDialog';
 import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
+import { Send, Megaphone } from 'lucide-react';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 export default function Employees() {
@@ -129,19 +130,35 @@ export default function Employees() {
                       size="sm"
                     />
                   </div>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="w-full"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedEmployeeId(employee.id);
-                      setMemoDialogOpen(true);
-                    }}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Send Memo
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="w-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedEmployeeId(employee.id);
+                        setMemoDialogOpen(true);
+                      }}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Memo
+                    </Button>
+                    <SendShoutoutRequestDialog
+                      preselectedEmployeeId={employee.id}
+                      trigger={
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Megaphone className="h-4 w-4 mr-2" />
+                          Shout Out
+                        </Button>
+                      }
+                    />
+                  </div>
                   <DeleteEmployeeDialog
                     employeeId={employee.id}
                     employeeName={employee.full_name}

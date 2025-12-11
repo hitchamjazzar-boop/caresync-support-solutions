@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, Receipt, type LucideIcon } from 'lucide-react';
+import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, Receipt, Heart, type LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -107,6 +107,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Org Chart', href: '/org-chart', icon: Network },
     { name: 'Employees', href: '/employees', icon: Users, adminOnly: true },
     { name: 'My Memos', href: '/memos', icon: Mail },
+    { name: 'Shout Outs', href: '/shoutouts', icon: Heart, adminOnly: true },
     { name: 'Schedules', href: '/schedules', icon: Calendar },
     { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   ];

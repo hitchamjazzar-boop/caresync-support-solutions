@@ -1,0 +1,124 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Megaphone, Loader2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { SubmitShoutoutDialog } from './SubmitShoutoutDialog';
+
+interface ShoutoutRequest {
+  id: string;
+  admin_id: string;
+  message: string | null;
+  status: string;
+  created_at: string;
+  admin_profile?: {
+    full_name: string;
+  };
+}
+
+export function ShoutoutRequestCard() {
+  const { user } = useAuth();
+  const [requests, setRequests] = useState<ShoutoutRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchRequests();
+    }
+  }, [user]);
+
+  const fetchRequests = async () => {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('shoutout_requests')
+      .select('*')
+      .eq('recipient_id', user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching requests:', error);
+    } else {
+      // Fetch admin profiles separately
+      const adminIds = [...new Set(data?.map(r => r.admin_id) || [])];
+      if (adminIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', adminIds);
+
+        const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+        const enrichedData = data?.map(r => ({
+          ...r,
+          admin_profile: profileMap.get(r.admin_id),
+        })) || [];
+        setRequests(enrichedData);
+      } else {
+        setRequests(data || []);
+      }
+    }
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-6">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (requests.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Megaphone className="h-5 w-5 text-primary" />
+            Shout Out Requests
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {requests.map((request) => (
+            <div
+              key={request.id}
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-background rounded-lg border"
+            >
+              <div className="space-y-1">
+                <p className="text-sm font-medium">
+                  {request.admin_profile?.full_name || 'Admin'} asked you to give a shout out
+                </p>
+                {request.message && (
+                  <p className="text-sm text-muted-foreground">{request.message}</p>
+                )}
+                <Badge variant="secondary" className="text-xs">
+                  {format(new Date(request.created_at), 'MMM dd, yyyy')}
+                </Badge>
+              </div>
+              <Button size="sm" onClick={() => setSelectedRequest(request.id)}>
+                Give Shout Out
+              </Button>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <SubmitShoutoutDialog
+        open={!!selectedRequest}
+        onOpenChange={(open) => !open && setSelectedRequest(null)}
+        requestId={selectedRequest || ''}
+        onSuccess={fetchRequests}
+      />
+    </>
+  );
+}
