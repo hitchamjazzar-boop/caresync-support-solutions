@@ -11,9 +11,10 @@ import { Loader2 } from 'lucide-react';
 interface FeedbackDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
+export function FeedbackDialog({ open, onOpenChange, onSuccess }: FeedbackDialogProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [subject, setSubject] = useState('');
@@ -64,6 +65,7 @@ export function FeedbackDialog({ open, onOpenChange }: FeedbackDialogProps) {
       onOpenChange(false);
       setSubject('');
       setMessage('');
+      onSuccess?.();
     } catch (error: any) {
       toast({
         title: 'Error',

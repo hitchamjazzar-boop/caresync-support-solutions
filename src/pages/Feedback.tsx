@@ -304,6 +304,7 @@ export default function Feedback() {
       <FeedbackDialog
         open={feedbackDialogOpen}
         onOpenChange={setFeedbackDialogOpen}
+        onSuccess={fetchFeedback}
       />
     </div>
   );
