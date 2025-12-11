@@ -107,7 +107,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Org Chart', href: '/org-chart', icon: Network },
     { name: 'Employees', href: '/employees', icon: Users, adminOnly: true },
     { name: 'My Memos', href: '/memos', icon: Mail },
-    { name: 'Shout Outs', href: '/shoutouts', icon: Heart, adminOnly: true },
+    { name: 'Shout Outs', href: '/shoutouts', icon: Heart },
     { name: 'Schedules', href: '/schedules', icon: Calendar },
     { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   ];
