@@ -25,6 +25,7 @@ import WeeklySummary from "./pages/WeeklySummary";
 import Profile from "./pages/Profile";
 import Feedback from "./pages/Feedback";
 import EmployeeVoting from "./pages/EmployeeVoting";
+import VotingHistory from "./pages/VotingHistory";
 import Achievements from "./pages/Achievements";
 import SecretSanta from "./pages/SecretSanta";
 import Calendar from "./pages/Calendar";
@@ -220,6 +221,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <EmployeeVoting />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/voting/history"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <VotingHistory />
                   </Layout>
                 </ProtectedRoute>
               }

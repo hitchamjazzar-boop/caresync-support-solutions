@@ -4,8 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { Vote, Trophy, Users, Settings, Award } from 'lucide-react';
+import { Vote, Trophy, Users, Settings, Award, History } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { NominationForm } from '@/components/voting/NominationForm';
 import { VotingForm } from '@/components/voting/VotingForm';
 import { VotingResults } from '@/components/voting/VotingResults';
@@ -33,6 +35,7 @@ interface AwardCategory {
 }
 
 const EmployeeVoting = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const [currentPeriod, setCurrentPeriod] = useState<VotingPeriod | null>(null);
@@ -126,6 +129,10 @@ const EmployeeVoting = () => {
             Nominate and vote for outstanding colleagues
           </p>
         </div>
+        <Button variant="outline" onClick={() => navigate('/voting/history')}>
+          <History className="h-4 w-4 mr-2" />
+          View History
+        </Button>
       </div>
 
       {/* Admin Controls */}
