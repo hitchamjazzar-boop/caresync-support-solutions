@@ -65,6 +65,16 @@ export function NotificationBell() {
         {
           event: '*',
           schema: 'public',
+          table: 'notification_acknowledgments',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => fetchNotifications()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: 'shoutout_requests',
           filter: `recipient_id=eq.${user.id}`
         },
@@ -119,6 +129,23 @@ export function NotificationBell() {
       const readIds = readAnnouncements?.map(a => a.announcement_id) || [];
       setReadAnnouncementIds(readIds);
 
+      // Get acknowledged notifications (for shoutout/feedback requests)
+      const { data: acknowledgedNotifications } = await supabase
+        .from('notification_acknowledgments')
+        .select('notification_id, notification_type')
+        .eq('user_id', user.id);
+
+      const acknowledgedShoutoutIds = new Set(
+        (acknowledgedNotifications || [])
+          .filter(n => n.notification_type === 'shoutout_request')
+          .map(n => n.notification_id)
+      );
+      const acknowledgedFeedbackIds = new Set(
+        (acknowledgedNotifications || [])
+          .filter(n => n.notification_type === 'feedback_request')
+          .map(n => n.notification_id)
+      );
+
       // Fetch announcements
       const { data: announcementData } = await supabase
         .from('announcements')
@@ -161,7 +188,7 @@ export function NotificationBell() {
         title: 'Shout Out Request',
         content: s.message || 'You have been asked to give a shout out to a colleague.',
         created_at: s.created_at,
-        is_read: false,
+        is_read: acknowledgedShoutoutIds.has(s.id),
       }));
 
       // Fetch pending feedback requests
@@ -178,7 +205,7 @@ export function NotificationBell() {
         title: 'Feedback Request',
         content: f.message || 'You have been asked to provide feedback.',
         created_at: f.created_at,
-        is_read: false,
+        is_read: acknowledgedFeedbackIds.has(f.id),
       }));
 
       // Combine and sort all notifications
@@ -230,6 +257,30 @@ export function NotificationBell() {
     }
   };
 
+  const markNotificationAsRead = async (notificationId: string, notificationType: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('notification_acknowledgments')
+        .insert({
+          user_id: user.id,
+          notification_id: notificationId,
+          notification_type: notificationType,
+          acknowledged_at: new Date().toISOString(),
+        });
+
+      if (error && !error.message.includes('duplicate')) {
+        console.error('Error marking notification as read:', error);
+        return;
+      }
+      
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
   const handleNotificationClick = async (notification: NotificationItem) => {
     setOpen(false);
     
@@ -237,8 +288,10 @@ export function NotificationBell() {
       await markAnnouncementAsRead(notification.id);
       navigate(`/announcement-gallery?highlight=${notification.id}`);
     } else if (notification.type === 'shoutout_request') {
+      await markNotificationAsRead(notification.id, 'shoutout_request');
       navigate('/shoutouts');
     } else if (notification.type === 'feedback_request') {
+      await markNotificationAsRead(notification.id, 'feedback_request');
       navigate('/feedback');
     }
   };
