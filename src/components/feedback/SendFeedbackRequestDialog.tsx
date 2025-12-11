@@ -20,6 +20,7 @@ export function SendFeedbackRequestDialog() {
   const [open, setOpen] = useState(false);
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [targetEmployee, setTargetEmployee] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -62,6 +63,7 @@ export function SendFeedbackRequestDialog() {
         .insert({
           admin_id: user?.id,
           recipient_id: selectedEmployee,
+          target_user_id: targetEmployee || null,
           message: message.trim() || null,
         });
 
@@ -87,6 +89,7 @@ export function SendFeedbackRequestDialog() {
 
       setOpen(false);
       setSelectedEmployee('');
+      setTargetEmployee('');
       setMessage('');
     } catch (error: any) {
       toast({
@@ -116,13 +119,29 @@ export function SendFeedbackRequestDialog() {
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Select Employee *</Label>
+            <Label>Who should provide feedback? *</Label>
             <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
               <SelectTrigger>
-                <SelectValue placeholder="Choose an employee" />
+                <SelectValue placeholder="Choose an employee to write feedback" />
               </SelectTrigger>
               <SelectContent>
                 {employees.map((emp) => (
+                  <SelectItem key={emp.id} value={emp.id}>
+                    {emp.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Feedback about whom? (optional)</Label>
+            <Select value={targetEmployee} onValueChange={setTargetEmployee}>
+              <SelectTrigger>
+                <SelectValue placeholder="General feedback, or about a specific employee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">General feedback</SelectItem>
+                {employees.filter(emp => emp.id !== selectedEmployee).map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
                     {emp.full_name}
                   </SelectItem>

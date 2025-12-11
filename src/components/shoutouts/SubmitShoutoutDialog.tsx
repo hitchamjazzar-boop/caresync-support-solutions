@@ -29,6 +29,7 @@ interface SubmitShoutoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
+  targetUserId?: string | null;
   onSuccess?: () => void;
 }
 
@@ -36,6 +37,7 @@ export function SubmitShoutoutDialog({
   open, 
   onOpenChange, 
   requestId,
+  targetUserId,
   onSuccess 
 }: SubmitShoutoutDialogProps) {
   const { user } = useAuth();
@@ -48,8 +50,12 @@ export function SubmitShoutoutDialog({
   useEffect(() => {
     if (open) {
       fetchEmployees();
+      // Pre-select target if specified
+      if (targetUserId) {
+        setSelectedEmployee(targetUserId);
+      }
     }
-  }, [open]);
+  }, [open, targetUserId]);
 
   const fetchEmployees = async () => {
     const { data } = await supabase
@@ -121,7 +127,11 @@ export function SubmitShoutoutDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="colleague">Who would you like to recognize?</Label>
-            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+            <Select 
+              value={selectedEmployee} 
+              onValueChange={setSelectedEmployee}
+              disabled={!!targetUserId}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select a colleague" />
               </SelectTrigger>
@@ -133,6 +143,11 @@ export function SubmitShoutoutDialog({
                 ))}
               </SelectContent>
             </Select>
+            {targetUserId && (
+              <p className="text-xs text-muted-foreground">
+                Admin has requested you recognize this specific person.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
