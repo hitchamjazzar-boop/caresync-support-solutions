@@ -243,7 +243,7 @@ export default function Announcements() {
                   <img
                     src={announcement.image_url}
                     alt={announcement.title}
-                    className="w-full max-h-64 object-cover rounded-lg"
+                    className="w-full rounded-lg"
                   />
                 )}
                 <p className="text-sm sm:text-base text-foreground whitespace-pre-wrap break-words">{announcement.content}</p>

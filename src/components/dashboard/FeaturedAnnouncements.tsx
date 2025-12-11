@@ -218,7 +218,7 @@ export function FeaturedAnnouncements() {
                     <img
                       src={announcement.image_url}
                       alt={announcement.title}
-                      className="w-full h-48 object-cover rounded-lg"
+                      className="w-full rounded-lg"
                     />
                   </div>
                 )}
