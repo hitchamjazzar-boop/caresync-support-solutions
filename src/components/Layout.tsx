@@ -110,9 +110,9 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Org Chart', href: '/org-chart', icon: Network },
     { name: 'Employees', href: '/employees', icon: Users, permission: 'employees' },
     { name: 'My Memos', href: '/memos', icon: Mail },
-    { name: 'Shout Outs', href: '/shoutouts', icon: Heart, permission: 'shoutouts' },
+    { name: 'Shout Outs', href: '/shoutouts', icon: Heart },
     { name: 'Schedules', href: '/schedules', icon: Calendar, permission: 'schedules' },
-    { name: 'Feedback', href: '/feedback', icon: MessageSquare, permission: 'feedback' },
+    { name: 'Feedback', href: '/feedback', icon: MessageSquare },
   ];
 
   const settingsNavigation: NavigationItem[] = [
