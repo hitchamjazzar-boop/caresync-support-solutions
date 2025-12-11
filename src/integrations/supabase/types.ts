@@ -277,6 +277,39 @@ export type Database = {
         }
         Relationships: []
       }
+      award_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       calendar_event_responses: {
         Row: {
           created_at: string | null
@@ -566,25 +599,34 @@ export type Database = {
       }
       employee_nominations: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           comment: string | null
           created_at: string
           id: string
+          is_approved: boolean | null
           nominated_user_id: string
           nominator_user_id: string
           voting_period_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           comment?: string | null
           created_at?: string
           id?: string
+          is_approved?: boolean | null
           nominated_user_id: string
           nominator_user_id: string
           voting_period_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           comment?: string | null
           created_at?: string
           id?: string
+          is_approved?: boolean | null
           nominated_user_id?: string
           nominator_user_id?: string
           voting_period_id?: string
@@ -1276,30 +1318,53 @@ export type Database = {
       }
       voting_periods: {
         Row: {
+          announcement_message: string | null
+          category_id: string | null
           closed_at: string | null
           created_at: string
           id: string
+          is_published: boolean
           month: number
+          published_at: string | null
           status: string
+          winner_id: string | null
           year: number
         }
         Insert: {
+          announcement_message?: string | null
+          category_id?: string | null
           closed_at?: string | null
           created_at?: string
           id?: string
+          is_published?: boolean
           month: number
+          published_at?: string | null
           status?: string
+          winner_id?: string | null
           year: number
         }
         Update: {
+          announcement_message?: string | null
+          category_id?: string | null
           closed_at?: string | null
           created_at?: string
           id?: string
+          is_published?: boolean
           month?: number
+          published_at?: string | null
           status?: string
+          winner_id?: string | null
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "voting_periods_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "award_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

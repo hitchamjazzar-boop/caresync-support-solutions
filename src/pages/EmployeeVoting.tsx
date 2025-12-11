@@ -3,14 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Vote, Trophy, Users } from 'lucide-react';
+import { Vote, Trophy, Users, Settings, Award } from 'lucide-react';
 import { NominationForm } from '@/components/voting/NominationForm';
 import { VotingForm } from '@/components/voting/VotingForm';
 import { VotingResults } from '@/components/voting/VotingResults';
 import { VotingPeriodManager } from '@/components/voting/VotingPeriodManager';
+import { AwardCategoriesManager } from '@/components/voting/AwardCategoriesManager';
+import { NomineeApprovalManager } from '@/components/voting/NomineeApprovalManager';
 
 interface VotingPeriod {
   id: string;
@@ -19,15 +20,27 @@ interface VotingPeriod {
   status: string;
   created_at: string;
   closed_at: string | null;
+  category_id: string | null;
+  is_published: boolean;
+  winner_id: string | null;
+  announcement_message: string | null;
+}
+
+interface AwardCategory {
+  id: string;
+  name: string;
+  color: string;
 }
 
 const EmployeeVoting = () => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const [currentPeriod, setCurrentPeriod] = useState<VotingPeriod | null>(null);
+  const [category, setCategory] = useState<AwardCategory | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasVoted, setHasVoted] = useState(false);
   const [hasNominated, setHasNominated] = useState(false);
+  const [adminTab, setAdminTab] = useState('period');
 
   useEffect(() => {
     fetchCurrentPeriod();
@@ -45,6 +58,19 @@ const EmployeeVoting = () => {
 
       if (error) throw error;
       setCurrentPeriod(data);
+
+      // Fetch category info
+      if (data?.category_id) {
+        const { data: categoryData } = await supabase
+          .from('award_categories')
+          .select('id, name, color')
+          .eq('id', data.category_id)
+          .maybeSingle();
+        
+        setCategory(categoryData);
+      } else {
+        setCategory(null);
+      }
 
       if (data && user) {
         // Check if user has voted
@@ -94,7 +120,7 @@ const EmployeeVoting = () => {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Trophy className="h-8 w-8 text-primary" />
-            Employee of the Month Voting
+            Employee Awards Voting
           </h1>
           <p className="text-muted-foreground mt-2">
             Nominate and vote for outstanding colleagues
@@ -102,13 +128,52 @@ const EmployeeVoting = () => {
         </div>
       </div>
 
+      {/* Admin Controls */}
       {isAdmin && (
-        <VotingPeriodManager 
-          currentPeriod={currentPeriod} 
-          onPeriodChange={fetchCurrentPeriod}
-        />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Admin Controls
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={adminTab} onValueChange={setAdminTab}>
+              <TabsList className="grid w-full grid-cols-3 mb-4">
+                <TabsTrigger value="period">Voting Period</TabsTrigger>
+                <TabsTrigger value="categories">Award Categories</TabsTrigger>
+                <TabsTrigger value="approvals">Nominee Approvals</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="period">
+                <VotingPeriodManager 
+                  currentPeriod={currentPeriod} 
+                  onPeriodChange={fetchCurrentPeriod}
+                />
+              </TabsContent>
+
+              <TabsContent value="categories">
+                <AwardCategoriesManager onCategoryChange={fetchCurrentPeriod} />
+              </TabsContent>
+
+              <TabsContent value="approvals">
+                {currentPeriod ? (
+                  <NomineeApprovalManager 
+                    votingPeriodId={currentPeriod.id}
+                    onApprovalChange={fetchCurrentPeriod}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Create a voting period first to manage nominations.
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
       )}
 
+      {/* Voting Section */}
       {!currentPeriod ? (
         <Card>
           <CardHeader>
@@ -123,14 +188,28 @@ const EmployeeVoting = () => {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>
-              Voting for {getMonthName(currentPeriod.month)} {currentPeriod.year}
-            </CardTitle>
-            <CardDescription>
-              {currentPeriod.status === 'open' 
-                ? 'Voting period is currently open' 
-                : 'This voting period has closed'}
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  {category && (
+                    <span 
+                      className="px-2 py-1 rounded text-sm text-white"
+                      style={{ backgroundColor: category.color }}
+                    >
+                      {category.name}
+                    </span>
+                  )}
+                  {getMonthName(currentPeriod.month)} {currentPeriod.year}
+                </CardTitle>
+                <CardDescription>
+                  {currentPeriod.status === 'open' 
+                    ? 'Voting period is currently open' 
+                    : currentPeriod.is_published 
+                      ? 'Results have been announced' 
+                      : 'This voting period has closed'}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="nominate" className="w-full">
@@ -188,6 +267,11 @@ const EmployeeVoting = () => {
                   votingPeriodId={currentPeriod.id}
                   isAdmin={isAdmin}
                   status={currentPeriod.status}
+                  isPublished={currentPeriod.is_published}
+                  categoryName={category?.name || 'Employee of the Month'}
+                  month={currentPeriod.month}
+                  year={currentPeriod.year}
+                  onPublished={fetchCurrentPeriod}
                 />
               </TabsContent>
             </Tabs>
