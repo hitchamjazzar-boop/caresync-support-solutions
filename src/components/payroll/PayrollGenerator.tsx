@@ -64,15 +64,38 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
     try {
       const { data, error } = await supabase
         .from('attendance')
-        .select('total_hours')
+        .select('clock_in, clock_out, lunch_start, lunch_end, total_hours')
         .eq('user_id', employeeId)
         .gte('clock_in', `${periodStart}T00:00:00`)
-        .lte('clock_in', `${periodEnd}T23:59:59`)
-        .eq('status', 'completed');
+        .lte('clock_in', `${periodEnd}T23:59:59`);
 
       if (error) throw error;
 
-      return data?.reduce((sum, record) => sum + (record.total_hours || 0), 0) || 0;
+      // Calculate total hours from each attendance record
+      let totalHours = 0;
+      data?.forEach(record => {
+        if (record.total_hours) {
+          // Use pre-calculated total_hours if available
+          totalHours += record.total_hours;
+        } else if (record.clock_in && record.clock_out) {
+          // Calculate hours manually if total_hours not set
+          const clockIn = new Date(record.clock_in);
+          const clockOut = new Date(record.clock_out);
+          let hoursWorked = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+          
+          // Subtract lunch break if applicable
+          if (record.lunch_start && record.lunch_end) {
+            const lunchStart = new Date(record.lunch_start);
+            const lunchEnd = new Date(record.lunch_end);
+            const lunchDuration = (lunchEnd.getTime() - lunchStart.getTime()) / (1000 * 60 * 60);
+            hoursWorked -= lunchDuration;
+          }
+          
+          totalHours += Math.max(0, hoursWorked);
+        }
+      });
+
+      return Math.round(totalHours * 100) / 100; // Round to 2 decimal places
     } catch (error) {
       console.error('Error calculating hours:', error);
       return 0;
@@ -146,11 +169,12 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
     try {
       const salary = parseFloat(formData.salary) || 0;
       let grossAmount = 0;
-      let totalHours = 0;
+      
+      // Always calculate total hours from attendance records for the selected period
+      const totalHours = await calculateHours(formData.employeeId, formData.periodStart, formData.periodEnd);
 
-      // Calculate hours for hourly employees
+      // Calculate gross amount based on pay type
       if (selectedEmployee.hourly_rate) {
-        totalHours = await calculateHours(formData.employeeId, formData.periodStart, formData.periodEnd);
         grossAmount = totalHours * salary;
       } else {
         grossAmount = salary;
@@ -165,7 +189,7 @@ export const PayrollGenerator = ({ onSuccess }: { onSuccess: () => void }) => {
         user_id: formData.employeeId,
         period_start: formData.periodStart,
         period_end: formData.periodEnd,
-        total_hours: totalHours,
+        total_hours: totalHours, // Always store the actual hours worked
         hourly_rate: selectedEmployee.hourly_rate ? salary : null,
         monthly_salary: selectedEmployee.monthly_salary ? salary : null,
         gross_amount: grossAmount,
