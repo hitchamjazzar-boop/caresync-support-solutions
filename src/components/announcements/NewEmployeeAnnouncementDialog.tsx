@@ -246,6 +246,7 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
                 >
                   <Checkbox 
                     checked={selectedEmployees.includes(employee.id)}
+                    onClick={(e) => e.stopPropagation()}
                     onCheckedChange={() => toggleEmployee(employee.id)}
                   />
                   <Avatar className="h-8 w-8">
