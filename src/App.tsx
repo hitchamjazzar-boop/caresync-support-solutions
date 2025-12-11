@@ -32,6 +32,7 @@ import Calendar from "./pages/Calendar";
 import CalendarSettings from "./pages/CalendarSettings";
 import Notifications from "./pages/Notifications";
 import EmployeeInvoices from "./pages/EmployeeInvoices";
+import Shoutouts from "./pages/Shoutouts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -289,6 +290,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <EmployeeInvoices />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/shoutouts"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Shoutouts />
                   </Layout>
                 </ProtectedRoute>
               }

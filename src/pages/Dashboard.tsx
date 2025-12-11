@@ -12,6 +12,7 @@ import { AnnouncementBanner } from '@/components/announcements/AnnouncementBanne
 import { MemoAlert } from '@/components/memos/MemoAlert';
 import { FeaturedAnnouncements } from '@/components/dashboard/FeaturedAnnouncements';
 import { BirthdayReminders } from '@/components/dashboard/BirthdayReminders';
+import { ShoutoutRequestCard } from '@/components/shoutouts/ShoutoutRequestCard';
 import { SecretSantaAssignment } from '@/components/dashboard/SecretSantaAssignment';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -239,6 +240,9 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="space-y-4 sm:space-y-6">
+          {/* Shout Out Requests */}
+          <ShoutoutRequestCard />
+
           {/* Secret Santa Assignment */}
           <SecretSantaAssignment />
 
