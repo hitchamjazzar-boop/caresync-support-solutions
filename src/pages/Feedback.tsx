@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, MessageSquare, CheckCircle2, Clock } from 'lucide-react';
 import { FeedbackDialog } from '@/components/feedback/FeedbackDialog';
+import { FeedbackRequestCard } from '@/components/feedback/FeedbackRequestCard';
+import { SendFeedbackRequestDialog } from '@/components/feedback/SendFeedbackRequestDialog';
 import { formatDistanceToNow } from 'date-fns';
 
 interface Feedback {
@@ -192,13 +194,17 @@ export default function Feedback() {
             {isAdmin ? 'Manage employee feedback' : 'Submit and track your feedback'}
           </p>
         </div>
-        {!isAdmin && (
+        {isAdmin ? (
+          <SendFeedbackRequestDialog />
+        ) : (
           <Button onClick={() => setFeedbackDialogOpen(true)} className="w-full sm:w-auto">
             <MessageSquare className="mr-2 h-4 w-4" />
             Send Feedback
           </Button>
         )}
       </div>
+
+      {!isAdmin && <FeedbackRequestCard />}
 
       {feedback.length === 0 ? (
         <Card>

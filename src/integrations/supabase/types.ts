@@ -723,6 +723,36 @@ export type Database = {
           },
         ]
       }
+      feedback_requests: {
+        Row: {
+          admin_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          message: string | null
+          recipient_id: string
+          status: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          recipient_id: string
+          status?: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          recipient_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       memo_replies: {
         Row: {
           content: string
