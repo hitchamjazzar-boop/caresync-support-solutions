@@ -12,6 +12,7 @@ interface NotificationRequest {
   recipientId: string;
   adminName: string;
   message?: string;
+  targetUserId?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -21,7 +22,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { recipientId, adminName, message }: NotificationRequest = await req.json();
+    const { recipientId, adminName, message, targetUserId }: NotificationRequest = await req.json();
     
     console.log("Processing shoutout request notification for recipient:", recipientId);
 
@@ -45,6 +46,20 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Get target person's name if specified
+    let targetName = "";
+    if (targetUserId) {
+      const { data: targetProfile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", targetUserId)
+        .single();
+      
+      if (targetProfile) {
+        targetName = targetProfile.full_name;
+      }
+    }
+
     if (!profile.contact_email) {
       console.log("No email found for recipient, skipping email notification");
       return new Response(
@@ -54,6 +69,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log("Sending email to:", profile.contact_email);
+
+    const targetSection = targetName 
+      ? `<p style="font-size: 16px; color: #333; margin-top: 16px; padding: 12px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+          <strong>🎯 Specifically for:</strong> ${targetName}
+        </p>`
+      : '';
 
     // Send email notification using Resend API
     const emailResponse = await fetch("https://api.resend.com/emails", {
@@ -65,21 +86,26 @@ const handler = async (req: Request): Promise<Response> => {
       body: JSON.stringify({
         from: "Care Sync <onboarding@resend.dev>",
         to: [profile.contact_email],
-        subject: "🎉 You've been asked to give a Shout Out!",
+        subject: targetName 
+          ? `🎉 Please give a Shout Out to ${targetName}!`
+          : "🎉 You've been asked to give a Shout Out!",
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
             <h1 style="color: #7c3aed;">Hi ${profile.full_name}!</h1>
             <p style="font-size: 16px; color: #333;">
-              <strong>${adminName}</strong> has asked you to recognize a colleague with a shout out.
+              <strong>${adminName}</strong> has asked you to ${targetName ? `recognize <strong>${targetName}</strong>` : 'recognize a colleague'} with a shout out.
             </p>
+            ${targetSection}
             ${message ? `
               <div style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
                 <p style="margin: 0; color: #666; font-style: italic;">"${message}"</p>
               </div>
             ` : ''}
             <p style="font-size: 16px; color: #333;">
-              Take a moment to think about who has helped you recently or gone above and beyond, 
-              and give them the recognition they deserve!
+              ${targetName 
+                ? `Take a moment to recognize ${targetName}'s contributions and give them the recognition they deserve!`
+                : 'Take a moment to think about who has helped you recently or gone above and beyond, and give them the recognition they deserve!'
+              }
             </p>
             <p style="font-size: 14px; color: #666;">
               Log in to Care Sync to submit your shout out. Your recognition will be anonymous 
