@@ -114,6 +114,9 @@ export function SubmitShoutoutDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Give a Shout Out</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Your recognition will be submitted for admin review and published anonymously.
+          </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

@@ -119,7 +119,7 @@ export default function Shoutouts() {
                   <CardContent>
                     <p className="text-sm mb-3">"{shoutout.message}"</p>
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>From {shoutout.from_profile?.full_name}</span>
+                      <span>From a colleague</span>
                       <Badge variant="secondary">
                         {format(new Date(shoutout.created_at), 'MMM dd')}
                       </Badge>
