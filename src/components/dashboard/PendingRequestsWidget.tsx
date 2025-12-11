@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Megaphone, MessageSquare, ArrowRight } from 'lucide-react';
+import { Megaphone, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function PendingRequestsWidget() {
@@ -82,48 +82,63 @@ export function PendingRequestsWidget() {
   }
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+    <Card className="border-amber-500/50 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 shadow-lg">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-lg">
-          <span>Pending Requests</span>
-          <Badge variant="default" className="text-sm">
+          <span className="flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            Action Required
+          </span>
+          <Badge variant="destructive" className="text-sm animate-pulse">
             {totalCount} pending
           </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-3">
+        <p className="text-sm text-muted-foreground mb-3">
+          You have pending requests that need your attention!
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {shoutoutCount > 0 && (
-            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full">
-                <Megaphone className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <Button
+              variant="outline"
+              className="flex items-center justify-between gap-3 p-4 h-auto bg-background hover:bg-amber-100 dark:hover:bg-amber-900/30 border-amber-200 dark:border-amber-800"
+              onClick={() => navigate('/shoutouts')}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+                  <Megaphone className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium">Shout Out Requests</p>
+                  <p className="text-xs text-muted-foreground">Give recognition</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Shout Outs</p>
-                <p className="text-2xl font-bold text-primary">{shoutoutCount}</p>
-              </div>
-            </div>
+              <Badge variant="secondary" className="text-lg font-bold">{shoutoutCount}</Badge>
+            </Button>
           )}
           {feedbackCount > 0 && (
-            <div className="flex items-center gap-3 p-3 bg-background rounded-lg border">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <Button
+              variant="outline"
+              className="flex items-center justify-between gap-3 p-4 h-auto bg-background hover:bg-blue-100 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+              onClick={() => navigate('/feedback')}
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                  <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium">Feedback Requests</p>
+                  <p className="text-xs text-muted-foreground">Share your thoughts</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium">Feedback</p>
-                <p className="text-2xl font-bold text-primary">{feedbackCount}</p>
-              </div>
-            </div>
+              <Badge variant="secondary" className="text-lg font-bold">{feedbackCount}</Badge>
+            </Button>
           )}
         </div>
-        <Button 
-          variant="outline" 
-          className="w-full mt-3"
-          onClick={() => navigate('/shoutouts')}
-        >
-          View All Requests
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
       </CardContent>
     </Card>
   );
