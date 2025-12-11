@@ -40,6 +40,16 @@ export function useNotificationCount() {
         {
           event: '*',
           schema: 'public',
+          table: 'notification_acknowledgments',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => fetchUnreadCount()
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: 'shoutout_requests',
           filter: `recipient_id=eq.${user.id}`
         },
@@ -86,6 +96,23 @@ export function useNotificationCount() {
 
       const readIds = readAnnouncements?.map(a => a.announcement_id) || [];
 
+      // Get acknowledged notifications (for shoutout/feedback requests)
+      const { data: acknowledgedNotifications } = await supabase
+        .from('notification_acknowledgments')
+        .select('notification_id, notification_type')
+        .eq('user_id', user.id);
+
+      const acknowledgedShoutoutIds = new Set(
+        (acknowledgedNotifications || [])
+          .filter(n => n.notification_type === 'shoutout_request')
+          .map(n => n.notification_id)
+      );
+      const acknowledgedFeedbackIds = new Set(
+        (acknowledgedNotifications || [])
+          .filter(n => n.notification_type === 'feedback_request')
+          .map(n => n.notification_id)
+      );
+
       // Fetch announcements
       const { data: announcementData } = await supabase
         .from('announcements')
@@ -103,21 +130,25 @@ export function useNotificationCount() {
         }
       );
 
-      // Fetch pending shoutout requests
+      // Fetch pending shoutout requests (not acknowledged)
       const { data: shoutoutData } = await supabase
         .from('shoutout_requests')
         .select('id')
         .eq('recipient_id', user.id)
         .eq('status', 'pending');
 
-      // Fetch pending feedback requests
+      const unreadShoutouts = (shoutoutData || []).filter(s => !acknowledgedShoutoutIds.has(s.id));
+
+      // Fetch pending feedback requests (not acknowledged)
       const { data: feedbackData } = await supabase
         .from('feedback_requests')
         .select('id')
         .eq('recipient_id', user.id)
         .eq('status', 'pending');
 
-      const total = activeAnnouncements.length + (shoutoutData?.length || 0) + (feedbackData?.length || 0);
+      const unreadFeedbacks = (feedbackData || []).filter(f => !acknowledgedFeedbackIds.has(f.id));
+
+      const total = activeAnnouncements.length + unreadShoutouts.length + unreadFeedbacks.length;
       setUnreadCount(total);
     } catch (error) {
       console.error('Error fetching notification count:', error);
