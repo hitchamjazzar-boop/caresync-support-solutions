@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, BarChart3, Award, Cake, TrendingUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, BarChart3, Award, Cake, TrendingUp, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AnnouncementDialog } from '@/components/announcements/AnnouncementDialog';
 import { EmployeeOfMonthDialog } from '@/components/announcements/EmployeeOfMonthDialog';
 import { BirthdayAnnouncementDialog } from '@/components/announcements/BirthdayAnnouncementDialog';
 import { PromotionAnnouncementDialog } from '@/components/announcements/PromotionAnnouncementDialog';
+import { NewEmployeeAnnouncementDialog } from '@/components/announcements/NewEmployeeAnnouncementDialog';
 import { DeleteAnnouncementDialog } from '@/components/announcements/DeleteAnnouncementDialog';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -37,6 +38,7 @@ export default function Announcements() {
   const [eomDialogOpen, setEomDialogOpen] = useState(false);
   const [birthdayDialogOpen, setBirthdayDialogOpen] = useState(false);
   const [promotionDialogOpen, setPromotionDialogOpen] = useState(false);
+  const [newEmployeeDialogOpen, setNewEmployeeDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const { toast } = useToast();
@@ -171,6 +173,14 @@ export default function Announcements() {
                 <TrendingUp className="h-4 w-4 mr-2" />
                 Promotion
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => setNewEmployeeDialogOpen(true)}
+                className="flex-1 sm:flex-initial"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                New Employee
+              </Button>
             </>
           )}
           <Button onClick={handleCreateNew} className="flex-1 sm:flex-initial">
@@ -257,6 +267,12 @@ export default function Announcements() {
       <PromotionAnnouncementDialog
         open={promotionDialogOpen}
         onOpenChange={setPromotionDialogOpen}
+        onSuccess={fetchAnnouncements}
+      />
+
+      <NewEmployeeAnnouncementDialog
+        open={newEmployeeDialogOpen}
+        onOpenChange={setNewEmployeeDialogOpen}
         onSuccess={fetchAnnouncements}
       />
 
