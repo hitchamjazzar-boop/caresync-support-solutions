@@ -94,7 +94,27 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
 
       if (error) throw error;
 
-      toast.success('New voting period created!');
+      // Get the category name for the announcement
+      const category = categories.find(c => c.id === categoryId);
+      const categoryName = category?.name || 'Award';
+
+      // Get current user for the announcement
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Create an announcement to notify users that voting is open
+        await supabase
+          .from('announcements')
+          .insert({
+            title: `🗳️ Voting Now Open: ${categoryName}`,
+            content: `Voting for ${months[month - 1]} ${year} ${categoryName} is now open! Cast your vote for the most deserving colleague. Head to the Voting page to nominate and vote for your favorite candidates.`,
+            created_by: user.id,
+            is_active: true,
+            target_type: 'all',
+          });
+      }
+
+      toast.success('New voting period created! Users have been notified.');
       onPeriodChange();
     } catch (error: any) {
       console.error('Error creating period:', error);
