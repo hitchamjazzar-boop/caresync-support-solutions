@@ -3,13 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, Loader2, CheckCheck, Mail, AlertTriangle, Award, Cake, TrendingUp, Calendar } from 'lucide-react';
+import { Bell, Loader2, CheckCheck, Mail, AlertTriangle, Award, Cake, TrendingUp, Calendar, Megaphone, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAnnouncementVisibility } from '@/hooks/useAnnouncementVisibility';
 import { triggerBirthdayConfetti, triggerAchievementConfetti } from '@/lib/confetti';
-import { playBirthdaySound, playCelebrationSound, playAnnouncementSound, playMemoSound, playAchievementSound } from '@/lib/sounds';
+import { playBirthdaySound, playCelebrationSound, playAnnouncementSound, playMemoSound, playAchievementSound, playRequestNotificationSound } from '@/lib/sounds';
 import { EventInvitationCard } from '@/components/calendar/EventInvitationCard';
 
 interface AchievementType {
@@ -45,14 +45,30 @@ interface Memo {
   sender_id: string;
 }
 
+interface ShoutoutRequest {
+  id: string;
+  message: string | null;
+  created_at: string;
+  status: string;
+  target_user_id: string | null;
+}
+
+interface FeedbackRequest {
+  id: string;
+  message: string | null;
+  created_at: string;
+  status: string;
+  target_user_id: string | null;
+}
+
 interface Notification {
   id: string;
-  type: 'announcement' | 'memo' | 'calendar_invitation';
+  type: 'announcement' | 'memo' | 'calendar_invitation' | 'shoutout_request' | 'feedback_request';
   title: string;
   content: string;
   created_at: string;
   is_read: boolean;
-  data: Announcement | Memo | any;
+  data: Announcement | Memo | ShoutoutRequest | FeedbackRequest | any;
 }
 
 export default function Notifications() {
@@ -126,6 +142,30 @@ export default function Notifications() {
             schema: 'public',
             table: 'calendar_event_responses',
             filter: `user_id=eq.${user.id}`,
+          },
+          () => {
+            fetchNotifications();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'shoutout_requests',
+            filter: `recipient_id=eq.${user.id}`,
+          },
+          () => {
+            fetchNotifications();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'feedback_requests',
+            filter: `recipient_id=eq.${user.id}`,
           },
           () => {
             fetchNotifications();
@@ -272,8 +312,48 @@ export default function Notifications() {
 
       setCalendarInvitations(pendingInvitations);
 
+      // Fetch pending shoutout requests
+      const { data: shoutoutRequestsData, error: shoutoutRequestsError } = await supabase
+        .from('shoutout_requests')
+        .select('*')
+        .eq('recipient_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (shoutoutRequestsError) throw shoutoutRequestsError;
+
+      const shoutoutRequests = (shoutoutRequestsData || []).map((request: any) => ({
+        id: request.id,
+        type: 'shoutout_request' as const,
+        title: 'Shout Out Request',
+        content: request.message || 'You have been asked to give a shout out to a colleague.',
+        created_at: request.created_at,
+        is_read: false,
+        data: request,
+      }));
+
+      // Fetch pending feedback requests
+      const { data: feedbackRequestsData, error: feedbackRequestsError } = await supabase
+        .from('feedback_requests')
+        .select('*')
+        .eq('recipient_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (feedbackRequestsError) throw feedbackRequestsError;
+
+      const feedbackRequests = (feedbackRequestsData || []).map((request: any) => ({
+        id: request.id,
+        type: 'feedback_request' as const,
+        title: 'Feedback Request',
+        content: request.message || 'You have been asked to provide feedback.',
+        created_at: request.created_at,
+        is_read: false,
+        data: request,
+      }));
+
       // Combine and sort by date
-      const allNotifications = [...visibleAnnouncements, ...memos].sort(
+      const allNotifications = [...visibleAnnouncements, ...memos, ...shoutoutRequests, ...feedbackRequests].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
@@ -289,6 +369,8 @@ export default function Notifications() {
           if (newestUnread) {
             if (newestUnread.type === 'memo') {
               playMemoSound();
+            } else if (newestUnread.type === 'shoutout_request' || newestUnread.type === 'feedback_request') {
+              playRequestNotificationSound();
             } else {
               const announcement = newestUnread.data as Announcement;
               const title = announcement.title.toLowerCase();
@@ -422,6 +504,10 @@ export default function Notifications() {
       }
     } else if (notification.type === 'memo') {
       navigate('/memos');
+    } else if (notification.type === 'shoutout_request') {
+      navigate('/shoutouts');
+    } else if (notification.type === 'feedback_request') {
+      navigate('/feedback');
     }
   };
 
@@ -516,10 +602,12 @@ export default function Notifications() {
           {notifications.map((notification) => {
             const isUnread = !notification.is_read;
             const isMemo = notification.type === 'memo';
+            const isShoutoutRequest = notification.type === 'shoutout_request';
+            const isFeedbackRequest = notification.type === 'feedback_request';
             const memoType = isMemo ? (notification.data as Memo).type : null;
             
             // Check announcement types
-            const announcement = !isMemo ? (notification.data as Announcement) : null;
+            const announcement = notification.type === 'announcement' ? (notification.data as Announcement) : null;
             const isPromotion = announcement?.title.toLowerCase().includes('promotion');
             const isBirthday = announcement?.title.toLowerCase().includes('birthday');
             const isEmployeeOfMonth = announcement?.title.toLowerCase().includes('employee of the month');
@@ -538,7 +626,15 @@ export default function Notifications() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start gap-3">
                     {/* Icon/Badge Display */}
-                    {isMemo ? (
+                    {isShoutoutRequest ? (
+                      <div className="p-2 rounded-lg bg-amber-500/20 shrink-0">
+                        <Megaphone className="h-5 w-5 text-amber-500" />
+                      </div>
+                    ) : isFeedbackRequest ? (
+                      <div className="p-2 rounded-lg bg-blue-500/20 shrink-0">
+                        <MessageSquare className="h-5 w-5 text-blue-500" />
+                      </div>
+                    ) : isMemo ? (
                       <div className="shrink-0">
                         {memoType === 'warning' ? (
                           <div className="p-2 rounded-lg bg-destructive/20">
