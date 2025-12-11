@@ -3,14 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bell, Loader2, CheckCheck, Mail, AlertTriangle, Award, Cake, TrendingUp, Calendar, Megaphone, MessageSquare } from 'lucide-react';
+import { Bell, Loader2, CheckCheck, Mail, AlertTriangle, Award, Cake, TrendingUp, Calendar, Megaphone, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAnnouncementVisibility } from '@/hooks/useAnnouncementVisibility';
+import { useBrowserNotifications, sendBrowserNotification } from '@/hooks/useBrowserNotifications';
 import { triggerBirthdayConfetti, triggerAchievementConfetti } from '@/lib/confetti';
 import { playBirthdaySound, playCelebrationSound, playAnnouncementSound, playMemoSound, playAchievementSound, playRequestNotificationSound } from '@/lib/sounds';
 import { EventInvitationCard } from '@/components/calendar/EventInvitationCard';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 
 interface AchievementType {
   name: string;
@@ -74,12 +78,19 @@ interface Notification {
 export default function Notifications() {
   const { user } = useAuth();
   const { canSeeAnnouncement } = useAnnouncementVisibility();
+  const { permission, requestPermission, isSupported } = useBrowserNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [calendarInvitations, setCalendarInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingAllRead, setMarkingAllRead] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(() => {
+    const stored = localStorage.getItem('notificationSoundEnabled');
+    return stored !== 'false';
+  });
   const navigate = useNavigate();
   const previousNotificationCountRef = useRef<number>(0);
+  const previousShoutoutIdsRef = useRef<Set<string>>(new Set());
+  const previousFeedbackIdsRef = useRef<Set<string>>(new Set());
   const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
@@ -359,10 +370,35 @@ export default function Notifications() {
 
       setNotifications(allNotifications);
 
-      // Play notification sound for new notifications (not on initial load)
+      // Check for new shoutout/feedback requests and send browser notifications
+      const currentShoutoutIds = new Set(shoutoutRequests.map(s => s.id));
+      const currentFeedbackIds = new Set(feedbackRequests.map(f => f.id));
+
       if (!isInitialLoadRef.current) {
+        // Find new shoutout requests
+        const newShoutouts = shoutoutRequests.filter(s => !previousShoutoutIdsRef.current.has(s.id));
+        const newFeedbacks = feedbackRequests.filter(f => !previousFeedbackIdsRef.current.has(f.id));
+
+        // Send browser notifications for new requests
+        for (const shoutout of newShoutouts) {
+          sendBrowserNotification(
+            'New Shout Out Request',
+            shoutout.content || 'You have been asked to give a shout out to a colleague.',
+            `shoutout-${shoutout.id}`
+          );
+        }
+
+        for (const feedback of newFeedbacks) {
+          sendBrowserNotification(
+            'New Feedback Request',
+            feedback.content || 'You have been asked to provide feedback.',
+            `feedback-${feedback.id}`
+          );
+        }
+
+        // Play notification sound for new notifications
         const currentUnreadCount = allNotifications.filter(n => !n.is_read).length;
-        if (currentUnreadCount > previousNotificationCountRef.current) {
+        if (currentUnreadCount > previousNotificationCountRef.current && soundEnabled) {
           // Get the newest unread notification to determine sound
           const newestUnread = allNotifications.find(n => !n.is_read);
           
@@ -387,10 +423,14 @@ export default function Notifications() {
         }
         previousNotificationCountRef.current = currentUnreadCount;
       } else {
-        // After initial load, track the count
+        // After initial load, track the count and IDs
         previousNotificationCountRef.current = allNotifications.filter(n => !n.is_read).length;
         isInitialLoadRef.current = false;
       }
+
+      // Update previous IDs refs
+      previousShoutoutIdsRef.current = currentShoutoutIds;
+      previousFeedbackIdsRef.current = currentFeedbackIds;
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -511,6 +551,21 @@ export default function Notifications() {
     }
   };
 
+  const handleSoundToggle = (enabled: boolean) => {
+    setSoundEnabled(enabled);
+    localStorage.setItem('notificationSoundEnabled', String(enabled));
+    toast.success(enabled ? 'Notification sounds enabled' : 'Notification sounds disabled');
+  };
+
+  const handleEnableBrowserNotifications = async () => {
+    const granted = await requestPermission();
+    if (granted) {
+      toast.success('Browser notifications enabled');
+    } else {
+      toast.error('Browser notification permission denied');
+    }
+  };
+
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   if (loading) {
@@ -533,27 +588,58 @@ export default function Notifications() {
             View all your notifications and announcements
           </p>
         </div>
-        {user && notifications.length > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={markAllAsRead}
-            disabled={markingAllRead || unreadCount === 0}
-            className="gap-2 w-full sm:w-auto"
-          >
-            {markingAllRead ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Marking...
-              </>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+          {/* Sound Toggle */}
+          <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-card">
+            {soundEnabled ? (
+              <Volume2 className="h-4 w-4 text-muted-foreground" />
             ) : (
-              <>
-                <CheckCheck className="h-4 w-4" />
-                Mark All Read
-              </>
+              <VolumeX className="h-4 w-4 text-muted-foreground" />
             )}
-          </Button>
-        )}
+            <Label htmlFor="sound-toggle" className="text-sm cursor-pointer">Sound</Label>
+            <Switch
+              id="sound-toggle"
+              checked={soundEnabled}
+              onCheckedChange={handleSoundToggle}
+            />
+          </div>
+
+          {/* Browser Notifications */}
+          {isSupported && permission !== 'granted' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEnableBrowserNotifications}
+              className="gap-2"
+            >
+              <Bell className="h-4 w-4" />
+              Enable Push
+            </Button>
+          )}
+
+          {/* Mark All Read */}
+          {user && notifications.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={markAllAsRead}
+              disabled={markingAllRead || unreadCount === 0}
+              className="gap-2"
+            >
+              {markingAllRead ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Marking...
+                </>
+              ) : (
+                <>
+                  <CheckCheck className="h-4 w-4" />
+                  Mark All Read
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
 
       {unreadCount > 0 && (
