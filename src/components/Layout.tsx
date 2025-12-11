@@ -99,7 +99,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'My Achievements', href: '/profile#achievements', icon: Award },
-    { name: 'Attendance', href: '/attendance', icon: Clock, permission: 'attendance' },
+    { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'EOD Reports', href: '/reports', icon: FileText },
     { name: 'Payroll', href: '/payroll', icon: DollarSign, permission: 'payroll' },
     { name: 'My Invoices', href: '/invoices', icon: Receipt },
