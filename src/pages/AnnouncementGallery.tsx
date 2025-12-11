@@ -384,7 +384,7 @@ export default function AnnouncementGallery() {
                           <img
                             src={announcement.image_url}
                             alt={announcement.title}
-                            className="w-full h-40 object-cover rounded-md"
+                            className="w-full rounded-md"
                           />
                         )}
 
