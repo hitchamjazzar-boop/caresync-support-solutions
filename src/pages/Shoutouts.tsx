@@ -4,6 +4,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShoutoutsList } from '@/components/shoutouts/ShoutoutsList';
+import { ShoutoutLeaderboard } from '@/components/shoutouts/ShoutoutLeaderboard';
 import { SendShoutoutRequestDialog } from '@/components/shoutouts/SendShoutoutRequestDialog';
 import { GiveShoutoutDialog } from '@/components/shoutouts/GiveShoutoutDialog';
 import { Heart, Loader2 } from 'lucide-react';
@@ -84,42 +85,50 @@ export default function Shoutouts() {
       </div>
 
       {isAdmin ? (
-        <ShoutoutsList />
+        <div className="space-y-6">
+          <ShoutoutLeaderboard />
+          <ShoutoutsList />
+        </div>
       ) : loading ? (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      ) : publishedShoutouts.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-            <p className="font-medium">No shout outs yet</p>
-            <p className="text-sm mt-1">Be the first to recognize a colleague!</p>
-          </CardContent>
-        </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {publishedShoutouts.map((shoutout) => (
-            <Card key={shoutout.id} className="border-primary/20">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Heart className="h-4 w-4 text-primary fill-primary" />
-                    {shoutout.to_profile?.full_name}
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm mb-3">"{shoutout.message}"</p>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>From {shoutout.from_profile?.full_name}</span>
-                  <Badge variant="secondary">
-                    {format(new Date(shoutout.created_at), 'MMM dd')}
-                  </Badge>
-                </div>
+        <div className="space-y-6">
+          <ShoutoutLeaderboard />
+          {publishedShoutouts.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                <Heart className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="font-medium">No shout outs yet</p>
+                <p className="text-sm mt-1">Be the first to recognize a colleague!</p>
               </CardContent>
             </Card>
-          ))}
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {publishedShoutouts.map((shoutout) => (
+                <Card key={shoutout.id} className="border-primary/20">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Heart className="h-4 w-4 text-primary fill-primary" />
+                        {shoutout.to_profile?.full_name}
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm mb-3">"{shoutout.message}"</p>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>From {shoutout.from_profile?.full_name}</span>
+                      <Badge variant="secondary">
+                        {format(new Date(shoutout.created_at), 'MMM dd')}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
