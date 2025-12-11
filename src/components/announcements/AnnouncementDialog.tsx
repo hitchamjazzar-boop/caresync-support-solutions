@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 
 const ANNOUNCEMENT_TEMPLATES = [
+  // General Templates
   {
     id: 'holiday',
     name: '🎉 Holiday Announcement',
@@ -59,9 +60,99 @@ const ANNOUNCEMENT_TEMPLATES = [
     title: 'System Maintenance Notice',
     content: 'Scheduled system maintenance on [DATE] from [START TIME] to [END TIME]. Services may be temporarily unavailable. Please save your work and log out before maintenance begins.',
   },
+  // Team Wins / Milestones
+  {
+    id: 'team_win',
+    name: '🏆 Team Win / Milestone',
+    title: 'Exciting Team Achievement!',
+    content: "Along with this great news, we're excited to share that our team has reached a new milestone! [DESCRIBE MILESTONE - e.g., We've closed a new client partnership this week! / We hit our lead generation target for the month! / Our service satisfaction rating increased again! / We completed a major project ahead of schedule!]",
+  },
+  {
+    id: 'new_client',
+    name: '🤝 New Client Partnership',
+    title: 'New Client Partnership Announcement',
+    content: "We're thrilled to announce that we have successfully onboarded [CLIENT NAME] as our newest client! This partnership represents [SIGNIFICANCE]. Thank you to everyone who contributed to making this happen!",
+  },
+  // Individual or Team Awards
+  {
+    id: 'employee_award',
+    name: '⭐ Employee Award',
+    title: 'Employee Recognition Award',
+    content: 'We are pleased to announce that [EMPLOYEE NAME] has been selected as [AWARD NAME - e.g., Employee of the Month / Top Lead Generator / Outstanding Teamwork Award / Creativity & Innovation Award / Reliability & Consistency Award]! Congratulations on this well-deserved recognition!',
+  },
+  {
+    id: 'awards_launch',
+    name: '🎖️ Awards Program Launch',
+    title: 'Introducing CareSync Awards!',
+    content: 'We will be launching monthly CareSync Awards to celebrate top performers and recognize exceptional contributions across the team. Categories include: Employee of the Month, Top Lead Generator, Outstanding Teamwork, Creativity & Innovation, and Reliability & Consistency. Stay tuned for nominations!',
+  },
+  // Bonuses / Incentives
+  {
+    id: 'bonus_program',
+    name: '💰 Bonus / Incentive Program',
+    title: 'New Incentive Program Announcement',
+    content: 'Starting this [QUARTER/MONTH], we will be introducing a [TYPE - e.g., monthly performance challenge / quarterly bonus program / attendance bonus / referral bonus] with exciting incentives for top contributors! More details to follow.',
+  },
+  {
+    id: 'performance_incentive',
+    name: '🎯 Performance Challenge',
+    title: 'Performance Challenge with Rewards!',
+    content: 'Get ready for our new Performance Challenge! [DESCRIBE CHALLENGE]. Top performers will receive [REWARDS]. Challenge period: [START DATE] to [END DATE]. Let the competition begin!',
+  },
+  // Upcoming Projects or Opportunities
+  {
+    id: 'new_project',
+    name: '🚀 New Project Launch',
+    title: 'Exciting New Project Announcement',
+    content: "We have new projects launching soon, giving everyone more opportunities to grow and showcase their skills! [PROJECT DETAILS]. If you're interested in being part of this initiative, please reach out to [CONTACT].",
+  },
+  {
+    id: 'training_program',
+    name: '📚 Training / Development',
+    title: 'New Training Program Available',
+    content: 'We are excited to announce a new [TRAINING NAME] program starting [DATE]. This initiative will help you develop [SKILLS]. Sign up by [DEADLINE] to secure your spot!',
+  },
+  {
+    id: 'leadership_opportunity',
+    name: '👔 Leadership Opportunity',
+    title: 'Leadership Opportunity Available',
+    content: 'We are looking for team members interested in [LEADERSHIP ROLE/OPPORTUNITY]. This is a great chance to grow your career and take on new responsibilities. Interested? Apply by [DEADLINE].',
+  },
+  // Team Culture Boosters
+  {
+    id: 'team_event',
+    name: '🎮 Team Event / Hangout',
+    title: 'Team Building Event!',
+    content: "To build our team culture, we'll be hosting [EVENT TYPE - e.g., monthly virtual hangout / game night / team quiz / wellness Friday] on [DATE] at [TIME]. Join us for games, fun, and team bonding! Everyone is welcome!",
+  },
+  {
+    id: 'huddle_day',
+    name: '🤗 CareSync Huddle Day',
+    title: 'CareSync Huddle Day Announcement',
+    content: "To build our team culture, we'll be introducing monthly CareSync Huddle Days with games, raffles, and team highlights! Our first Huddle Day is scheduled for [DATE]. Mark your calendars!",
+  },
+  {
+    id: 'birthday_shoutout',
+    name: '🎂 Birthday Celebration',
+    title: 'Birthday Celebration!',
+    content: "Let's celebrate [EMPLOYEE NAME]'s birthday! 🎉 Please join us in wishing them a wonderful day filled with joy and happiness. Happy Birthday!",
+  },
+  {
+    id: 'wellness_initiative',
+    name: '💚 Wellness Initiative',
+    title: 'Wellness Initiative Announcement',
+    content: "We're launching a new wellness initiative: [INITIATIVE NAME - e.g., Wellness Fridays / Mental Health Days / Fitness Challenge]. [DETAILS]. Your well-being matters to us!",
+  },
+  {
+    id: 'surprise_raffle',
+    name: '🎁 Surprise Raffle',
+    title: 'Surprise Raffle Time!',
+    content: "Surprise! We're holding a special raffle for our amazing team. [PRIZE DETAILS]. To enter: [HOW TO ENTER]. Winners will be announced on [DATE]. Good luck everyone!",
+  },
+  // General Celebration
   {
     id: 'celebration',
-    name: '🎊 Celebration/Achievement',
+    name: '🎊 General Celebration',
     title: 'Congratulations Team!',
     content: 'We are pleased to announce [ACHIEVEMENT/MILESTONE]. Special recognition to [NAMES/TEAMS]. Thank you for your dedication and hard work!',
   },
