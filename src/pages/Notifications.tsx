@@ -569,6 +569,73 @@ export default function Notifications() {
         </Card>
       )}
 
+      {/* Action Required Section - Shoutout & Feedback Requests */}
+      {(() => {
+        const actionRequiredItems = notifications.filter(
+          n => n.type === 'shoutout_request' || n.type === 'feedback_request'
+        );
+        if (actionRequiredItems.length === 0) return null;
+        
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+              </span>
+              <h2 className="text-xl font-semibold">Action Required</h2>
+              <Badge variant="destructive" className="animate-pulse">{actionRequiredItems.length}</Badge>
+            </div>
+            <Card className="border-amber-500/50 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+              <CardContent className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {actionRequiredItems.filter(n => n.type === 'shoutout_request').length > 0 && (
+                    <Button
+                      variant="outline"
+                      className="flex items-center justify-between gap-3 p-4 h-auto bg-background hover:bg-amber-100 dark:hover:bg-amber-900/30 border-amber-200 dark:border-amber-800"
+                      onClick={() => navigate('/shoutouts')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full">
+                          <Megaphone className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium">Shout Out Requests</p>
+                          <p className="text-xs text-muted-foreground">Give recognition to colleagues</p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-lg font-bold">
+                        {actionRequiredItems.filter(n => n.type === 'shoutout_request').length}
+                      </Badge>
+                    </Button>
+                  )}
+                  {actionRequiredItems.filter(n => n.type === 'feedback_request').length > 0 && (
+                    <Button
+                      variant="outline"
+                      className="flex items-center justify-between gap-3 p-4 h-auto bg-background hover:bg-blue-100 dark:hover:bg-blue-900/30 border-blue-200 dark:border-blue-800"
+                      onClick={() => navigate('/feedback')}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                          <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="text-left">
+                          <p className="text-sm font-medium">Feedback Requests</p>
+                          <p className="text-xs text-muted-foreground">Share your thoughts</p>
+                        </div>
+                      </div>
+                      <Badge variant="secondary" className="text-lg font-bold">
+                        {actionRequiredItems.filter(n => n.type === 'feedback_request').length}
+                      </Badge>
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
+
       {/* Calendar Invitations */}
       {calendarInvitations.length > 0 && (
         <div className="space-y-3">
