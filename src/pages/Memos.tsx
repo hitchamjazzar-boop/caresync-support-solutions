@@ -206,30 +206,30 @@ export default function Memos() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">My Memos</h1>
-        <p className="text-muted-foreground">View and manage all your memos</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">My Memos</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">View and manage all your memos</p>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
+        <CardContent className="p-4 sm:p-6 pt-0">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
             <div className="relative">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search memos..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
+                className="pl-8 text-sm"
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger>
+              <SelectTrigger className="text-sm">
                 <SelectValue placeholder="Filter by type" />
               </SelectTrigger>
               <SelectContent>
@@ -240,7 +240,7 @@ export default function Memos() {
               </SelectContent>
             </Select>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger>
+              <SelectTrigger className="text-sm">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -254,37 +254,42 @@ export default function Memos() {
       </Card>
 
       {/* Memos List */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {filteredMemos.length === 0 ? (
           <Card>
-            <CardContent className="py-8 text-center text-muted-foreground">
+            <CardContent className="py-8 text-center text-muted-foreground text-sm sm:text-base">
               No memos found
             </CardContent>
           </Card>
         ) : (
           filteredMemos.map((memo) => (
             <Card key={memo.id} className={`border-l-4 ${getMemoColor(memo.type)}`}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
                     {getMemoIcon(memo.type)}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <CardTitle className="text-xl">{memo.title}</CardTitle>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <CardTitle className="text-base sm:text-xl break-words">{memo.title}</CardTitle>
                         {!memo.is_read && (
-                          <Badge variant="secondary">New</Badge>
+                          <Badge variant="secondary" className="text-xs">New</Badge>
                         )}
                         {memo.resolved && (
-                          <Badge variant="default" className="bg-green-600">Resolved ✓</Badge>
+                          <Badge variant="default" className="bg-green-600 text-xs">Resolved ✓</Badge>
                         )}
-                        <Badge variant="outline" className="capitalize">
+                        <Badge variant="outline" className="capitalize text-xs">
                           {memo.type}
                         </Badge>
                       </div>
-                      <CardDescription className="mt-1">
-                        From: {memo.sender_profile?.full_name} • {format(new Date(memo.created_at), 'PPpp')}
+                      <CardDescription className="mt-1 text-xs sm:text-sm">
+                        <span className="block sm:inline">From: {memo.sender_profile?.full_name}</span>
+                        <span className="hidden sm:inline"> • </span>
+                        <span className="block sm:inline">{format(new Date(memo.created_at), 'PPpp')}</span>
                         {memo.expires_at && (
-                          <> • Expires: {format(new Date(memo.expires_at), 'PPP')}</>
+                          <span className="block sm:inline">
+                            <span className="hidden sm:inline"> • </span>
+                            Expires: {format(new Date(memo.expires_at), 'PPP')}
+                          </span>
                         )}
                         {memo.resolved && memo.resolved_at && (
                           <div className="mt-1 text-green-600 dark:text-green-400 font-medium">
@@ -296,27 +301,27 @@ export default function Memos() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="whitespace-pre-wrap">{memo.content}</p>
+              <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
+                <p className="whitespace-pre-wrap text-sm sm:text-base">{memo.content}</p>
 
                 {/* Replies Section */}
                 {memo.replies && memo.replies.length > 0 && (
                   <div className="space-y-3 pt-4 border-t">
-                    <h4 className="font-semibold text-sm">Replies ({memo.replies.length})</h4>
-                    <ScrollArea className="h-[200px]">
+                    <h4 className="font-semibold text-xs sm:text-sm">Replies ({memo.replies.length})</h4>
+                    <ScrollArea className="h-[150px] sm:h-[200px]">
                       <div className="space-y-3 pr-4">
                         {memo.replies.map((reply) => (
                           <Card key={reply.id} className="bg-muted/50">
-                            <CardContent className="py-3">
-                              <div className="flex justify-between items-start mb-2">
-                                <span className="font-medium text-sm">
+                            <CardContent className="p-3">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 mb-2">
+                                <span className="font-medium text-xs sm:text-sm">
                                   {reply.user_profile?.full_name || 'Unknown'}
                                 </span>
                                 <span className="text-xs text-muted-foreground">
                                   {format(new Date(reply.created_at), 'PPp')}
                                 </span>
                               </div>
-                              <p className="text-sm whitespace-pre-wrap">{reply.content}</p>
+                              <p className="text-xs sm:text-sm whitespace-pre-wrap">{reply.content}</p>
                             </CardContent>
                           </Card>
                         ))}
@@ -326,7 +331,7 @@ export default function Memos() {
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-2">
+                <div className="flex flex-wrap gap-2 pt-2">
                   {!memo.is_read && (
                     <MemoReplyDialog
                       memoId={memo.id}

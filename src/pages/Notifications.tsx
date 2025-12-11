@@ -436,14 +436,14 @@ export default function Notifications() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <Bell className="h-8 w-8" />
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Bell className="h-6 sm:h-8 w-6 sm:w-8" />
             Notifications
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             View all your notifications and announcements
           </p>
         </div>
@@ -453,7 +453,7 @@ export default function Notifications() {
             size="sm"
             onClick={markAllAsRead}
             disabled={markingAllRead || unreadCount === 0}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             {markingAllRead ? (
               <>

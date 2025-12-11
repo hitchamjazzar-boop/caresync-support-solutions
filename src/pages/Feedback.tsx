@@ -184,16 +184,16 @@ export default function Feedback() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Feedback</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Feedback</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             {isAdmin ? 'Manage employee feedback' : 'Submit and track your feedback'}
           </p>
         </div>
         {!isAdmin && (
-          <Button onClick={() => setFeedbackDialogOpen(true)}>
+          <Button onClick={() => setFeedbackDialogOpen(true)} className="w-full sm:w-auto">
             <MessageSquare className="mr-2 h-4 w-4" />
             Send Feedback
           </Button>
@@ -203,43 +203,43 @@ export default function Feedback() {
       {feedback.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium">No feedback yet</p>
-            <p className="text-sm text-muted-foreground">
+            <MessageSquare className="h-10 sm:h-12 w-10 sm:w-12 text-muted-foreground mb-4" />
+            <p className="text-base sm:text-lg font-medium">No feedback yet</p>
+            <p className="text-xs sm:text-sm text-muted-foreground text-center">
               {isAdmin ? 'Employee feedback will appear here' : 'Start by sending your first feedback'}
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3 sm:gap-4">
           {feedback.map((item) => (
             <Card key={item.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">{item.subject}</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="space-y-1 flex-1 min-w-0">
+                    <CardTitle className="text-base sm:text-lg break-words">{item.subject}</CardTitle>
                     {isAdmin && (
-                      <CardDescription>
+                      <CardDescription className="text-xs sm:text-sm">
                         From: {item.profiles.full_name}
                       </CardDescription>
                     )}
-                    <CardDescription>
+                    <CardDescription className="text-xs sm:text-sm">
                       {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                     </CardDescription>
                   </div>
                   {getStatusBadge(item.status)}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
                 <div>
-                  <p className="text-sm font-medium mb-1">Message:</p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.message}</p>
+                  <p className="text-xs sm:text-sm font-medium mb-1">Message:</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">{item.message}</p>
                 </div>
 
                 {item.admin_response && (
                   <div className="border-t pt-4">
-                    <p className="text-sm font-medium mb-1">Admin Response:</p>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{item.admin_response}</p>
+                    <p className="text-xs sm:text-sm font-medium mb-1">Admin Response:</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap">{item.admin_response}</p>
                     {isAdmin && item.status !== 'resolved' && (
                       <Button
                         size="sm"

@@ -118,18 +118,18 @@ const EmployeeVoting = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Trophy className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
+            <Trophy className="h-6 sm:h-8 w-6 sm:w-8 text-primary" />
             Employee Awards Voting
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
             Nominate and vote for outstanding colleagues
           </p>
         </div>
-        <Button variant="outline" onClick={() => navigate('/voting/history')}>
+        <Button variant="outline" onClick={() => navigate('/voting/history')} className="w-full sm:w-auto">
           <History className="h-4 w-4 mr-2" />
           View History
         </Button>
@@ -138,18 +138,18 @@ const EmployeeVoting = () => {
       {/* Admin Controls */}
       {isAdmin && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Settings className="h-4 sm:h-5 w-4 sm:w-5" />
               Admin Controls
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             <Tabs value={adminTab} onValueChange={setAdminTab}>
-              <TabsList className="grid w-full grid-cols-3 mb-4">
-                <TabsTrigger value="period">Voting Period</TabsTrigger>
-                <TabsTrigger value="categories">Award Categories</TabsTrigger>
-                <TabsTrigger value="approvals">Nominee Approvals</TabsTrigger>
+              <TabsList className="w-full grid grid-cols-3 mb-4 h-auto">
+                <TabsTrigger value="period" className="text-xs sm:text-sm px-2 py-2">Voting Period</TabsTrigger>
+                <TabsTrigger value="categories" className="text-xs sm:text-sm px-2 py-2">Categories</TabsTrigger>
+                <TabsTrigger value="approvals" className="text-xs sm:text-sm px-2 py-2">Approvals</TabsTrigger>
               </TabsList>
 
               <TabsContent value="period">
@@ -183,9 +183,9 @@ const EmployeeVoting = () => {
       {/* Voting Section */}
       {!currentPeriod ? (
         <Card>
-          <CardHeader>
-            <CardTitle>No Active Voting Period</CardTitle>
-            <CardDescription>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">No Active Voting Period</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               {isAdmin 
                 ? 'Create a new voting period to allow employees to nominate and vote.'
                 : 'There is no active voting period at the moment. Check back later!'}
@@ -194,13 +194,13 @@ const EmployeeVoting = () => {
         </Card>
       ) : (
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
                   {category && (
                     <span 
-                      className="px-2 py-1 rounded text-sm text-white"
+                      className="px-2 py-1 rounded text-xs sm:text-sm text-white"
                       style={{ backgroundColor: category.color }}
                     >
                       {category.name}
@@ -208,7 +208,7 @@ const EmployeeVoting = () => {
                   )}
                   {getMonthName(currentPeriod.month)} {currentPeriod.year}
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   {currentPeriod.status === 'open' 
                     ? 'Voting period is currently open' 
                     : currentPeriod.is_published 
@@ -218,19 +218,20 @@ const EmployeeVoting = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             <Tabs defaultValue="nominate" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="nominate" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Nominate
+              <TabsList className="w-full grid grid-cols-3 h-auto">
+                <TabsTrigger value="nominate" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+                  <Users className="h-3 sm:h-4 w-3 sm:w-4" />
+                  <span className="hidden sm:inline">Nominate</span>
+                  <span className="sm:hidden">Nom.</span>
                 </TabsTrigger>
-                <TabsTrigger value="vote" className="flex items-center gap-2">
-                  <Vote className="h-4 w-4" />
+                <TabsTrigger value="vote" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+                  <Vote className="h-3 sm:h-4 w-3 sm:w-4" />
                   Vote
                 </TabsTrigger>
-                <TabsTrigger value="results" className="flex items-center gap-2">
-                  <Trophy className="h-4 w-4" />
+                <TabsTrigger value="results" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+                  <Trophy className="h-3 sm:h-4 w-3 sm:w-4" />
                   Results
                 </TabsTrigger>
               </TabsList>

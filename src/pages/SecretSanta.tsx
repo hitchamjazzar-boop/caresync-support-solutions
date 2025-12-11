@@ -89,10 +89,10 @@ export default function SecretSanta() {
 
   if (!activeEvent) {
     return (
-      <div className="space-y-6">
-        <div className="text-center py-12">
-          <h1 className="text-3xl font-bold mb-4">Secret Santa</h1>
-          <p className="text-muted-foreground mb-8">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="text-center py-8 sm:py-12">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-4">Secret Santa</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8">
             No active Secret Santa event at the moment.
           </p>
           {isAdmin && <AdminControls onEventCreated={loadActiveEvent} />}
@@ -102,9 +102,9 @@ export default function SecretSanta() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Secret Santa</h1>
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Secret Santa</h1>
         {isAdmin && (
           <AdminControls 
             event={activeEvent}

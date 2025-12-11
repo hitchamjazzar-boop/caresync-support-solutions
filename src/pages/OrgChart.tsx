@@ -266,27 +266,28 @@ export default function OrgChart() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Organizational Chart</h1>
-          <p className="text-muted-foreground">
-            {isAdmin ? 'Manage your organization\'s hierarchy' : 'View your organization\'s hierarchy'}
+          <h1 className="text-2xl sm:text-3xl font-bold">Organizational Chart</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            {isAdmin ? "Manage your organization's hierarchy" : "View your organization's hierarchy"}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={expandAll}>
-            <Maximize2 className="h-4 w-4 mr-2" />
-            Expand All
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={expandAll} size="sm" className="flex-1 sm:flex-initial">
+            <Maximize2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Expand All</span>
           </Button>
-          <Button variant="outline" onClick={collapseAll}>
-            <Minimize2 className="h-4 w-4 mr-2" />
-            Collapse All
+          <Button variant="outline" onClick={collapseAll} size="sm" className="flex-1 sm:flex-initial">
+            <Minimize2 className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Collapse All</span>
           </Button>
           {isAdmin && (
-            <Button onClick={() => setAddDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add to Org Chart
+            <Button onClick={() => setAddDialogOpen(true)} size="sm" className="w-full sm:w-auto">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add to Org Chart</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           )}
         </div>
@@ -300,17 +301,17 @@ export default function OrgChart() {
         </Card>
       ) : (
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
+          <CardHeader className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle>Organization Hierarchy</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
+                <CardTitle className="text-base sm:text-lg">Organization Hierarchy</CardTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   {isAdmin 
                     ? 'Drag and drop employees to reorganize the hierarchy' 
                     : 'View your organization structure'}
                 </p>
               </div>
-              <div className="hidden sm:flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <ZoomOut className="h-4 w-4 text-muted-foreground" />
                 <div className="flex items-center gap-2">
                   <Slider
@@ -319,9 +320,9 @@ export default function OrgChart() {
                     min={50}
                     max={150}
                     step={10}
-                    className="w-24 md:w-32"
+                    className="w-20 sm:w-24 md:w-32"
                   />
-                  <span className="text-sm font-medium text-muted-foreground min-w-[3rem]">
+                  <span className="text-xs sm:text-sm font-medium text-muted-foreground min-w-[2.5rem]">
                     {zoom}%
                   </span>
                 </div>
