@@ -29,6 +29,7 @@ interface Announcement {
   target_users: string[] | null;
   target_roles: string[] | null;
   target_departments: string[] | null;
+  image_url: string | null;
 }
 
 export default function Announcements() {
@@ -237,7 +238,14 @@ export default function Announcements() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-4 sm:p-6 pt-0">
+              <CardContent className="p-4 sm:p-6 pt-0 space-y-3">
+                {announcement.image_url && (
+                  <img
+                    src={announcement.image_url}
+                    alt={announcement.title}
+                    className="w-full max-h-64 object-cover rounded-lg"
+                  />
+                )}
                 <p className="text-sm sm:text-base text-foreground whitespace-pre-wrap break-words">{announcement.content}</p>
               </CardContent>
             </Card>
