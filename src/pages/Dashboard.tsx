@@ -13,6 +13,7 @@ import { MemoAlert } from '@/components/memos/MemoAlert';
 import { FeaturedAnnouncements } from '@/components/dashboard/FeaturedAnnouncements';
 import { BirthdayReminders } from '@/components/dashboard/BirthdayReminders';
 import { ShoutoutRequestCard } from '@/components/shoutouts/ShoutoutRequestCard';
+import { GiveShoutoutDialog } from '@/components/shoutouts/GiveShoutoutDialog';
 import { SecretSantaAssignment } from '@/components/dashboard/SecretSantaAssignment';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -328,9 +329,10 @@ export default function Dashboard() {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
+                <GiveShoutoutDialog />
                 <Button 
                   onClick={() => navigate('/weekly-summary')} 
-                  variant="default" 
+                  variant="outline" 
                   className="w-full justify-start"
                 >
                   <TrendingUp className="mr-2 h-4 w-4" />
