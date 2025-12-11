@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Send, Loader2 } from 'lucide-react';
+import { sendBrowserNotification } from '@/hooks/useBrowserNotifications';
 
 interface Profile {
   id: string;
@@ -82,6 +83,14 @@ export function SendFeedbackRequestDialog() {
       } catch (emailError) {
         console.error('Failed to send email notification:', emailError);
       }
+
+      // Send browser notification to the recipient
+      const recipientName = employees.find(e => e.id === selectedEmployee)?.full_name || 'Employee';
+      sendBrowserNotification(
+        'New Feedback Request',
+        `${adminProfile?.full_name || 'Admin'} has requested feedback from you.`,
+        `feedback-request-${selectedEmployee}`
+      );
 
       toast({
         title: 'Success',

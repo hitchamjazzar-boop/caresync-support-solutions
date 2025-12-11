@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Megaphone, Loader2 } from 'lucide-react';
+import { sendBrowserNotification } from '@/hooks/useBrowserNotifications';
 
 interface Profile {
   id: string;
@@ -121,6 +122,13 @@ export function SendShoutoutRequestDialog({
       // Send email notification (non-blocking)
       sendNotification(selectedEmployee, targetEmployee || undefined);
 
+      // Send browser notification
+      sendBrowserNotification(
+        'New Shout Out Request',
+        `${adminName || 'Admin'} has requested a shout out from you.`,
+        `shoutout-request-${selectedEmployee}`
+      );
+
       toast({
         title: 'Request sent',
         description: 'The shout out request has been sent to the employee.',
@@ -174,12 +182,12 @@ export function SendShoutoutRequestDialog({
 
           <div className="space-y-2">
             <Label htmlFor="target">Who should receive the shout out? (optional)</Label>
-            <Select value={targetEmployee} onValueChange={setTargetEmployee}>
+            <Select value={targetEmployee} onValueChange={(val) => setTargetEmployee(val === 'let-them-choose' ? '' : val)}>
               <SelectTrigger>
                 <SelectValue placeholder="Let them choose, or select a specific employee" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Let them choose</SelectItem>
+                <SelectItem value="let-them-choose">Let them choose</SelectItem>
                 {employees.filter(emp => emp.id !== selectedEmployee).map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
                     {emp.full_name}
