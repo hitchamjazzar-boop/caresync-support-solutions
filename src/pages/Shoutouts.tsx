@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ShoutoutsList } from '@/components/shoutouts/ShoutoutsList';
 import { ShoutoutLeaderboard } from '@/components/shoutouts/ShoutoutLeaderboard';
+import { ShoutoutRequestCard } from '@/components/shoutouts/ShoutoutRequestCard';
 import { SendShoutoutRequestDialog } from '@/components/shoutouts/SendShoutoutRequestDialog';
 import { GiveShoutoutDialog } from '@/components/shoutouts/GiveShoutoutDialog';
 import { Heart, Loader2 } from 'lucide-react';
@@ -95,6 +96,7 @@ export default function Shoutouts() {
         </div>
       ) : (
         <div className="space-y-6">
+          <ShoutoutRequestCard />
           <ShoutoutLeaderboard />
           {publishedShoutouts.length === 0 ? (
             <Card>

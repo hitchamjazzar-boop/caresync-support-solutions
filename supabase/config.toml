@@ -17,3 +17,18 @@ verify_jwt = false
 
 [functions.send-shoutout-notification]
 verify_jwt = true
+
+[functions.send-feedback-notification]
+verify_jwt = true
+
+[functions.delete-employee]
+verify_jwt = true
+
+[functions.escalate-memos]
+verify_jwt = false
+
+[functions.assign-secret-santa]
+verify_jwt = true
+
+[functions.sync-reminders-to-calendar]
+verify_jwt = false
