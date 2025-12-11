@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,9 +25,11 @@ import { Award, Calendar, User, Trash2, Clock, CheckCircle, XCircle } from 'luci
 import { format, isPast } from 'date-fns';
 import { useAdmin } from '@/hooks/useAdmin';
 import { cn } from '@/lib/utils';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface EmployeeAchievement {
   id: string;
+  user_id: string;
   reason: string;
   awarded_date: string;
   created_at: string;
@@ -120,6 +121,7 @@ export const EmployeeAchievementsList = () => {
 
       const mapped: EmployeeAchievement[] = (data as any[]).map((row) => ({
         id: row.id,
+        user_id: row.user_id,
         reason: row.reason || '',
         awarded_date: row.awarded_date,
         created_at: row.created_at,
@@ -278,12 +280,12 @@ export const EmployeeAchievementsList = () => {
                       </div>
                       <div className="flex items-center gap-4 mt-2">
                         <div className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={achievement.profiles.photo_url || ''} />
-                            <AvatarFallback>
-                              {achievement.profiles.full_name[0]}
-                            </AvatarFallback>
-                          </Avatar>
+                          <ProfileAvatarWithBadges
+                            userId={achievement.user_id}
+                            photoUrl={achievement.profiles.photo_url}
+                            fullName={achievement.profiles.full_name}
+                            className="h-8 w-8"
+                          />
                           <div>
                             <div className="font-medium text-sm">
                               {achievement.profiles.full_name}

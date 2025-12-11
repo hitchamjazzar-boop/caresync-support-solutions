@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -174,10 +174,13 @@ export const AwardAchievementDialog = ({
                 {employees.map((employee) => (
                   <SelectItem key={employee.id} value={employee.id}>
                     <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={employee.photo_url || ''} />
-                        <AvatarFallback>{employee.full_name[0]}</AvatarFallback>
-                      </Avatar>
+                      <ProfileAvatarWithBadges
+                        userId={employee.id}
+                        photoUrl={employee.photo_url}
+                        fullName={employee.full_name}
+                        className="h-6 w-6"
+                        showBadges={false}
+                      />
                       <div>
                         <div className="font-medium">{employee.full_name}</div>
                         <div className="text-xs text-muted-foreground">

@@ -4,10 +4,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface Nominee {
   nominated_user_id: string;
@@ -154,14 +154,16 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
                   value={nominee.nominated_user_id}
                   id={nominee.nominated_user_id}
                 />
-                <Label
-                  htmlFor={nominee.nominated_user_id}
-                  className="flex items-center gap-3 cursor-pointer flex-1"
-                >
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={nominee.profiles.photo_url || ''} />
-                    <AvatarFallback>{nominee.profiles.full_name[0]}</AvatarFallback>
-                  </Avatar>
+                  <Label
+                    htmlFor={nominee.nominated_user_id}
+                    className="flex items-center gap-3 cursor-pointer flex-1"
+                  >
+                    <ProfileAvatarWithBadges
+                      userId={nominee.nominated_user_id}
+                      photoUrl={nominee.profiles.photo_url}
+                      fullName={nominee.profiles.full_name}
+                      className="h-12 w-12"
+                    />
                   <div className="flex-1">
                     <div className="font-medium">{nominee.profiles.full_name}</div>
                     <div className="text-sm text-muted-foreground">{nominee.profiles.position}</div>
