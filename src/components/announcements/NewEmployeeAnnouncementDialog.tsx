@@ -12,10 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, UserPlus, X, Image } from 'lucide-react';
+import { Loader2, UserPlus, X, ImageIcon } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface Employee {
@@ -237,16 +236,14 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Select New Employee(s) ({selectedEmployees.length} selected)</Label>
-            <ScrollArea className="h-48 border rounded-md p-2">
+            <div className="h-48 border rounded-md p-2 overflow-y-auto">
               {employees.map((employee) => (
-                <div 
+                <label 
                   key={employee.id} 
                   className="flex items-center gap-3 p-2 hover:bg-muted rounded-md cursor-pointer"
-                  onClick={() => toggleEmployee(employee.id)}
                 >
                   <Checkbox 
                     checked={selectedEmployees.includes(employee.id)}
-                    onClick={(e) => e.stopPropagation()}
                     onCheckedChange={() => toggleEmployee(employee.id)}
                   />
                   <Avatar className="h-8 w-8">
@@ -262,9 +259,9 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
                       {employee.department && ` • ${employee.department}`}
                     </p>
                   </div>
-                </div>
+                </label>
               ))}
-            </ScrollArea>
+            </div>
           </div>
 
           {selectedEmployeeData.length > 0 && (
@@ -327,7 +324,7 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
                 onClick={() => fileInputRef.current?.click()}
               >
                 <div className="flex flex-col items-center gap-2">
-                  <Image className="h-6 w-6 text-muted-foreground" />
+                  <ImageIcon className="h-6 w-6 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Click to upload an image (600x600 recommended)</span>
                 </div>
               </Button>
