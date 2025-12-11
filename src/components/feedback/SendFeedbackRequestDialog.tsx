@@ -136,12 +136,12 @@ export function SendFeedbackRequestDialog() {
           </div>
           <div className="space-y-2">
             <Label>Feedback about whom? (optional)</Label>
-            <Select value={targetEmployee} onValueChange={setTargetEmployee}>
+            <Select value={targetEmployee} onValueChange={(val) => setTargetEmployee(val === 'general' ? '' : val)}>
               <SelectTrigger>
                 <SelectValue placeholder="General feedback, or about a specific employee" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">General feedback</SelectItem>
+                <SelectItem value="general">General feedback</SelectItem>
                 {employees.filter(emp => emp.id !== selectedEmployee).map((emp) => (
                   <SelectItem key={emp.id} value={emp.id}>
                     {emp.full_name}
