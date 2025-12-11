@@ -171,6 +171,7 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
           is_pinned: true,
           image_url: imageUrl,
           featured_user_id: selectedEmployees[0],
+          featured_user_ids: selectedEmployees,
         });
 
       if (error) throw error;

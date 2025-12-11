@@ -17,6 +17,7 @@ interface Announcement {
   content: string;
   image_url: string | null;
   featured_user_id: string | null;
+  featured_user_ids: string[] | null;
   created_at: string;
 }
 
@@ -109,15 +110,24 @@ export default function AnnouncementGallery() {
 
       setAnnouncements(filteredAnnouncements);
 
-      // Fetch profiles for featured users
+      // Fetch profiles for all featured users (including arrays)
       if (announcementData && announcementData.length > 0) {
-        const userIds = [...new Set(announcementData.map(a => a.featured_user_id).filter(Boolean))] as string[];
+        const userIds = new Set<string>();
         
-        if (userIds.length > 0) {
+        announcementData.forEach(a => {
+          if (a.featured_user_id) {
+            userIds.add(a.featured_user_id);
+          }
+          if (a.featured_user_ids && Array.isArray(a.featured_user_ids)) {
+            a.featured_user_ids.forEach((id: string) => userIds.add(id));
+          }
+        });
+        
+        if (userIds.size > 0) {
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('*')
-            .in('id', userIds);
+            .select('id, full_name, photo_url, position, department')
+            .in('id', Array.from(userIds));
 
           if (profileData) {
             const profilesMap = new Map(profileData.map(p => [p.id, p]));
@@ -272,13 +282,20 @@ export default function AnnouncementGallery() {
 
               <div className="grid gap-6 md:grid-cols-2">
                 {monthAnnouncements.map((announcement) => {
-                  const profile = announcement.featured_user_id
-                    ? profiles.get(announcement.featured_user_id)
-                    : null;
+                  // Get all featured profiles - prefer featured_user_ids array, fallback to single featured_user_id
+                  const featuredUserIds = announcement.featured_user_ids && announcement.featured_user_ids.length > 0
+                    ? announcement.featured_user_ids
+                    : announcement.featured_user_id 
+                      ? [announcement.featured_user_id]
+                      : [];
+                  
+                  const featuredProfiles = featuredUserIds
+                    .map(id => profiles.get(id))
+                    .filter((p): p is Profile => p !== undefined);
 
-                    const isBirthday = announcement.title.toLowerCase().includes('birthday');
-                    const isPromotion = announcement.title.toLowerCase().includes('promotion');
-                    const isHighlighted = searchParams.get('highlight') === announcement.id;
+                  const isBirthday = announcement.title.toLowerCase().includes('birthday');
+                  const isPromotion = announcement.title.toLowerCase().includes('promotion');
+                  const isHighlighted = searchParams.get('highlight') === announcement.id;
 
                   return (
                     <Card 
@@ -325,23 +342,42 @@ export default function AnnouncementGallery() {
                         <CardTitle className="text-lg">{announcement.title}</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        {/* Employee Info & Image */}
-                        <div className="flex gap-3">
-                          {profile && (
-                            <div className="flex items-center gap-2">
-                              <ProfileAvatarWithBadges
-                                userId={profile.id}
-                                photoUrl={profile.photo_url}
-                                fullName={profile.full_name}
-                                className="h-12 w-12"
-                              />
-                              <div>
-                                <p className="font-medium text-sm">{profile.full_name}</p>
-                                <p className="text-xs text-muted-foreground">{profile.position || 'N/A'}</p>
+                        {/* Employee Info - Show all featured employees */}
+                        {featuredProfiles.length > 0 && (
+                          <div className={featuredProfiles.length === 1 ? '' : 'flex flex-wrap gap-3'}>
+                            {featuredProfiles.length === 1 ? (
+                              // Single employee layout
+                              <div className="flex items-center gap-2">
+                                <ProfileAvatarWithBadges
+                                  userId={featuredProfiles[0].id}
+                                  photoUrl={featuredProfiles[0].photo_url}
+                                  fullName={featuredProfiles[0].full_name}
+                                  className="h-12 w-12"
+                                />
+                                <div>
+                                  <p className="font-medium text-sm">{featuredProfiles[0].full_name}</p>
+                                  <p className="text-xs text-muted-foreground">{featuredProfiles[0].position || 'N/A'}</p>
+                                </div>
                               </div>
-                            </div>
-                          )}
-                        </div>
+                            ) : (
+                              // Multiple employees layout
+                              featuredProfiles.map((profile) => (
+                                <div key={profile.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+                                  <ProfileAvatarWithBadges
+                                    userId={profile.id}
+                                    photoUrl={profile.photo_url}
+                                    fullName={profile.full_name}
+                                    className="h-10 w-10"
+                                  />
+                                  <div>
+                                    <p className="font-medium text-sm">{profile.full_name}</p>
+                                    <p className="text-xs text-muted-foreground">{profile.position || 'N/A'}</p>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
 
                         {/* Featured Image */}
                         {announcement.image_url && (

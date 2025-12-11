@@ -178,6 +178,7 @@ export function PromotionAnnouncementDialog({ open, onOpenChange, onSuccess }: P
           content: description || `Congratulations to ${namesText} on their promotion to ${newPosition}!`,
           created_by: user.id,
           featured_user_id: selectedEmployees[0],
+          featured_user_ids: selectedEmployees,
           is_pinned: true,
           target_type: 'specific_users',
           target_users: selectedEmployees,
