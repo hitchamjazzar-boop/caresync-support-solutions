@@ -186,3 +186,36 @@ export const playAchievementSound = () => {
     console.error('Error playing achievement sound:', error);
   }
 };
+
+export const playRequestNotificationSound = () => {
+  try {
+    const ctx = createAudioContext();
+    const now = ctx.currentTime;
+    
+    // Attention-grabbing three-tone chime for new requests
+    const notes = [
+      { freq: 587.33, time: 0 },     // D5
+      { freq: 880, time: 0.12 },     // A5
+      { freq: 1174.66, time: 0.24 }, // D6
+    ];
+    
+    notes.forEach(note => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(note.freq, now + note.time);
+      
+      gain.gain.setValueAtTime(0.25, now + note.time);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + note.time + 0.2);
+      
+      osc.start(now + note.time);
+      osc.stop(now + note.time + 0.2);
+    });
+  } catch (error) {
+    console.error('Error playing request notification sound:', error);
+  }
+};
