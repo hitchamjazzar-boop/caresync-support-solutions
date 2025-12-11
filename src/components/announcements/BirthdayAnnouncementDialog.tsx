@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useState, useEffect, useRef } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, X, Image } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 
@@ -30,10 +31,11 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<string>('');
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('');
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -60,6 +62,14 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
     setEmployees(data || []);
   };
 
+  const toggleEmployee = (employeeId: string) => {
+    setSelectedEmployees(prev => 
+      prev.includes(employeeId) 
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -73,10 +83,10 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
+    if (file.size > 5 * 1024 * 1024) {
       toast({
         title: 'File Too Large',
-        description: 'Please upload an image smaller than 2MB',
+        description: 'Please upload an image smaller than 5MB',
         variant: 'destructive',
       });
       return;
@@ -90,13 +100,21 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
     reader.readAsDataURL(file);
   };
 
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedEmployee) {
+    if (selectedEmployees.length === 0) {
       toast({
         title: 'Missing Information',
-        description: 'Please select an employee',
+        description: 'Please select at least one employee',
         variant: 'destructive',
       });
       return;
@@ -105,7 +123,7 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
     setLoading(true);
 
     try {
-      let imageUrl = '';
+      let imageUrl: string | null = null;
 
       // Upload image if provided
       if (imageFile) {
@@ -128,12 +146,19 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
         setUploading(false);
       }
 
-      // Get employee name and birthday
-      const employee = employees.find(e => e.id === selectedEmployee);
-      if (!employee) throw new Error('Employee not found');
+      const selectedEmployeeData = employees.filter(e => selectedEmployees.includes(e.id));
+      const names = selectedEmployeeData.map(e => e.full_name);
+      const namesText = names.length === 1 
+        ? names[0] 
+        : names.length === 2 
+          ? `${names[0]} and ${names[1]}`
+          : `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
 
-      const title = `🎂 Happy Birthday ${employee.full_name}!`;
-      const defaultMessage = message.trim() || `Wishing ${employee.full_name.split(' ')[0]} a wonderful birthday filled with joy and happiness! 🎉`;
+      const title = selectedEmployees.length === 1
+        ? `🎂 Happy Birthday ${names[0]}!`
+        : `🎂 Happy Birthday to Our Team Members!`;
+      
+      const defaultMessage = message.trim() || `Wishing ${namesText} a wonderful birthday filled with joy and happiness! 🎉`;
 
       // Create announcement
       const { data: userData } = await supabase.auth.getUser();
@@ -146,8 +171,8 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
           created_by: userData.user?.id,
           target_type: 'all',
           is_pinned: true,
-          image_url: imageUrl || null,
-          featured_user_id: selectedEmployee,
+          image_url: imageUrl,
+          featured_user_id: selectedEmployees[0],
         });
 
       if (error) throw error;
@@ -173,55 +198,75 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
   };
 
   const resetForm = () => {
-    setSelectedEmployee('');
+    setSelectedEmployees([]);
     setMessage('');
     setImageFile(null);
-    setImagePreview('');
+    setImagePreview(null);
   };
 
-  const selectedEmployeeData = employees.find(e => e.id === selectedEmployee);
+  const selectedEmployeeData = employees.filter(e => selectedEmployees.includes(e.id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create Birthday Announcement</DialogTitle>
           <DialogDescription>
-            Select an employee and add a special birthday message
+            Select employees and add a special birthday message
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="employee">Select Employee *</Label>
-            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose an employee" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((employee) => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    {employee.full_name} {employee.birthday && `(${format(new Date(employee.birthday), 'MMM dd')})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Select Employee(s) ({selectedEmployees.length} selected)</Label>
+            <ScrollArea className="h-48 border rounded-md p-2">
+              {employees.map((employee) => (
+                <div 
+                  key={employee.id} 
+                  className="flex items-center gap-3 p-2 hover:bg-muted rounded-md cursor-pointer"
+                  onClick={() => toggleEmployee(employee.id)}
+                >
+                  <Checkbox 
+                    checked={selectedEmployees.includes(employee.id)}
+                    onCheckedChange={() => toggleEmployee(employee.id)}
+                  />
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={employee.photo_url || ''} />
+                    <AvatarFallback>{employee.full_name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{employee.full_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {employee.birthday && format(new Date(employee.birthday), 'MMM dd')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
           </div>
 
-          {selectedEmployeeData && (
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={selectedEmployeeData.photo_url || undefined} />
-                <AvatarFallback className="text-lg">{selectedEmployeeData.full_name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div>
-                <p className="font-medium">{selectedEmployeeData.full_name}</p>
-                <p className="text-sm text-muted-foreground">{selectedEmployeeData.position || 'N/A'}</p>
-                {selectedEmployeeData.birthday && (
-                  <p className="text-xs text-muted-foreground">
-                    Birthday: {format(new Date(selectedEmployeeData.birthday), 'MMMM dd')}
-                  </p>
-                )}
+          {selectedEmployeeData.length > 0 && (
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-sm font-medium mb-2">Selected Employees:</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedEmployeeData.map(emp => (
+                  <div key={emp.id} className="flex items-center gap-2 bg-background px-2 py-1 rounded-md">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={emp.photo_url || ''} />
+                      <AvatarFallback>{emp.full_name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{emp.full_name}</span>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-5 w-5"
+                      onClick={() => toggleEmployee(emp.id)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -238,48 +283,47 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="image">Birthday Image (Optional)</Label>
+            <Label>Birthday Image (Optional)</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
             {imagePreview ? (
               <div className="relative">
                 <img
                   src={imagePreview}
                   alt="Preview"
-                  className="w-full h-48 object-cover rounded-md"
+                  className="w-full max-w-[600px] h-auto max-h-[600px] object-contain rounded-lg border"
                 />
                 <Button
                   type="button"
                   variant="destructive"
-                  size="sm"
-                  className="absolute top-2 right-2"
-                  onClick={() => {
-                    setImageFile(null);
-                    setImagePreview('');
-                  }}
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8"
+                  onClick={removeImage}
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <Label htmlFor="image" className="cursor-pointer">
-                <div className="flex items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-8 text-sm hover:bg-accent hover:text-accent-foreground">
-                  <Upload className="h-4 w-4" />
-                  Upload Birthday Image
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-24 border-dashed"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Image className="h-6 w-6 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Click to upload an image (600x600 recommended)</span>
                 </div>
-              </Label>
+              </Button>
             )}
-            <Input
-              id="image"
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleImageSelect}
-            />
-            <p className="text-xs text-muted-foreground">
-              JPG, PNG or WEBP. Max 2MB.
-            </p>
           </div>
 
-          <div className="flex justify-end gap-2 pt-4">
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
@@ -301,7 +345,7 @@ export function BirthdayAnnouncementDialog({ open, onOpenChange, onSuccess }: Bi
                 'Create Announcement'
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

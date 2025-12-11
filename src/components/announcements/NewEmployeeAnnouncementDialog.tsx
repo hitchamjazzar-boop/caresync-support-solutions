@@ -11,17 +11,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, UserPlus, Upload, X, Image } from 'lucide-react';
+import { Loader2, UserPlus, X, Image } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 interface Employee {
   id: string;
@@ -43,7 +38,7 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<string>('');
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [welcomeMessage, setWelcomeMessage] = useState('');
   const [expiresInDays, setExpiresInDays] = useState<string>('14');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -74,11 +69,18 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
     }
   };
 
+  const toggleEmployee = (employeeId: string) => {
+    setSelectedEmployees(prev => 
+      prev.includes(employeeId) 
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       toast({
         title: 'Invalid file type',
@@ -88,7 +90,6 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast({
         title: 'File too large',
@@ -117,10 +118,10 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedEmployee) {
+    if (selectedEmployees.length === 0) {
       toast({
         title: 'Error',
-        description: 'Please select an employee',
+        description: 'Please select at least one employee',
         variant: 'destructive',
       });
       return;
@@ -129,8 +130,8 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
     setLoading(true);
 
     try {
-      const employee = employees.find((e) => e.id === selectedEmployee);
-      if (!employee) throw new Error('Employee not found');
+      const selectedEmployeeData = employees.filter(e => selectedEmployees.includes(e.id));
+      if (selectedEmployeeData.length === 0) throw new Error('Employees not found');
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -162,16 +163,26 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + parseInt(expiresInDays));
 
-      const defaultMessage = `Please join us in welcoming ${employee.full_name} to our team${employee.position ? ` as ${employee.position}` : ''}${employee.department ? ` in the ${employee.department} department` : ''}! We're excited to have them on board.`;
+      // Create names list
+      const names = selectedEmployeeData.map(e => e.full_name);
+      const namesText = names.length === 1 
+        ? names[0] 
+        : names.length === 2 
+          ? `${names[0]} and ${names[1]}`
+          : `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+
+      const defaultMessage = `Please join us in welcoming ${namesText} to our team! We're excited to have them on board.`;
 
       // Create new employee announcement - visible to everyone
       const { error: announcementError } = await supabase
         .from('announcements')
         .insert({
-          title: `👋 Welcome to the Team: ${employee.full_name}`,
+          title: selectedEmployees.length === 1 
+            ? `👋 Welcome to the Team: ${names[0]}`
+            : `👋 Welcome Our New Team Members!`,
           content: welcomeMessage || defaultMessage,
           created_by: user.id,
-          featured_user_id: selectedEmployee,
+          featured_user_id: selectedEmployees[0], // First selected employee
           is_pinned: true,
           target_type: 'all',
           expires_at: expiresAt.toISOString(),
@@ -201,69 +212,82 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
   };
 
   const resetForm = () => {
-    setSelectedEmployee('');
+    setSelectedEmployees([]);
     setWelcomeMessage('');
     setExpiresInDays('14');
     setImageFile(null);
     setImagePreview(null);
   };
 
-  const selectedEmployeeData = employees.find((e) => e.id === selectedEmployee);
+  const selectedEmployeeData = employees.filter(e => selectedEmployees.includes(e.id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Announce New Team Member
+            Announce New Team Member{selectedEmployees.length > 1 ? 's' : ''}
           </DialogTitle>
           <DialogDescription>
-            Welcome a new employee to the team with an announcement
+            Welcome new employees to the team with an announcement
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="employee">Select New Employee</Label>
-            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-              <SelectTrigger>
-                <SelectValue placeholder="Choose an employee" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((employee) => (
-                  <SelectItem key={employee.id} value={employee.id}>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={employee.photo_url || ''} />
-                        <AvatarFallback>
-                          {employee.full_name.split(' ').map((n) => n[0]).join('')}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span>{employee.full_name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Select New Employee(s) ({selectedEmployees.length} selected)</Label>
+            <ScrollArea className="h-48 border rounded-md p-2">
+              {employees.map((employee) => (
+                <div 
+                  key={employee.id} 
+                  className="flex items-center gap-3 p-2 hover:bg-muted rounded-md cursor-pointer"
+                  onClick={() => toggleEmployee(employee.id)}
+                >
+                  <Checkbox 
+                    checked={selectedEmployees.includes(employee.id)}
+                    onCheckedChange={() => toggleEmployee(employee.id)}
+                  />
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={employee.photo_url || ''} />
+                    <AvatarFallback>
+                      {employee.full_name.split(' ').map((n) => n[0]).join('')}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{employee.full_name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {employee.position || 'No position'}
+                      {employee.department && ` • ${employee.department}`}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
           </div>
 
-          {selectedEmployeeData && (
+          {selectedEmployeeData.length > 0 && (
             <div className="p-3 bg-muted rounded-lg">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={selectedEmployeeData.photo_url || ''} />
-                  <AvatarFallback>
-                    {selectedEmployeeData.full_name.split(' ').map((n) => n[0]).join('')}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium">{selectedEmployeeData.full_name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedEmployeeData.position || 'No position set'}
-                    {selectedEmployeeData.department && ` • ${selectedEmployeeData.department}`}
-                  </p>
-                </div>
+              <p className="text-sm font-medium mb-2">Selected Employees:</p>
+              <div className="flex flex-wrap gap-2">
+                {selectedEmployeeData.map(emp => (
+                  <div key={emp.id} className="flex items-center gap-2 bg-background px-2 py-1 rounded-md">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={emp.photo_url || ''} />
+                      <AvatarFallback>{emp.full_name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm">{emp.full_name}</span>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-5 w-5"
+                      onClick={() => toggleEmployee(emp.id)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -282,7 +306,7 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
                 <img
                   src={imagePreview}
                   alt="Preview"
-                  className="w-full h-40 object-cover rounded-lg border"
+                  className="w-full max-w-[600px] h-auto max-h-[600px] object-contain rounded-lg border"
                 />
                 <Button
                   type="button"
@@ -303,7 +327,7 @@ export function NewEmployeeAnnouncementDialog({ open, onOpenChange, onSuccess }:
               >
                 <div className="flex flex-col items-center gap-2">
                   <Image className="h-6 w-6 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Click to upload an image</span>
+                  <span className="text-sm text-muted-foreground">Click to upload an image (600x600 recommended)</span>
                 </div>
               </Button>
             )}
