@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.sync-birthdays-to-calendar]
 verify_jwt = false
+
+[functions.send-shoutout-notification]
+verify_jwt = true
