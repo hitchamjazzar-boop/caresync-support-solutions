@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ImagePlus, X, Loader2 } from 'lucide-react';
 
 const ANNOUNCEMENT_TEMPLATES = [
   // General Templates
@@ -186,6 +187,7 @@ interface AnnouncementDialogProps {
     target_users: string[] | null;
     target_roles: string[] | null;
     target_departments: string[] | null;
+    image_url?: string | null;
   } | null;
   onSuccess: () => void;
 }
@@ -202,6 +204,10 @@ export function AnnouncementDialog({
   const [employees, setEmployees] = useState<{ id: string; full_name: string; department: string | null }[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchEmployeesAndDepartments();
@@ -250,6 +256,7 @@ export function AnnouncementDialog({
         target_roles: announcement.target_roles || [],
         target_departments: announcement.target_departments || [],
       });
+      setImagePreview(announcement.image_url || null);
     } else {
       form.reset({
         title: '',
@@ -262,8 +269,58 @@ export function AnnouncementDialog({
         target_roles: [],
         target_departments: [],
       });
+      setImagePreview(null);
+      setImageFile(null);
     }
   }, [announcement, form]);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Please select an image under 5MB',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const uploadImage = async (file: File): Promise<string | null> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('announcement-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('announcement-images')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplate(templateId);
@@ -276,6 +333,14 @@ export function AnnouncementDialog({
 
   const onSubmit = async (data: AnnouncementFormData) => {
     try {
+      setIsUploading(true);
+      
+      // Upload image if there's a new file
+      let imageUrl = imagePreview;
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+      
       const updateData = {
         title: data.title.trim(),
         content: data.content.trim(),
@@ -286,6 +351,7 @@ export function AnnouncementDialog({
         target_users: data.target_type === 'specific_users' ? data.target_users : null,
         target_roles: data.target_type === 'roles' ? data.target_roles : null,
         target_departments: data.target_type === 'departments' ? data.target_departments : null,
+        image_url: imageUrl,
       };
 
       if (isEditing) {
@@ -323,12 +389,16 @@ export function AnnouncementDialog({
       onSuccess();
       onOpenChange(false);
       form.reset();
+      setImageFile(null);
+      setImagePreview(null);
     } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message,
         variant: 'destructive',
       });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -395,6 +465,47 @@ export function AnnouncementDialog({
                 </FormItem>
               )}
             />
+
+            {/* Image Upload */}
+            <div className="space-y-2">
+              <FormLabel>Image (Optional)</FormLabel>
+              <div className="flex flex-col gap-3">
+                {imagePreview ? (
+                  <div className="relative w-full">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg border"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-8 w-8"
+                      onClick={removeImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full h-32 border-2 border-dashed border-muted-foreground/25 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                  >
+                    <ImagePlus className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                    <span className="text-sm text-muted-foreground">Click to upload an image</span>
+                    <span className="text-xs text-muted-foreground/70">Max 5MB</span>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageSelect}
+                />
+              </div>
+            </div>
 
             <FormField
               control={form.control}
@@ -470,11 +581,19 @@ export function AnnouncementDialog({
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                disabled={isUploading}
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                {isEditing ? 'Update' : 'Create'}
+              <Button type="submit" disabled={isUploading}>
+                {isUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  isEditing ? 'Update' : 'Create'
+                )}
               </Button>
             </div>
           </form>
