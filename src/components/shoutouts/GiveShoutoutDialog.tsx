@@ -59,7 +59,13 @@ export function GiveShoutoutDialog({ trigger }: GiveShoutoutDialogProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedEmployee || !message.trim()) return;
+    
+    console.log('Submit attempted:', { user: user?.id, selectedEmployee, message: message.trim() });
+    
+    if (!user || !selectedEmployee || !message.trim()) {
+      console.log('Validation failed:', { hasUser: !!user, hasEmployee: !!selectedEmployee, hasMessage: !!message.trim() });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -71,7 +77,10 @@ export function GiveShoutoutDialog({ trigger }: GiveShoutoutDialogProps) {
           message: message.trim(),
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Insert error:', error);
+        throw error;
+      }
 
       toast({
         title: 'Shout out sent!',
