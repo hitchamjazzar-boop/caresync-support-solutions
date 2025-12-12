@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, Loader2, Eye, Megaphone, Check } from 'lucide-react';
+import { Heart, Loader2, Eye, Megaphone, Check, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
+import { SubmitShoutoutDialog } from './SubmitShoutoutDialog';
 
 interface Shoutout {
   id: string;
@@ -23,10 +24,12 @@ interface ShoutoutRequest {
   id: string;
   admin_id: string;
   recipient_id: string;
+  target_user_id: string | null;
   message: string | null;
   status: string;
   created_at: string;
   recipient_profile?: { full_name: string };
+  target_profile?: { full_name: string };
 }
 
 export function ShoutoutsList() {
@@ -35,6 +38,8 @@ export function ShoutoutsList() {
   const [requests, setRequests] = useState<ShoutoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishingId, setPublishingId] = useState<string | null>(null);
+  const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<ShoutoutRequest | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -63,6 +68,7 @@ export function ShoutoutsList() {
     });
     requestsData?.forEach(r => {
       userIds.add(r.recipient_id);
+      if (r.target_user_id) userIds.add(r.target_user_id);
     });
 
     // Fetch profiles
@@ -86,6 +92,7 @@ export function ShoutoutsList() {
         requestsData?.map(r => ({
           ...r,
           recipient_profile: profileMap.get(r.recipient_id),
+          target_profile: r.target_user_id ? profileMap.get(r.target_user_id) : undefined,
         })) || []
       );
     } else {
@@ -151,6 +158,7 @@ export function ShoutoutsList() {
   }
 
   return (
+  <>
     <Tabs defaultValue="shoutouts" className="w-full">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="shoutouts" className="flex items-center gap-2">
@@ -225,14 +233,36 @@ export function ShoutoutsList() {
             <Card key={request.id}>
               <CardHeader className="pb-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <CardTitle className="text-base">
-                    Request to {request.recipient_profile?.full_name}
-                  </CardTitle>
-                  <Badge
-                    variant={request.status === 'completed' ? 'default' : 'secondary'}
-                  >
-                    {request.status}
-                  </Badge>
+                  <div>
+                    <CardTitle className="text-base">
+                      Request to {request.recipient_profile?.full_name}
+                    </CardTitle>
+                    {request.target_profile && (
+                      <p className="text-xs text-muted-foreground">
+                        For: {request.target_profile.full_name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={request.status === 'completed' ? 'default' : 'secondary'}
+                    >
+                      {request.status}
+                    </Badge>
+                    {request.status === 'pending' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedRequest(request);
+                          setAnswerDialogOpen(true);
+                        }}
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Answer
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -250,5 +280,19 @@ export function ShoutoutsList() {
         )}
       </TabsContent>
     </Tabs>
+
+    {selectedRequest && (
+      <SubmitShoutoutDialog
+        open={answerDialogOpen}
+        onOpenChange={setAnswerDialogOpen}
+        requestId={selectedRequest.id}
+        targetUserId={selectedRequest.target_user_id}
+        onSuccess={() => {
+          fetchData();
+          setSelectedRequest(null);
+        }}
+      />
+    )}
+  </>
   );
 }
