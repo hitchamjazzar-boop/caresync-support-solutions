@@ -59,10 +59,11 @@ const EmployeeVoting = () => {
 
   const fetchOpenPeriods = async () => {
     try {
+      // Fetch open periods and closed periods that aren't published yet
       const { data, error } = await supabase
         .from('voting_periods')
         .select('*')
-        .eq('status', 'open')
+        .or('status.eq.open,and(status.eq.closed,is_published.eq.false)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
