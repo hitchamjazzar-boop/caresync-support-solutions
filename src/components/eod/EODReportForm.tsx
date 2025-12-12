@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { Loader2, Upload, X, FileText } from 'lucide-react';
+import { Loader2, Upload, X, FileText, ListTodo } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { format } from 'date-fns';
 
 const eodSchema = z.object({
   tasks_completed: z.string().trim().min(10, 'Please provide at least 10 characters').max(2000, 'Maximum 2000 characters'),
@@ -33,6 +35,40 @@ export const EODReportForm = () => {
     notes: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  // Fetch today's completed tasks
+  const { data: completedTasks = [] } = useQuery({
+    queryKey: ['completed-tasks-for-eod', user?.id, today],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('employee_daily_tasks')
+        .select('title, notes, client_id')
+        .eq('user_id', user?.id)
+        .eq('task_date', today)
+        .eq('status', 'completed')
+        .order('completed_at', { ascending: true });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch clients for display
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return data;
+    },
+  });
 
   useEffect(() => {
     checkTodayAttendanceAndReport();
@@ -73,6 +109,46 @@ export const EODReportForm = () => {
     } else {
       setAttendanceId(null);
     }
+  };
+
+  const getClientName = (clientId: string | null) => {
+    if (!clientId) return null;
+    return clients.find(c => c.id === clientId)?.name || null;
+  };
+
+  const handleLoadFromDiary = () => {
+    if (completedTasks.length === 0) {
+      toast({
+        title: 'No Completed Tasks',
+        description: 'You have no completed tasks in your diary for today.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const tasksText = completedTasks
+      .map((task) => {
+        let line = `• ${task.title}`;
+        const clientName = getClientName(task.client_id);
+        if (clientName) {
+          line += ` (${clientName})`;
+        }
+        if (task.notes) {
+          line += ` - ${task.notes}`;
+        }
+        return line;
+      })
+      .join('\n');
+
+    setFormData((prev) => ({
+      ...prev,
+      tasks_completed: tasksText,
+    }));
+
+    toast({
+      title: 'Tasks Loaded',
+      description: `Loaded ${completedTasks.length} completed task(s) from your diary.`,
+    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,7 +330,19 @@ export const EODReportForm = () => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="tasks_completed">Tasks Completed *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="tasks_completed">Tasks Completed *</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleLoadFromDiary}
+                disabled={completedTasks.length === 0}
+              >
+                <ListTodo className="h-4 w-4 mr-2" />
+                Load from Diary ({completedTasks.length})
+              </Button>
+            </div>
             <Textarea
               id="tasks_completed"
               required

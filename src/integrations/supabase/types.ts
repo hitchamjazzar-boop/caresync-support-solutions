@@ -466,9 +466,52 @@ export type Database = {
         }
         Relationships: []
       }
+      clients: {
+        Row: {
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          website: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          website?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       default_tasks: {
         Row: {
+          assigned_departments: string[] | null
+          assigned_to: string[] | null
+          assignment_type: string | null
           category: string
+          client_id: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -482,7 +525,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_departments?: string[] | null
+          assigned_to?: string[] | null
+          assignment_type?: string | null
           category?: string
+          client_id?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -496,7 +543,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_departments?: string[] | null
+          assigned_to?: string[] | null
+          assignment_type?: string | null
           category?: string
+          client_id?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -509,7 +560,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "default_tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_achievements: {
         Row: {
@@ -584,6 +643,7 @@ export type Database = {
       }
       employee_daily_tasks: {
         Row: {
+          client_id: string | null
           completed_at: string | null
           created_at: string
           default_task_id: string | null
@@ -599,6 +659,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           completed_at?: string | null
           created_at?: string
           default_task_id?: string | null
@@ -614,6 +675,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_id?: string | null
           completed_at?: string | null
           created_at?: string
           default_task_id?: string | null
@@ -629,6 +691,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "employee_daily_tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employee_daily_tasks_default_task_id_fkey"
             columns: ["default_task_id"]
