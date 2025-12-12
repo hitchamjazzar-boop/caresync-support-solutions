@@ -34,6 +34,7 @@ import Notifications from "./pages/Notifications";
 import EmployeeInvoices from "./pages/EmployeeInvoices";
 import Shoutouts from "./pages/Shoutouts";
 import AdminManagement from "./pages/AdminManagement";
+import Diary from "./pages/Diary";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -311,6 +312,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <AdminManagement />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/diary"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Diary />
                   </Layout>
                 </ProtectedRoute>
               }

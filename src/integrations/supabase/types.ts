@@ -466,6 +466,51 @@ export type Database = {
         }
         Relationships: []
       }
+      default_tasks: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          instructions: string | null
+          is_active: boolean
+          order_position: number
+          priority: Database["public"]["Enums"]["task_priority"]
+          time_estimate: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean
+          order_position?: number
+          priority?: Database["public"]["Enums"]["task_priority"]
+          time_estimate?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean
+          order_position?: number
+          priority?: Database["public"]["Enums"]["task_priority"]
+          time_estimate?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       employee_achievements: {
         Row: {
           achievement_type_id: string
@@ -533,6 +578,62 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employee_daily_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          default_task_id: string | null
+          description: string | null
+          id: string
+          instructions: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          status: Database["public"]["Enums"]["task_status"]
+          task_date: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          default_task_id?: string | null
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          status?: Database["public"]["Enums"]["task_status"]
+          task_date?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          default_task_id?: string | null
+          description?: string | null
+          id?: string
+          instructions?: string | null
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          status?: Database["public"]["Enums"]["task_status"]
+          task_date?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_daily_tasks_default_task_id_fkey"
+            columns: ["default_task_id"]
+            isOneToOne: false
+            referencedRelation: "default_tasks"
             referencedColumns: ["id"]
           },
         ]
@@ -1554,6 +1655,8 @@ export type Database = {
       app_role: "admin" | "manager" | "employee"
       memo_type: "memo" | "reminder" | "warning"
       secret_santa_status: "draft" | "open" | "assigned" | "completed"
+      task_priority: "low" | "medium" | "high"
+      task_status: "pending" | "in_progress" | "completed" | "skipped"
       wishlist_priority: "high" | "medium" | "low"
     }
     CompositeTypes: {
@@ -1685,6 +1788,8 @@ export const Constants = {
       app_role: ["admin", "manager", "employee"],
       memo_type: ["memo", "reminder", "warning"],
       secret_santa_status: ["draft", "open", "assigned", "completed"],
+      task_priority: ["low", "medium", "high"],
+      task_status: ["pending", "in_progress", "completed", "skipped"],
       wishlist_priority: ["high", "medium", "low"],
     },
   },
