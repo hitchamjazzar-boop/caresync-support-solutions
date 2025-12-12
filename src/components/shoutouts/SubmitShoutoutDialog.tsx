@@ -49,6 +49,7 @@ export function SubmitShoutoutDialog({
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [targetUserName, setTargetUserName] = useState('');
   const [message, setMessage] = useState('');
 
   // Determine who the shoutout should be "from"
@@ -60,13 +61,27 @@ export function SubmitShoutoutDialog({
       // Pre-select target if specified - do this immediately
       if (targetUserId) {
         setSelectedEmployee(targetUserId);
+        fetchTargetUserName(targetUserId);
       } else {
         setSelectedEmployee('');
+        setTargetUserName('');
       }
       setMessage('');
       fetchEmployees();
     }
   }, [open, targetUserId]);
+
+  const fetchTargetUserName = async (userId: string) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', userId)
+      .single();
+    
+    if (data) {
+      setTargetUserName(data.full_name);
+    }
+  };
 
   const fetchEmployees = async () => {
     const { data } = await supabase
@@ -81,8 +96,9 @@ export function SubmitShoutoutDialog({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fromUserId || !selectedEmployee || !message.trim()) return;
+    // Use targetUserId if provided, otherwise use selectedEmployee
+    const toUserId = targetUserId || selectedEmployee;
+    if (!fromUserId || !toUserId || !message.trim()) return;
 
     setLoading(true);
     try {
@@ -92,7 +108,7 @@ export function SubmitShoutoutDialog({
         .insert({
           request_id: requestId,
           from_user_id: fromUserId,
-          to_user_id: selectedEmployee,
+          to_user_id: toUserId,
           message: message.trim(),
         });
 
@@ -138,22 +154,27 @@ export function SubmitShoutoutDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="colleague">Who would you like to recognize?</Label>
-            <Select 
-              value={selectedEmployee} 
-              onValueChange={setSelectedEmployee}
-              disabled={!!targetUserId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a colleague" />
-              </SelectTrigger>
-              <SelectContent>
-                {employees.map((emp) => (
-                  <SelectItem key={emp.id} value={emp.id}>
-                    {emp.full_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {targetUserId && targetUserName ? (
+              <div className="flex h-10 w-full items-center rounded-md border border-input bg-muted px-3 py-2 text-sm">
+                {targetUserName}
+              </div>
+            ) : (
+              <Select 
+                value={selectedEmployee} 
+                onValueChange={setSelectedEmployee}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a colleague" />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {targetUserId && (
               <p className="text-xs text-muted-foreground">
                 Admin has requested you recognize this specific person.
@@ -177,7 +198,7 @@ export function SubmitShoutoutDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || !selectedEmployee || !message.trim()}>
+            <Button type="submit" disabled={loading || !(targetUserId || selectedEmployee) || !message.trim()}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Submit Shout Out
             </Button>
