@@ -96,6 +96,7 @@ export function SubmitShoutoutDialog({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     // Use targetUserId if provided, otherwise use selectedEmployee
     const toUserId = targetUserId || selectedEmployee;
     if (!fromUserId || !toUserId || !message.trim()) return;
