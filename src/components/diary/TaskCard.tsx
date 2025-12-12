@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   CheckCircle2, 
   Circle, 
@@ -11,7 +12,9 @@ import {
   ChevronDown, 
   ChevronUp,
   PlayCircle,
-  Building2
+  Building2,
+  Users,
+  User
 } from 'lucide-react';
 import {
   Collapsible,
@@ -26,6 +29,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Label } from '@/components/ui/label';
 
 type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
@@ -42,13 +51,20 @@ interface DailyTask {
   notes: string | null;
 }
 
+interface Collaborator {
+  id: string;
+  full_name: string;
+  photo_url: string | null;
+}
+
 interface TaskCardProps {
   task: DailyTask;
   onUpdateStatus: (taskId: string, status: TaskStatus, notes?: string) => void;
   clientName?: string | null;
+  collaborators?: Collaborator[];
 }
 
-export const TaskCard = ({ task, onUpdateStatus, clientName }: TaskCardProps) => {
+export const TaskCard = ({ task, onUpdateStatus, clientName, collaborators = [] }: TaskCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<TaskStatus | null>(null);
@@ -111,6 +127,42 @@ export const TaskCard = ({ task, onUpdateStatus, clientName }: TaskCardProps) =>
                     <Badge variant="outline" className="text-xs gap-1">
                       <Building2 className="h-3 w-3" />
                       {clientName}
+                    </Badge>
+                  )}
+                  {/* Solo/Collaboration indicator */}
+                  {collaborators.length > 0 ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Users className="h-3 w-3" />
+                            Team ({collaborators.length + 1})
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium">Working on this with:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {collaborators.map((collab) => (
+                                <div key={collab.id} className="flex items-center gap-1">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarImage src={collab.photo_url || undefined} />
+                                    <AvatarFallback className="text-xs">
+                                      {collab.full_name.split(' ').map(n => n[0]).join('')}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-xs">{collab.full_name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <User className="h-3 w-3" />
+                      Solo
                     </Badge>
                   )}
                 </div>

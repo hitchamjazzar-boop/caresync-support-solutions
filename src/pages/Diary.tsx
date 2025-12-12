@@ -13,12 +13,20 @@ import {
   Clock, 
   SkipForward, 
   ListTodo,
+  Filter,
 } from 'lucide-react';
 import { DefaultTaskManager } from '@/components/diary/DefaultTaskManager';
 import { ClientManager } from '@/components/diary/ClientManager';
 import { TaskCard } from '@/components/diary/TaskCard';
 import { SuggestedTasksSection } from '@/components/diary/SuggestedTasksSection';
 import { CarryOverTasksSection } from '@/components/diary/CarryOverTasksSection';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'skipped';
 type TaskPriority = 'low' | 'medium' | 'high';
@@ -37,6 +45,12 @@ interface DailyTask {
   notes: string | null;
   created_at: string;
   client_id: string | null;
+}
+
+interface Collaborator {
+  id: string;
+  full_name: string;
+  photo_url: string | null;
 }
 
 interface DefaultTask {
@@ -66,6 +80,7 @@ const Diary = () => {
   const queryClient = useQueryClient();
   const today = format(new Date(), 'yyyy-MM-dd');
   const canManageTasks = isAdmin || hasPermission('schedules');
+  const [clientFilter, setClientFilter] = useState<string>('all');
 
   // Fetch user's profile for department
   const { data: userProfile } = useQuery({
@@ -161,9 +176,67 @@ const Diary = () => {
     },
   });
 
+  // Fetch collaborators - users with the same default tasks today
+  const { data: collaboratorsMap = {} } = useQuery({
+    queryKey: ['task-collaborators', today],
+    queryFn: async () => {
+      // Get all tasks for today with default_task_id (shared tasks)
+      const { data: allTasks, error: tasksError } = await supabase
+        .from('employee_daily_tasks')
+        .select('default_task_id, user_id')
+        .eq('task_date', today)
+        .not('default_task_id', 'is', null);
+      
+      if (tasksError) throw tasksError;
+      
+      // Group by default_task_id
+      const taskUserMap: Record<string, string[]> = {};
+      allTasks?.forEach(task => {
+        if (task.default_task_id) {
+          if (!taskUserMap[task.default_task_id]) {
+            taskUserMap[task.default_task_id] = [];
+          }
+          if (!taskUserMap[task.default_task_id].includes(task.user_id)) {
+            taskUserMap[task.default_task_id].push(task.user_id);
+          }
+        }
+      });
+      
+      // Get unique user IDs (excluding current user)
+      const allUserIds = [...new Set(Object.values(taskUserMap).flat())].filter(id => id !== user?.id);
+      
+      if (allUserIds.length === 0) return {};
+      
+      // Fetch profiles for these users
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, photo_url')
+        .in('id', allUserIds);
+      
+      if (profilesError) throw profilesError;
+      
+      // Create a map of default_task_id -> collaborators (excluding current user)
+      const collaborators: Record<string, Collaborator[]> = {};
+      Object.entries(taskUserMap).forEach(([taskId, userIds]) => {
+        const otherUsers = userIds.filter(id => id !== user?.id);
+        collaborators[taskId] = otherUsers
+          .map(userId => profiles?.find(p => p.id === userId))
+          .filter((p): p is Collaborator => !!p);
+      });
+      
+      return collaborators;
+    },
+    enabled: !!user?.id,
+  });
+
   const getClientName = (clientId: string | null) => {
     if (!clientId) return null;
     return clients.find(c => c.id === clientId)?.name || null;
+  };
+
+  const getCollaborators = (defaultTaskId: string | null): Collaborator[] => {
+    if (!defaultTaskId) return [];
+    return collaboratorsMap[defaultTaskId] || [];
   };
 
   // Add task from default
@@ -347,6 +420,10 @@ const Diary = () => {
               isAddingTask={addTaskMutation.isPending}
               isCarryingOver={carryOverMutation.isPending || carryOverAllMutation.isPending}
               getClientName={getClientName}
+              getCollaborators={getCollaborators}
+              clients={clients}
+              clientFilter={clientFilter}
+              setClientFilter={setClientFilter}
             />
           </TabsContent>
           
@@ -377,6 +454,10 @@ const Diary = () => {
           isAddingTask={addTaskMutation.isPending}
           isCarryingOver={carryOverMutation.isPending || carryOverAllMutation.isPending}
           getClientName={getClientName}
+          getCollaborators={getCollaborators}
+          clients={clients}
+          clientFilter={clientFilter}
+          setClientFilter={setClientFilter}
         />
       )}
     </div>
@@ -399,6 +480,10 @@ interface DiaryContentProps {
   isAddingTask: boolean;
   isCarryingOver: boolean;
   getClientName: (clientId: string | null) => string | null;
+  getCollaborators: (defaultTaskId: string | null) => Collaborator[];
+  clients: Client[];
+  clientFilter: string;
+  setClientFilter: (filter: string) => void;
 }
 
 const DiaryContent = ({
@@ -417,9 +502,57 @@ const DiaryContent = ({
   isAddingTask,
   isCarryingOver,
   getClientName,
+  getCollaborators,
+  clients,
+  clientFilter,
+  setClientFilter,
 }: DiaryContentProps) => {
+  // Filter tasks by client
+  const filterByClient = (tasks: DailyTask[]) => {
+    if (clientFilter === 'all') return tasks;
+    if (clientFilter === 'none') return tasks.filter(t => !t.client_id);
+    return tasks.filter(t => t.client_id === clientFilter);
+  };
+
+  const filteredPendingTasks = filterByClient(pendingTasks);
+  const filteredCompletedTasks = filterByClient(completedTasks);
+  const filteredSkippedTasks = filterByClient(skippedTasks);
+
+  // Get unique clients from current tasks
+  const taskClients = [...new Set(dailyTasks.map(t => t.client_id).filter(Boolean))];
+
   return (
     <div className="space-y-6">
+      {/* Carry Over Section */}
+      <CarryOverTasksSection
+        tasks={tasksToCarryOver}
+        onCarryOver={onCarryOver}
+        onCarryOverAll={onCarryOverAll}
+        isCarryingOver={isCarryingOver}
+      />
+
+      {/* Filter Section */}
+      {dailyTasks.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Filter by client" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tasks</SelectItem>
+              <SelectItem value="none">No Client</SelectItem>
+              {clients
+                .filter(c => taskClients.includes(c.id))
+                .map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       {/* Carry Over Section */}
       <CarryOverTasksSection
         tasks={tasksToCarryOver}
@@ -483,7 +616,7 @@ const DiaryContent = ({
         />
       ) : (
         <div className="space-y-4">
-          {pendingTasks.length > 0 && (
+          {filteredPendingTasks.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -492,19 +625,20 @@ const DiaryContent = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {pendingTasks.map((task) => (
+                {filteredPendingTasks.map((task) => (
                   <TaskCard 
                     key={task.id} 
                     task={task} 
                     onUpdateStatus={onUpdateTask}
                     clientName={getClientName(task.client_id)}
+                    collaborators={getCollaborators(task.default_task_id)}
                   />
                 ))}
               </CardContent>
             </Card>
           )}
 
-          {completedTasks.length > 0 && (
+          {filteredCompletedTasks.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -513,19 +647,20 @@ const DiaryContent = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {completedTasks.map((task) => (
+                {filteredCompletedTasks.map((task) => (
                   <TaskCard 
                     key={task.id} 
                     task={task} 
                     onUpdateStatus={onUpdateTask}
                     clientName={getClientName(task.client_id)}
+                    collaborators={getCollaborators(task.default_task_id)}
                   />
                 ))}
               </CardContent>
             </Card>
           )}
 
-          {skippedTasks.length > 0 && (
+          {filteredSkippedTasks.length > 0 && (
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -534,12 +669,13 @@ const DiaryContent = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {skippedTasks.map((task) => (
+                {filteredSkippedTasks.map((task) => (
                   <TaskCard 
                     key={task.id} 
                     task={task} 
                     onUpdateStatus={onUpdateTask}
                     clientName={getClientName(task.client_id)}
+                    collaborators={getCollaborators(task.default_task_id)}
                   />
                 ))}
               </CardContent>
