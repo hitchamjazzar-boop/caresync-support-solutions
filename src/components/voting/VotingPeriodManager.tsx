@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Calendar, Lock, Unlock, Loader2 } from 'lucide-react';
+import { Calendar, Lock, Unlock, Loader2, Plus, X } from 'lucide-react';
 
 interface VotingPeriod {
   id: string;
@@ -26,18 +27,20 @@ interface AwardCategory {
 }
 
 interface VotingPeriodManagerProps {
-  currentPeriod: VotingPeriod | null;
+  openPeriods: VotingPeriod[];
   onPeriodChange: () => void;
 }
 
-export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPeriodManagerProps) => {
+export const VotingPeriodManager = ({ openPeriods, onPeriodChange }: VotingPeriodManagerProps) => {
   const [month, setMonth] = useState<number>(new Date().getMonth() + 1);
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [categoryId, setCategoryId] = useState<string>('');
   const [categories, setCategories] = useState<AwardCategory[]>([]);
   const [requiresNomination, setRequiresNomination] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [closingPeriodId, setClosingPeriodId] = useState<string | null>(null);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [showCreateForm, setShowCreateForm] = useState(openPeriods.length === 0);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -125,15 +128,13 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
     }
   };
 
-  const handleClosePeriod = async () => {
-    if (!currentPeriod) return;
-
-    setLoading(true);
+  const handleClosePeriod = async (periodId: string) => {
+    setClosingPeriodId(periodId);
     try {
       const { error } = await supabase
         .from('voting_periods')
         .update({ status: 'closed', closed_at: new Date().toISOString() })
-        .eq('id', currentPeriod.id);
+        .eq('id', periodId);
 
       if (error) throw error;
 
@@ -143,56 +144,82 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
       console.error('Error closing period:', error);
       toast.error('Failed to close voting period');
     } finally {
-      setLoading(false);
+      setClosingPeriodId(null);
     }
   };
 
-  const currentCategory = categories.find(c => c.id === currentPeriod?.category_id);
+  const getCategoryForPeriod = (categoryId: string | null) => {
+    return categories.find(c => c.id === categoryId);
+  };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
-          Manage Voting Period
+          Manage Voting Periods
         </CardTitle>
-        <CardDescription>Create or close voting periods for awards</CardDescription>
+        <CardDescription>Create and manage multiple voting periods for awards</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {currentPeriod ? (
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <div className="font-medium flex items-center gap-2">
-                Current Period: {months[currentPeriod.month - 1]} {currentPeriod.year}
-                {currentCategory && (
-                  <span 
-                    className="px-2 py-0.5 rounded text-xs text-white"
-                    style={{ backgroundColor: currentCategory.color }}
+        {/* Existing Open Periods */}
+        {openPeriods.length > 0 && (
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Active Voting Periods</Label>
+            {openPeriods.map((period) => {
+              const periodCategory = getCategoryForPeriod(period.category_id);
+              return (
+                <div key={period.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <div className="font-medium flex items-center gap-2">
+                      {months[period.month - 1]} {period.year}
+                      {periodCategory && (
+                        <span 
+                          className="px-2 py-0.5 rounded text-xs text-white"
+                          style={{ backgroundColor: periodCategory.color }}
+                        >
+                          {periodCategory.name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {period.requires_nomination ? 'Requires Nomination' : 'Direct Voting'}
+                      </Badge>
+                      {period.is_published && <Badge variant="secondary" className="text-xs">Published</Badge>}
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => handleClosePeriod(period.id)} 
+                    disabled={closingPeriodId === period.id || period.status === 'closed'}
+                    variant="destructive"
+                    size="sm"
                   >
-                    {currentCategory.name}
-                  </span>
-                )}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Status: {currentPeriod.status} • {currentPeriod.requires_nomination ? 'Requires Nomination' : 'Direct Voting'}
-                {currentPeriod.is_published && ' (Published)'}
-              </div>
-            </div>
-            <Button 
-              onClick={handleClosePeriod} 
-              disabled={loading || currentPeriod.status === 'closed'}
-              variant="destructive"
-            >
-              {loading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Lock className="mr-2 h-4 w-4" />
-              )}
-              Close Period
-            </Button>
+                    {closingPeriodId === period.id ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Lock className="mr-2 h-4 w-4" />
+                    )}
+                    Close
+                  </Button>
+                </div>
+              );
+            })}
           </div>
-        ) : (
-          <div className="space-y-4">
+        )}
+
+        {/* Create New Period Form */}
+        {showCreateForm ? (
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">Create New Voting Period</Label>
+              {openPeriods.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            
             <div className="space-y-2">
               <Label>Award Category</Label>
               {loadingCategories ? (
@@ -256,7 +283,7 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-3 border rounded-lg">
+            <div className="flex items-center justify-between p-3 border rounded-lg bg-background">
               <div className="space-y-0.5">
                 <Label>Require Nominations</Label>
                 <p className="text-xs text-muted-foreground">
@@ -281,9 +308,18 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
               ) : (
                 <Unlock className="mr-2 h-4 w-4" />
               )}
-              Create New Voting Period
+              Create Voting Period
             </Button>
           </div>
+        ) : (
+          <Button 
+            onClick={() => setShowCreateForm(true)} 
+            variant="outline"
+            className="w-full"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create Another Voting Period
+          </Button>
         )}
       </CardContent>
     </Card>

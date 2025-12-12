@@ -174,7 +174,7 @@ const EmployeeVoting = () => {
 
               <TabsContent value="period">
                 <VotingPeriodManager 
-                  currentPeriod={selectedPeriod} 
+                  openPeriods={openPeriods} 
                   onPeriodChange={fetchOpenPeriods}
                 />
               </TabsContent>
