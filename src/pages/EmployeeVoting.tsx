@@ -42,6 +42,7 @@ const EmployeeVoting = () => {
   const [openPeriods, setOpenPeriods] = useState<VotingPeriod[]>([]);
   const [selectedPeriod, setSelectedPeriod] = useState<VotingPeriod | null>(null);
   const [category, setCategory] = useState<AwardCategory | null>(null);
+  const [categories, setCategories] = useState<Record<string, AwardCategory>>({});
   const [loading, setLoading] = useState(true);
   const [hasVoted, setHasVoted] = useState(false);
   const [hasNominated, setHasNominated] = useState(false);
@@ -68,6 +69,23 @@ const EmployeeVoting = () => {
 
       if (error) throw error;
       setOpenPeriods(data || []);
+      
+      // Fetch all categories for period display
+      const categoryIds = [...new Set((data || []).map(p => p.category_id).filter(Boolean))];
+      if (categoryIds.length > 0) {
+        const { data: categoryData } = await supabase
+          .from('award_categories')
+          .select('id, name, color')
+          .in('id', categoryIds);
+        
+        if (categoryData) {
+          const categoryMap: Record<string, AwardCategory> = {};
+          categoryData.forEach(cat => {
+            categoryMap[cat.id] = cat;
+          });
+          setCategories(categoryMap);
+        }
+      }
       
       // Select the first period by default
       if (data && data.length > 0) {
@@ -220,7 +238,7 @@ const EmployeeVoting = () => {
             <Card className="p-4">
               <div className="flex flex-wrap gap-2">
                 {openPeriods.map((period) => {
-                  const periodCategory = period.category_id;
+                  const periodCategory = period.category_id ? categories[period.category_id] : null;
                   return (
                     <Button
                       key={period.id}
@@ -228,7 +246,7 @@ const EmployeeVoting = () => {
                       size="sm"
                       onClick={() => setSelectedPeriod(period)}
                     >
-                      {getMonthName(period.month)} {period.year}
+                      {periodCategory?.name || `${getMonthName(period.month)} ${period.year}`}
                     </Button>
                   );
                 })}
