@@ -96,10 +96,9 @@ export function GiveShoutoutDialog({ trigger }: GiveShoutoutDialogProps) {
         title: 'Shout out sent!',
         description: 'Your recognition has been submitted for review.',
       });
-      // Reset form but keep dialog open for another submission
+      // Reset form and keep dialog open for another submission
       setSelectedEmployee('');
       setMessage('');
-      setOpen(false);
     } catch (error) {
       console.error('Error submitting shoutout:', error);
       toast({
