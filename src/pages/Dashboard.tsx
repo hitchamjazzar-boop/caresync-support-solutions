@@ -15,6 +15,7 @@ import { BirthdayReminders } from '@/components/dashboard/BirthdayReminders';
 import { ShoutoutRequestCard } from '@/components/shoutouts/ShoutoutRequestCard';
 import { FeedbackRequestCard } from '@/components/feedback/FeedbackRequestCard';
 import { PendingRequestsWidget } from '@/components/dashboard/PendingRequestsWidget';
+import { TodaysTasksWidget } from '@/components/dashboard/TodaysTasksWidget';
 import { GiveShoutoutDialog } from '@/components/shoutouts/GiveShoutoutDialog';
 import { SecretSantaAssignment } from '@/components/dashboard/SecretSantaAssignment';
 import { format } from 'date-fns';
@@ -243,8 +244,13 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="space-y-4 sm:space-y-6">
-          {/* Pending Requests Widget */}
-          <PendingRequestsWidget />
+          {/* Today's Tasks Widget */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <TodaysTasksWidget />
+            <div className="sm:col-span-1 lg:col-span-2">
+              <PendingRequestsWidget />
+            </div>
+          </div>
 
           {/* Shout Out Requests */}
           <ShoutoutRequestCard />
