@@ -22,6 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { ClientSelector } from './ClientSelector';
+import { AssignmentSelector } from './AssignmentSelector';
 
 interface CreateDefaultTaskDialogProps {
   open: boolean;
@@ -37,6 +39,10 @@ export const CreateDefaultTaskDialog = ({ open, onOpenChange }: CreateDefaultTas
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
   const [category, setCategory] = useState('General');
   const [timeEstimate, setTimeEstimate] = useState('');
+  const [clientId, setClientId] = useState<string | null>(null);
+  const [assignmentType, setAssignmentType] = useState<'all' | 'specific' | 'department'>('all');
+  const [assignedTo, setAssignedTo] = useState<string[]>([]);
+  const [assignedDepartments, setAssignedDepartments] = useState<string[]>([]);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -50,6 +56,10 @@ export const CreateDefaultTaskDialog = ({ open, onOpenChange }: CreateDefaultTas
           category,
           time_estimate: timeEstimate ? parseInt(timeEstimate) : null,
           created_by: user?.id,
+          client_id: clientId,
+          assignment_type: assignmentType,
+          assigned_to: assignmentType === 'specific' ? assignedTo : null,
+          assigned_departments: assignmentType === 'department' ? assignedDepartments : null,
         });
       
       if (error) throw error;
@@ -72,6 +82,10 @@ export const CreateDefaultTaskDialog = ({ open, onOpenChange }: CreateDefaultTas
     setPriority('medium');
     setCategory('General');
     setTimeEstimate('');
+    setClientId(null);
+    setAssignmentType('all');
+    setAssignedTo([]);
+    setAssignedDepartments([]);
     onOpenChange(false);
   };
 
@@ -174,6 +188,17 @@ export const CreateDefaultTaskDialog = ({ open, onOpenChange }: CreateDefaultTas
               min="1"
             />
           </div>
+
+          <ClientSelector value={clientId} onChange={setClientId} />
+
+          <AssignmentSelector
+            assignmentType={assignmentType}
+            assignedTo={assignedTo}
+            assignedDepartments={assignedDepartments}
+            onAssignmentTypeChange={setAssignmentType}
+            onAssignedToChange={setAssignedTo}
+            onAssignedDepartmentsChange={setAssignedDepartments}
+          />
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>

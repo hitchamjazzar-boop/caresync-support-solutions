@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,7 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, GripVertical, Clock } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Clock, Users, UserCheck, Building } from 'lucide-react';
 import { CreateDefaultTaskDialog } from './CreateDefaultTaskDialog';
 import { EditDefaultTaskDialog } from './EditDefaultTaskDialog';
 import {
@@ -41,10 +40,18 @@ interface DefaultTask {
   is_active: boolean;
   order_position: number;
   created_by: string;
+  client_id: string | null;
+  assignment_type: string | null;
+  assigned_to: string[] | null;
+  assigned_departments: string[] | null;
+}
+
+interface Client {
+  id: string;
+  name: string;
 }
 
 export const DefaultTaskManager = () => {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<DefaultTask | null>(null);
@@ -62,6 +69,24 @@ export const DefaultTaskManager = () => {
       return data as DefaultTask[];
     },
   });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name')
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      return data as Client[];
+    },
+  });
+
+  const getClientName = (clientId: string | null) => {
+    if (!clientId) return null;
+    return clients.find(c => c.id === clientId)?.name || null;
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (taskId: string) => {
@@ -106,6 +131,25 @@ export const DefaultTaskManager = () => {
     }
   };
 
+  const getAssignmentIcon = (type: string | null) => {
+    switch (type) {
+      case 'specific': return <UserCheck className="h-3 w-3" />;
+      case 'department': return <Building className="h-3 w-3" />;
+      default: return <Users className="h-3 w-3" />;
+    }
+  };
+
+  const getAssignmentLabel = (task: DefaultTask) => {
+    if (!task.assignment_type || task.assignment_type === 'all') return 'All';
+    if (task.assignment_type === 'specific' && task.assigned_to) {
+      return `${task.assigned_to.length} users`;
+    }
+    if (task.assignment_type === 'department' && task.assigned_departments) {
+      return task.assigned_departments.join(', ');
+    }
+    return 'All';
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -136,7 +180,9 @@ export const DefaultTaskManager = () => {
                 <TableHead className="w-[50px]"></TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Client</TableHead>
                 <TableHead>Priority</TableHead>
+                <TableHead>Assignment</TableHead>
                 <TableHead>Time Est.</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -162,8 +208,24 @@ export const DefaultTaskManager = () => {
                     <Badge variant="outline">{task.category}</Badge>
                   </TableCell>
                   <TableCell>
+                    {getClientName(task.client_id) ? (
+                      <Badge variant="outline" className="gap-1">
+                        <Building className="h-3 w-3" />
+                        {getClientName(task.client_id)}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <Badge variant={getPriorityColor(task.priority)}>
                       {task.priority}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="gap-1">
+                      {getAssignmentIcon(task.assignment_type)}
+                      {getAssignmentLabel(task)}
                     </Badge>
                   </TableCell>
                   <TableCell>
