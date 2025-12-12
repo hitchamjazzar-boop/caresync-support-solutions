@@ -57,11 +57,14 @@ export function SubmitShoutoutDialog({
 
   useEffect(() => {
     if (open) {
-      fetchEmployees();
-      // Pre-select target if specified
+      // Pre-select target if specified - do this immediately
       if (targetUserId) {
         setSelectedEmployee(targetUserId);
+      } else {
+        setSelectedEmployee('');
       }
+      setMessage('');
+      fetchEmployees();
     }
   }, [open, targetUserId]);
 
