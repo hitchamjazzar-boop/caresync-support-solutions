@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { format, parseISO } from 'date-fns';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, GripVertical, Clock, Users, UserCheck, Building } from 'lucide-react';
+import { Plus, Pencil, Trash2, GripVertical, Clock, Users, UserCheck, Building, RefreshCw, CalendarDays } from 'lucide-react';
 import { CreateDefaultTaskDialog } from './CreateDefaultTaskDialog';
 import { EditDefaultTaskDialog } from './EditDefaultTaskDialog';
 import {
@@ -44,6 +45,8 @@ interface DefaultTask {
   assignment_type: string | null;
   assigned_to: string[] | null;
   assigned_departments: string[] | null;
+  is_daily: boolean | null;
+  due_date: string | null;
 }
 
 interface Client {
@@ -180,6 +183,7 @@ export const DefaultTaskManager = () => {
                 <TableHead className="w-[50px]"></TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Priority</TableHead>
                 <TableHead>Assignment</TableHead>
@@ -206,6 +210,19 @@ export const DefaultTaskManager = () => {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{task.category}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {task.is_daily !== false ? (
+                      <Badge variant="secondary" className="gap-1">
+                        <RefreshCw className="h-3 w-3" />
+                        Daily
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="gap-1">
+                        <CalendarDays className="h-3 w-3" />
+                        {task.due_date ? format(parseISO(task.due_date), 'MMM d') : 'No date'}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {getClientName(task.client_id) ? (

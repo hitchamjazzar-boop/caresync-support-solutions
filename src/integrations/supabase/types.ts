@@ -515,9 +515,11 @@ export type Database = {
           created_at: string
           created_by: string
           description: string | null
+          due_date: string | null
           id: string
           instructions: string | null
           is_active: boolean
+          is_daily: boolean | null
           order_position: number
           priority: Database["public"]["Enums"]["task_priority"]
           time_estimate: number | null
@@ -533,9 +535,11 @@ export type Database = {
           created_at?: string
           created_by: string
           description?: string | null
+          due_date?: string | null
           id?: string
           instructions?: string | null
           is_active?: boolean
+          is_daily?: boolean | null
           order_position?: number
           priority?: Database["public"]["Enums"]["task_priority"]
           time_estimate?: number | null
@@ -551,9 +555,11 @@ export type Database = {
           created_at?: string
           created_by?: string
           description?: string | null
+          due_date?: string | null
           id?: string
           instructions?: string | null
           is_active?: boolean
+          is_daily?: boolean | null
           order_position?: number
           priority?: Database["public"]["Enums"]["task_priority"]
           time_estimate?: number | null
@@ -648,6 +654,7 @@ export type Database = {
           created_at: string
           default_task_id: string | null
           description: string | null
+          due_date: string | null
           id: string
           instructions: string | null
           notes: string | null
@@ -664,6 +671,7 @@ export type Database = {
           created_at?: string
           default_task_id?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           instructions?: string | null
           notes?: string | null
@@ -680,6 +688,7 @@ export type Database = {
           created_at?: string
           default_task_id?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           instructions?: string | null
           notes?: string | null
