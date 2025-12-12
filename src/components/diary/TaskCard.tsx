@@ -10,7 +10,8 @@ import {
   SkipForward, 
   ChevronDown, 
   ChevronUp,
-  PlayCircle
+  PlayCircle,
+  Building2
 } from 'lucide-react';
 import {
   Collapsible,
@@ -44,9 +45,10 @@ interface DailyTask {
 interface TaskCardProps {
   task: DailyTask;
   onUpdateStatus: (taskId: string, status: TaskStatus, notes?: string) => void;
+  clientName?: string | null;
 }
 
-export const TaskCard = ({ task, onUpdateStatus }: TaskCardProps) => {
+export const TaskCard = ({ task, onUpdateStatus, clientName }: TaskCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showNoteDialog, setShowNoteDialog] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<TaskStatus | null>(null);
@@ -105,6 +107,12 @@ export const TaskCard = ({ task, onUpdateStatus }: TaskCardProps) => {
                   <Badge variant={getPriorityColor(task.priority)} className="text-xs">
                     {task.priority}
                   </Badge>
+                  {clientName && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <Building2 className="h-3 w-3" />
+                      {clientName}
+                    </Badge>
+                  )}
                 </div>
                 
                 {task.description && (
