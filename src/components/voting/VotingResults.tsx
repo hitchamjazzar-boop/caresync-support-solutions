@@ -3,11 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
-import { Trophy, Medal, Lock, Megaphone, Eye, EyeOff } from 'lucide-react';
+import { Trophy, Medal, Lock, Megaphone, Eye, EyeOff, ChevronDown, MessageSquare } from 'lucide-react';
 import { CertificateGenerator } from '@/components/voting/CertificateGenerator';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 import { PublishWinnerDialog } from './PublishWinnerDialog';
+
+interface Voter {
+  voter_user_id: string;
+  reason: string | null;
+  voter_name: string;
+  voter_photo: string | null;
+}
 
 interface VoteResult {
   nominated_user_id: string;
@@ -17,6 +25,7 @@ interface VoteResult {
     position: string;
     photo_url: string | null;
   };
+  voters: Voter[];
 }
 
 interface VotingResultsProps {
@@ -44,26 +53,49 @@ export const VotingResults = ({
   const [loading, setLoading] = useState(true);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
 
+  const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     fetchResults();
   }, [votingPeriodId]);
 
+  const toggleExpanded = (userId: string) => {
+    setExpandedResults(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
+
   const fetchResults = async () => {
     try {
+      // Fetch all votes with voter info
       const { data, error } = await supabase
         .from('employee_votes')
-        .select('nominated_user_id')
+        .select('nominated_user_id, voter_user_id, reason')
         .eq('voting_period_id', votingPeriodId);
 
       if (error) throw error;
 
-      const voteMap = new Map<string, number>();
+      // Group votes by nominated user
+      const voteMap = new Map<string, { count: number; voters: { voter_user_id: string; reason: string | null }[] }>();
       data?.forEach((vote: any) => {
         const userId = vote.nominated_user_id;
-        voteMap.set(userId, (voteMap.get(userId) || 0) + 1);
+        if (!voteMap.has(userId)) {
+          voteMap.set(userId, { count: 0, voters: [] });
+        }
+        const entry = voteMap.get(userId)!;
+        entry.count++;
+        entry.voters.push({ voter_user_id: vote.voter_user_id, reason: vote.reason });
       });
 
       const uniqueUserIds = Array.from(voteMap.keys());
+      const allVoterIds = data?.map((v: any) => v.voter_user_id) || [];
+      const uniqueVoterIds = [...new Set(allVoterIds)];
 
       if (uniqueUserIds.length === 0) {
         setResults([]);
@@ -71,6 +103,7 @@ export const VotingResults = ({
         return;
       }
 
+      // Fetch nominee profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, full_name, position, photo_url')
@@ -78,15 +111,36 @@ export const VotingResults = ({
 
       if (profilesError) throw profilesError;
 
-      const resultsWithProfiles = profilesData?.map((profile) => ({
-        nominated_user_id: profile.id,
-        vote_count: voteMap.get(profile.id) || 0,
-        profiles: {
-          full_name: profile.full_name,
-          position: profile.position || 'N/A',
-          photo_url: profile.photo_url,
-        },
-      })) || [];
+      // Fetch voter profiles
+      const { data: voterProfilesData } = await supabase
+        .from('profiles')
+        .select('id, full_name, photo_url')
+        .in('id', uniqueVoterIds);
+
+      const voterProfilesMap = new Map(voterProfilesData?.map(p => [p.id, p]) || []);
+
+      const resultsWithProfiles = profilesData?.map((profile) => {
+        const voteInfo = voteMap.get(profile.id);
+        const votersWithNames = voteInfo?.voters.map(v => {
+          const voterProfile = voterProfilesMap.get(v.voter_user_id);
+          return {
+            ...v,
+            voter_name: voterProfile?.full_name || 'Unknown',
+            voter_photo: voterProfile?.photo_url || null
+          };
+        }) || [];
+
+        return {
+          nominated_user_id: profile.id,
+          vote_count: voteInfo?.count || 0,
+          profiles: {
+            full_name: profile.full_name,
+            position: profile.position || 'N/A',
+            photo_url: profile.photo_url,
+          },
+          voters: votersWithNames,
+        };
+      }) || [];
 
       const sortedResults = resultsWithProfiles.sort((a, b) => b.vote_count - a.vote_count);
       setResults(sortedResults);
@@ -202,30 +256,68 @@ export const VotingResults = ({
           {/* All Results */}
           <div className="space-y-3">
             {results.map((result, index) => (
-              <Card key={result.nominated_user_id} className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {index < 3 && (status === 'closed' || isAdmin) && (
-                      <div className="flex items-center justify-center w-8">
-                        {index === 0 && <Trophy className="h-6 w-6 text-yellow-500" />}
-                        {index === 1 && <Medal className="h-6 w-6 text-gray-400" />}
-                        {index === 2 && <Medal className="h-6 w-6 text-amber-600" />}
+              <Collapsible
+                key={result.nominated_user_id}
+                open={expandedResults.has(result.nominated_user_id)}
+                onOpenChange={() => toggleExpanded(result.nominated_user_id)}
+              >
+                <Card className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {index < 3 && (status === 'closed' || isAdmin) && (
+                        <div className="flex items-center justify-center w-8">
+                          {index === 0 && <Trophy className="h-6 w-6 text-yellow-500" />}
+                          {index === 1 && <Medal className="h-6 w-6 text-gray-400" />}
+                          {index === 2 && <Medal className="h-6 w-6 text-amber-600" />}
+                        </div>
+                      )}
+                      <ProfileAvatarWithBadges
+                        userId={result.nominated_user_id}
+                        photoUrl={result.profiles.photo_url}
+                        fullName={result.profiles.full_name}
+                        className="h-12 w-12"
+                      />
+                      <div>
+                        <div className="font-medium">{result.profiles.full_name}</div>
+                        <div className="text-sm text-muted-foreground">{result.profiles.position}</div>
                       </div>
-                    )}
-                    <ProfileAvatarWithBadges
-                      userId={result.nominated_user_id}
-                      photoUrl={result.profiles.photo_url}
-                      fullName={result.profiles.full_name}
-                      className="h-12 w-12"
-                    />
-                    <div>
-                      <div className="font-medium">{result.profiles.full_name}</div>
-                      <div className="text-sm text-muted-foreground">{result.profiles.position}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{result.vote_count} votes</Badge>
+                      {isAdmin && result.voters.length > 0 && (
+                        <CollapsibleTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MessageSquare className="h-4 w-4 mr-1" />
+                            <ChevronDown className={`h-4 w-4 transition-transform ${expandedResults.has(result.nominated_user_id) ? 'rotate-180' : ''}`} />
+                          </Button>
+                        </CollapsibleTrigger>
+                      )}
                     </div>
                   </div>
-                  <Badge variant="secondary">{result.vote_count} votes</Badge>
-                </div>
-              </Card>
+                  
+                  {isAdmin && (
+                    <CollapsibleContent className="mt-4 pt-4 border-t space-y-3">
+                      <p className="text-sm font-medium text-muted-foreground">Voters & Reasons:</p>
+                      {result.voters.map((voter, idx) => (
+                        <div key={idx} className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                          <ProfileAvatarWithBadges
+                            userId={voter.voter_user_id}
+                            photoUrl={voter.voter_photo}
+                            fullName={voter.voter_name}
+                            className="h-8 w-8"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{voter.voter_name}</p>
+                            {voter.reason && (
+                              <p className="text-sm text-muted-foreground mt-1">"{voter.reason}"</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </CollapsibleContent>
+                  )}
+                </Card>
+              </Collapsible>
             ))}
           </div>
         </>

@@ -864,6 +864,7 @@ export type Database = {
           created_at: string
           id: string
           nominated_user_id: string
+          reason: string | null
           voter_user_id: string
           voting_period_id: string
         }
@@ -871,6 +872,7 @@ export type Database = {
           created_at?: string
           id?: string
           nominated_user_id: string
+          reason?: string | null
           voter_user_id: string
           voting_period_id: string
         }
@@ -878,6 +880,7 @@ export type Database = {
           created_at?: string
           id?: string
           nominated_user_id?: string
+          reason?: string | null
           voter_user_id?: string
           voting_period_id?: string
         }
