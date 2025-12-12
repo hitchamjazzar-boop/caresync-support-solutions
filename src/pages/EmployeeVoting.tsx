@@ -325,6 +325,7 @@ const EmployeeVoting = () => {
                       status={selectedPeriod.status}
                       isPublished={selectedPeriod.is_published}
                       categoryName={category?.name || 'Employee of the Month'}
+                      categoryId={selectedPeriod.category_id}
                       month={selectedPeriod.month}
                       year={selectedPeriod.year}
                       onPublished={fetchOpenPeriods}

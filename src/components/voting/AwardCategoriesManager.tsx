@@ -8,8 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Award, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Award, Loader2, Shield } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +31,7 @@ interface AwardCategory {
   color: string;
   is_active: boolean;
   created_at: string;
+  admin_vote_weight: number | null;
 }
 
 interface AwardCategoriesManagerProps {
@@ -48,6 +51,8 @@ export const AwardCategoriesManager = ({ onCategoryChange }: AwardCategoriesMana
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#f59e0b');
+  const [useAdminWeight, setUseAdminWeight] = useState(false);
+  const [adminVoteWeight, setAdminVoteWeight] = useState(40);
 
   useEffect(() => {
     fetchCategories();
@@ -75,6 +80,8 @@ export const AwardCategoriesManager = ({ onCategoryChange }: AwardCategoriesMana
     setName('');
     setDescription('');
     setColor('#f59e0b');
+    setUseAdminWeight(false);
+    setAdminVoteWeight(40);
     setDialogOpen(true);
   };
 
@@ -83,6 +90,8 @@ export const AwardCategoriesManager = ({ onCategoryChange }: AwardCategoriesMana
     setName(category.name);
     setDescription(category.description || '');
     setColor(category.color);
+    setUseAdminWeight(category.admin_vote_weight !== null);
+    setAdminVoteWeight(category.admin_vote_weight || 40);
     setDialogOpen(true);
   };
 
@@ -94,11 +103,18 @@ export const AwardCategoriesManager = ({ onCategoryChange }: AwardCategoriesMana
 
     setSaving(true);
     try {
+      const categoryData = {
+        name: name.trim(),
+        description: description.trim() || null,
+        color,
+        admin_vote_weight: useAdminWeight ? adminVoteWeight : null,
+      };
+
       if (selectedCategory) {
         // Update
         const { error } = await supabase
           .from('award_categories')
-          .update({ name: name.trim(), description: description.trim() || null, color })
+          .update(categoryData)
           .eq('id', selectedCategory.id);
 
         if (error) throw error;
@@ -108,9 +124,7 @@ export const AwardCategoriesManager = ({ onCategoryChange }: AwardCategoriesMana
         const { error } = await supabase
           .from('award_categories')
           .insert({
-            name: name.trim(),
-            description: description.trim() || null,
-            color,
+            ...categoryData,
             created_by: user?.id,
           });
 
@@ -227,6 +241,41 @@ export const AwardCategoriesManager = ({ onCategoryChange }: AwardCategoriesMana
                     <span className="text-sm text-muted-foreground">{color}</span>
                   </div>
                 </div>
+                
+                <div className="space-y-3 p-4 border rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label className="flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Admin Vote Weight
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Give admin votes extra weight in results
+                      </p>
+                    </div>
+                    <Switch
+                      checked={useAdminWeight}
+                      onCheckedChange={setUseAdminWeight}
+                    />
+                  </div>
+                  
+                  {useAdminWeight && (
+                    <div className="space-y-2 pt-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>Admin votes: {adminVoteWeight}%</span>
+                        <span>Regular votes: {100 - adminVoteWeight}%</span>
+                      </div>
+                      <Slider
+                        value={[adminVoteWeight]}
+                        onValueChange={(v) => setAdminVoteWeight(v[0])}
+                        min={10}
+                        max={90}
+                        step={5}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <Button onClick={handleSave} disabled={saving} className="w-full">
                   {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {selectedCategory ? 'Update Category' : 'Create Category'}
@@ -258,6 +307,12 @@ export const AwardCategoriesManager = ({ onCategoryChange }: AwardCategoriesMana
                       {category.name}
                       {!category.is_active && (
                         <Badge variant="secondary" className="text-xs">Inactive</Badge>
+                      )}
+                      {category.admin_vote_weight !== null && (
+                        <Badge variant="outline" className="text-xs">
+                          <Shield className="h-3 w-3 mr-1" />
+                          {category.admin_vote_weight}%
+                        </Badge>
                       )}
                     </div>
                     {category.description && (
