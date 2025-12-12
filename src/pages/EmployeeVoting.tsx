@@ -38,7 +38,8 @@ const EmployeeVoting = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
-  const [currentPeriod, setCurrentPeriod] = useState<VotingPeriod | null>(null);
+  const [openPeriods, setOpenPeriods] = useState<VotingPeriod[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<VotingPeriod | null>(null);
   const [category, setCategory] = useState<AwardCategory | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasVoted, setHasVoted] = useState(false);
@@ -46,28 +47,49 @@ const EmployeeVoting = () => {
   const [adminTab, setAdminTab] = useState('period');
 
   useEffect(() => {
-    fetchCurrentPeriod();
+    fetchOpenPeriods();
   }, []);
 
-  const fetchCurrentPeriod = async () => {
+  useEffect(() => {
+    if (selectedPeriod) {
+      fetchCategoryAndUserStatus(selectedPeriod);
+    }
+  }, [selectedPeriod, user]);
+
+  const fetchOpenPeriods = async () => {
     try {
       const { data, error } = await supabase
         .from('voting_periods')
         .select('*')
         .eq('status', 'open')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCurrentPeriod(data);
+      setOpenPeriods(data || []);
+      
+      // Select the first period by default
+      if (data && data.length > 0) {
+        setSelectedPeriod(data[0]);
+      } else {
+        setSelectedPeriod(null);
+        setCategory(null);
+      }
+    } catch (error: any) {
+      console.error('Error fetching voting periods:', error);
+      toast.error('Failed to load voting periods');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const fetchCategoryAndUserStatus = async (period: VotingPeriod) => {
+    try {
       // Fetch category info
-      if (data?.category_id) {
+      if (period.category_id) {
         const { data: categoryData } = await supabase
           .from('award_categories')
           .select('id, name, color')
-          .eq('id', data.category_id)
+          .eq('id', period.category_id)
           .maybeSingle();
         
         setCategory(categoryData);
@@ -75,12 +97,12 @@ const EmployeeVoting = () => {
         setCategory(null);
       }
 
-      if (data && user) {
+      if (user) {
         // Check if user has voted
         const { data: voteData } = await supabase
           .from('employee_votes')
           .select('id')
-          .eq('voting_period_id', data.id)
+          .eq('voting_period_id', period.id)
           .eq('voter_user_id', user.id)
           .maybeSingle();
 
@@ -90,7 +112,7 @@ const EmployeeVoting = () => {
         const { data: nominationData } = await supabase
           .from('employee_nominations')
           .select('id')
-          .eq('voting_period_id', data.id)
+          .eq('voting_period_id', period.id)
           .eq('nominator_user_id', user.id)
           .limit(1)
           .maybeSingle();
@@ -98,10 +120,7 @@ const EmployeeVoting = () => {
         setHasNominated(!!nominationData);
       }
     } catch (error: any) {
-      console.error('Error fetching voting period:', error);
-      toast.error('Failed to load voting period');
-    } finally {
-      setLoading(false);
+      console.error('Error fetching category/status:', error);
     }
   };
 
@@ -154,20 +173,20 @@ const EmployeeVoting = () => {
 
               <TabsContent value="period">
                 <VotingPeriodManager 
-                  currentPeriod={currentPeriod} 
-                  onPeriodChange={fetchCurrentPeriod}
+                  currentPeriod={selectedPeriod} 
+                  onPeriodChange={fetchOpenPeriods}
                 />
               </TabsContent>
 
               <TabsContent value="categories">
-                <AwardCategoriesManager onCategoryChange={fetchCurrentPeriod} />
+                <AwardCategoriesManager onCategoryChange={fetchOpenPeriods} />
               </TabsContent>
 
               <TabsContent value="approvals">
-                {currentPeriod ? (
+                {selectedPeriod ? (
                   <NomineeApprovalManager 
-                    votingPeriodId={currentPeriod.id}
-                    onApprovalChange={fetchCurrentPeriod}
+                    votingPeriodId={selectedPeriod.id}
+                    onApprovalChange={fetchOpenPeriods}
                   />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
@@ -181,110 +200,135 @@ const EmployeeVoting = () => {
       )}
 
       {/* Voting Section */}
-      {!currentPeriod ? (
+      {openPeriods.length === 0 ? (
         <Card>
           <CardHeader className="p-4 sm:p-6">
-            <CardTitle className="text-base sm:text-lg">No Active Voting Period</CardTitle>
+            <CardTitle className="text-base sm:text-lg">No Active Voting Periods</CardTitle>
             <CardDescription className="text-xs sm:text-sm">
               {isAdmin 
                 ? 'Create a new voting period to allow employees to nominate and vote.'
-                : 'There is no active voting period at the moment. Check back later!'}
+                : 'There are no active voting periods at the moment. Check back later!'}
             </CardDescription>
           </CardHeader>
         </Card>
       ) : (
-        <Card>
-          <CardHeader className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
-                  {category && (
-                    <span 
-                      className="px-2 py-1 rounded text-xs sm:text-sm text-white"
-                      style={{ backgroundColor: category.color }}
+        <>
+          {/* Period Selector (if multiple) */}
+          {openPeriods.length > 1 && (
+            <Card className="p-4">
+              <div className="flex flex-wrap gap-2">
+                {openPeriods.map((period) => {
+                  const periodCategory = period.category_id;
+                  return (
+                    <Button
+                      key={period.id}
+                      variant={selectedPeriod?.id === period.id ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedPeriod(period)}
                     >
-                      {category.name}
-                    </span>
-                  )}
-                  {getMonthName(currentPeriod.month)} {currentPeriod.year}
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  {currentPeriod.status === 'open' 
-                    ? 'Voting period is currently open' 
-                    : currentPeriod.is_published 
-                      ? 'Results have been announced' 
-                      : 'This voting period has closed'}
-                </CardDescription>
+                      {getMonthName(period.month)} {period.year}
+                    </Button>
+                  );
+                })}
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-4 sm:p-6 pt-0">
-            <Tabs defaultValue="nominate" className="w-full">
-              <TabsList className="w-full grid grid-cols-3 h-auto">
-                <TabsTrigger value="nominate" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
-                  <Users className="h-3 sm:h-4 w-3 sm:w-4" />
-                  <span className="hidden sm:inline">Nominate</span>
-                  <span className="sm:hidden">Nom.</span>
-                </TabsTrigger>
-                <TabsTrigger value="vote" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
-                  <Vote className="h-3 sm:h-4 w-3 sm:w-4" />
-                  Vote
-                </TabsTrigger>
-                <TabsTrigger value="results" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
-                  <Trophy className="h-3 sm:h-4 w-3 sm:w-4" />
-                  Results
-                </TabsTrigger>
-              </TabsList>
+            </Card>
+          )}
 
-              <TabsContent value="nominate">
-                {currentPeriod.status === 'open' ? (
-                  <NominationForm 
-                    votingPeriodId={currentPeriod.id}
-                    hasNominated={hasNominated}
-                    onNominated={() => {
-                      setHasNominated(true);
-                      fetchCurrentPeriod();
-                    }}
-                  />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Voting period has closed
+          {selectedPeriod && (
+            <Card>
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
+                      {category && (
+                        <span 
+                          className="px-2 py-1 rounded text-xs sm:text-sm text-white"
+                          style={{ backgroundColor: category.color }}
+                        >
+                          {category.name}
+                        </span>
+                      )}
+                      {getMonthName(selectedPeriod.month)} {selectedPeriod.year}
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      {selectedPeriod.status === 'open' 
+                        ? 'Voting period is currently open' 
+                        : selectedPeriod.is_published 
+                          ? 'Results have been announced' 
+                          : 'This voting period has closed'}
+                    </CardDescription>
                   </div>
-                )}
-              </TabsContent>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <Tabs defaultValue="nominate" className="w-full">
+                  <TabsList className="w-full grid grid-cols-3 h-auto">
+                    <TabsTrigger value="nominate" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+                      <Users className="h-3 sm:h-4 w-3 sm:w-4" />
+                      <span className="hidden sm:inline">Nominate</span>
+                      <span className="sm:hidden">Nom.</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="vote" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+                      <Vote className="h-3 sm:h-4 w-3 sm:w-4" />
+                      Vote
+                    </TabsTrigger>
+                    <TabsTrigger value="results" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+                      <Trophy className="h-3 sm:h-4 w-3 sm:w-4" />
+                      Results
+                    </TabsTrigger>
+                  </TabsList>
 
-              <TabsContent value="vote">
-                {currentPeriod.status === 'open' ? (
-                  <VotingForm 
-                    votingPeriodId={currentPeriod.id}
-                    hasVoted={hasVoted}
-                    onVoted={() => {
-                      setHasVoted(true);
-                      fetchCurrentPeriod();
-                    }}
-                  />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    Voting period has closed
-                  </div>
-                )}
-              </TabsContent>
+                  <TabsContent value="nominate">
+                    {selectedPeriod.status === 'open' ? (
+                      <NominationForm 
+                        votingPeriodId={selectedPeriod.id}
+                        hasNominated={hasNominated}
+                        onNominated={() => {
+                          setHasNominated(true);
+                          fetchOpenPeriods();
+                        }}
+                      />
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Voting period has closed
+                      </div>
+                    )}
+                  </TabsContent>
 
-              <TabsContent value="results">
-                <VotingResults 
-                  votingPeriodId={currentPeriod.id}
-                  isAdmin={isAdmin}
-                  status={currentPeriod.status}
-                  isPublished={currentPeriod.is_published}
-                  categoryName={category?.name || 'Employee of the Month'}
-                  month={currentPeriod.month}
-                  year={currentPeriod.year}
-                  onPublished={fetchCurrentPeriod}
-                />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                  <TabsContent value="vote">
+                    {selectedPeriod.status === 'open' ? (
+                      <VotingForm 
+                        votingPeriodId={selectedPeriod.id}
+                        hasVoted={hasVoted}
+                        onVoted={() => {
+                          setHasVoted(true);
+                          fetchOpenPeriods();
+                        }}
+                      />
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Voting period has closed
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="results">
+                    <VotingResults 
+                      votingPeriodId={selectedPeriod.id}
+                      isAdmin={isAdmin}
+                      status={selectedPeriod.status}
+                      isPublished={selectedPeriod.is_published}
+                      categoryName={category?.name || 'Employee of the Month'}
+                      month={selectedPeriod.month}
+                      year={selectedPeriod.year}
+                      onPublished={fetchOpenPeriods}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

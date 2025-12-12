@@ -75,14 +75,7 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
 
     setLoading(true);
     try {
-      // Close any existing open periods for this category
-      await supabase
-        .from('voting_periods')
-        .update({ status: 'closed', closed_at: new Date().toISOString() })
-        .eq('status', 'open')
-        .eq('category_id', categoryId);
-
-      // Create new period
+      // Create new period (allow multiple open periods)
       const { error } = await supabase
         .from('voting_periods')
         .insert({ 
