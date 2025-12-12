@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
-import { Calendar, Lock, Unlock, Loader2, Plus, X } from 'lucide-react';
+import { Calendar, Lock, Unlock, Loader2, Plus, X, Trash2 } from 'lucide-react';
 
 interface VotingPeriod {
   id: string;
@@ -39,6 +40,7 @@ export const VotingPeriodManager = ({ openPeriods, onPeriodChange }: VotingPerio
   const [requiresNomination, setRequiresNomination] = useState(true);
   const [loading, setLoading] = useState(false);
   const [closingPeriodId, setClosingPeriodId] = useState<string | null>(null);
+  const [deletingPeriodId, setDeletingPeriodId] = useState<string | null>(null);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(openPeriods.length === 0);
 
@@ -144,6 +146,27 @@ export const VotingPeriodManager = ({ openPeriods, onPeriodChange }: VotingPerio
     }
   };
 
+  const handleDeletePeriod = async (periodId: string) => {
+    setDeletingPeriodId(periodId);
+    try {
+      // Delete related votes first
+      await supabase.from('employee_votes').delete().eq('voting_period_id', periodId);
+      // Delete related nominations
+      await supabase.from('employee_nominations').delete().eq('voting_period_id', periodId);
+      // Delete the voting period
+      const { error } = await supabase.from('voting_periods').delete().eq('id', periodId);
+      if (error) throw error;
+
+      toast.success('Voting period deleted');
+      onPeriodChange();
+    } catch (error: any) {
+      console.error('Error deleting period:', error);
+      toast.error('Failed to delete voting period');
+    } finally {
+      setDeletingPeriodId(null);
+    }
+  };
+
   const getCategoryForPeriod = (categoryId: string | null) => {
     return categories.find(c => c.id === categoryId);
   };
@@ -185,19 +208,46 @@ export const VotingPeriodManager = ({ openPeriods, onPeriodChange }: VotingPerio
                       {period.is_published && <Badge variant="secondary" className="text-xs">Published</Badge>}
                     </div>
                   </div>
-                  <Button 
-                    onClick={() => handleClosePeriod(period.id)} 
-                    disabled={closingPeriodId === period.id || period.status === 'closed'}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    {closingPeriodId === period.id ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Lock className="mr-2 h-4 w-4" />
-                    )}
-                    Close
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      onClick={() => handleClosePeriod(period.id)} 
+                      disabled={closingPeriodId === period.id || period.status === 'closed'}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      {closingPeriodId === period.id ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Lock className="mr-2 h-4 w-4" />
+                      )}
+                      Close
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Voting Period</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete this voting period and all associated votes and nominations. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeletePeriod(period.id)}
+                            disabled={deletingPeriodId === period.id}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {deletingPeriodId === period.id ? 'Deleting...' : 'Delete'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               );
             })}
