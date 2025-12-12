@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -31,6 +32,7 @@ interface VotingFormProps {
 
 export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVoted }: VotingFormProps) => {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [nominees, setNominees] = useState<Nominee[]>([]);
   const [selectedNominee, setSelectedNominee] = useState('');
   const [reason, setReason] = useState('');
@@ -147,7 +149,8 @@ export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVot
           voting_period_id: votingPeriodId,
           nominated_user_id: selectedNominee,
           voter_user_id: user?.id,
-          reason: reason.trim()
+          reason: reason.trim(),
+          is_admin_vote: isAdmin
         });
 
       if (error) throw error;

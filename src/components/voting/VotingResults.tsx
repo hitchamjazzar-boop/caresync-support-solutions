@@ -10,16 +10,24 @@ import { CertificateGenerator } from '@/components/voting/CertificateGenerator';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 import { PublishWinnerDialog } from './PublishWinnerDialog';
 
+// Admin votes count as 40% weight, regular votes as 60%
+const ADMIN_VOTE_WEIGHT = 0.4;
+const REGULAR_VOTE_WEIGHT = 0.6;
+
 interface Voter {
   voter_user_id: string;
   reason: string | null;
   voter_name: string;
   voter_photo: string | null;
+  is_admin_vote: boolean;
 }
 
 interface VoteResult {
   nominated_user_id: string;
   vote_count: number;
+  weighted_score: number;
+  admin_votes: number;
+  regular_votes: number;
   profiles: {
     full_name: string;
     position: string;
@@ -73,24 +81,39 @@ export const VotingResults = ({
 
   const fetchResults = async () => {
     try {
-      // Fetch all votes with voter info
+      // Fetch all votes with voter info and admin status
       const { data, error } = await supabase
         .from('employee_votes')
-        .select('nominated_user_id, voter_user_id, reason')
+        .select('nominated_user_id, voter_user_id, reason, is_admin_vote')
         .eq('voting_period_id', votingPeriodId);
 
       if (error) throw error;
 
-      // Group votes by nominated user
-      const voteMap = new Map<string, { count: number; voters: { voter_user_id: string; reason: string | null }[] }>();
+      // Group votes by nominated user with admin tracking
+      const voteMap = new Map<string, { 
+        count: number; 
+        adminVotes: number;
+        regularVotes: number;
+        voters: { voter_user_id: string; reason: string | null; is_admin_vote: boolean }[] 
+      }>();
+      
       data?.forEach((vote: any) => {
         const userId = vote.nominated_user_id;
         if (!voteMap.has(userId)) {
-          voteMap.set(userId, { count: 0, voters: [] });
+          voteMap.set(userId, { count: 0, adminVotes: 0, regularVotes: 0, voters: [] });
         }
         const entry = voteMap.get(userId)!;
         entry.count++;
-        entry.voters.push({ voter_user_id: vote.voter_user_id, reason: vote.reason });
+        if (vote.is_admin_vote) {
+          entry.adminVotes++;
+        } else {
+          entry.regularVotes++;
+        }
+        entry.voters.push({ 
+          voter_user_id: vote.voter_user_id, 
+          reason: vote.reason,
+          is_admin_vote: vote.is_admin_vote 
+        });
       });
 
       const uniqueUserIds = Array.from(voteMap.keys());
@@ -119,6 +142,10 @@ export const VotingResults = ({
 
       const voterProfilesMap = new Map(voterProfilesData?.map(p => [p.id, p]) || []);
 
+      // Calculate total admin and regular votes across all nominees for percentage
+      const totalAdminVotes = Array.from(voteMap.values()).reduce((sum, v) => sum + v.adminVotes, 0);
+      const totalRegularVotes = Array.from(voteMap.values()).reduce((sum, v) => sum + v.regularVotes, 0);
+
       const resultsWithProfiles = profilesData?.map((profile) => {
         const voteInfo = voteMap.get(profile.id);
         const votersWithNames = voteInfo?.voters.map(v => {
@@ -130,9 +157,23 @@ export const VotingResults = ({
           };
         }) || [];
 
+        // Calculate weighted score:
+        // Admin votes contribute 40% of total weight
+        // Regular votes contribute 60% of total weight
+        const adminScore = totalAdminVotes > 0 
+          ? ((voteInfo?.adminVotes || 0) / totalAdminVotes) * ADMIN_VOTE_WEIGHT * 100
+          : 0;
+        const regularScore = totalRegularVotes > 0
+          ? ((voteInfo?.regularVotes || 0) / totalRegularVotes) * REGULAR_VOTE_WEIGHT * 100
+          : 0;
+        const weightedScore = adminScore + regularScore;
+
         return {
           nominated_user_id: profile.id,
           vote_count: voteInfo?.count || 0,
+          weighted_score: weightedScore,
+          admin_votes: voteInfo?.adminVotes || 0,
+          regular_votes: voteInfo?.regularVotes || 0,
           profiles: {
             full_name: profile.full_name,
             position: profile.position || 'N/A',
@@ -142,7 +183,8 @@ export const VotingResults = ({
         };
       }) || [];
 
-      const sortedResults = resultsWithProfiles.sort((a, b) => b.vote_count - a.vote_count);
+      // Sort by weighted score instead of raw vote count
+      const sortedResults = resultsWithProfiles.sort((a, b) => b.weighted_score - a.weighted_score);
       setResults(sortedResults);
     } catch (error: any) {
       console.error('Error fetching results:', error);
@@ -237,7 +279,15 @@ export const VotingResults = ({
                       <div>
                         <div className="font-semibold text-lg">{winner.profiles.full_name}</div>
                         <div className="text-sm text-muted-foreground">{winner.profiles.position}</div>
-                        <Badge className="mt-1">{winner.vote_count} votes</Badge>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge>{winner.vote_count} votes</Badge>
+                          <Badge variant="outline">{winner.weighted_score.toFixed(1)}% score</Badge>
+                        </div>
+                        {isAdmin && (
+                          <div className="text-xs text-muted-foreground mt-1">
+                            Admin: {winner.admin_votes} ({ADMIN_VOTE_WEIGHT * 100}% weight) · Regular: {winner.regular_votes} ({REGULAR_VOTE_WEIGHT * 100}% weight)
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -283,7 +333,14 @@ export const VotingResults = ({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">{result.vote_count} votes</Badge>
+                      <div className="flex flex-col items-end">
+                        <Badge variant="secondary">{result.vote_count} votes</Badge>
+                        {isAdmin && (
+                          <span className="text-xs text-muted-foreground mt-1">
+                            {result.weighted_score.toFixed(1)}% score
+                          </span>
+                        )}
+                      </div>
                       {isAdmin && result.voters.length > 0 && (
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" size="sm">
@@ -307,7 +364,12 @@ export const VotingResults = ({
                             className="h-8 w-8"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{voter.voter_name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">{voter.voter_name}</p>
+                              {voter.is_admin_vote && (
+                                <Badge variant="outline" className="text-xs">Admin</Badge>
+                              )}
+                            </div>
                             {voter.reason && (
                               <p className="text-sm text-muted-foreground mt-1">"{voter.reason}"</p>
                             )}

@@ -863,6 +863,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_admin_vote: boolean | null
           nominated_user_id: string
           reason: string | null
           voter_user_id: string
@@ -871,6 +872,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_admin_vote?: boolean | null
           nominated_user_id: string
           reason?: string | null
           voter_user_id: string
@@ -879,6 +881,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_admin_vote?: boolean | null
           nominated_user_id?: string
           reason?: string | null
           voter_user_id?: string

@@ -118,11 +118,7 @@ export const VotingPeriodManager = ({ openPeriods, onPeriodChange }: VotingPerio
       onPeriodChange();
     } catch (error: any) {
       console.error('Error creating period:', error);
-      if (error.message.includes('duplicate')) {
-        toast.error('A voting period for this month already exists');
-      } else {
-        toast.error('Failed to create voting period');
-      }
+      toast.error('Failed to create voting period');
     } finally {
       setLoading(false);
     }
