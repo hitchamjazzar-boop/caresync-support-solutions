@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Heart, Loader2, Eye, Megaphone, Check, MessageSquare } from 'lucide-react';
+import { Heart, Loader2, Eye, Megaphone, Check, MessageSquare, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 import { SubmitShoutoutDialog } from './SubmitShoutoutDialog';
 
@@ -37,7 +37,8 @@ export function ShoutoutsList() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [shoutouts, setShoutouts] = useState<Shoutout[]>([]);
-  const [requests, setRequests] = useState<ShoutoutRequest[]>([]);
+  const [myRequests, setMyRequests] = useState<ShoutoutRequest[]>([]);
+  const [allRequests, setAllRequests] = useState<ShoutoutRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
@@ -56,11 +57,17 @@ export function ShoutoutsList() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Fetch requests assigned to current user only
-    const { data: requestsData } = await supabase
+    // Fetch requests assigned to current user (for answering)
+    const { data: myRequestsData } = await supabase
       .from('shoutout_requests')
       .select('*')
       .eq('recipient_id', user?.id)
+      .order('created_at', { ascending: false });
+
+    // Fetch all requests (for tracking)
+    const { data: allRequestsData } = await supabase
+      .from('shoutout_requests')
+      .select('*')
       .order('created_at', { ascending: false });
 
     // Get all unique user IDs
@@ -69,7 +76,11 @@ export function ShoutoutsList() {
       userIds.add(s.from_user_id);
       userIds.add(s.to_user_id);
     });
-    requestsData?.forEach(r => {
+    myRequestsData?.forEach(r => {
+      userIds.add(r.recipient_id);
+      if (r.target_user_id) userIds.add(r.target_user_id);
+    });
+    allRequestsData?.forEach(r => {
       userIds.add(r.recipient_id);
       if (r.target_user_id) userIds.add(r.target_user_id);
     });
@@ -91,8 +102,16 @@ export function ShoutoutsList() {
         })) || []
       );
 
-      setRequests(
-        requestsData?.map(r => ({
+      setMyRequests(
+        myRequestsData?.map(r => ({
+          ...r,
+          recipient_profile: profileMap.get(r.recipient_id),
+          target_profile: r.target_user_id ? profileMap.get(r.target_user_id) : undefined,
+        })) || []
+      );
+
+      setAllRequests(
+        allRequestsData?.map(r => ({
           ...r,
           recipient_profile: profileMap.get(r.recipient_id),
           target_profile: r.target_user_id ? profileMap.get(r.target_user_id) : undefined,
@@ -100,7 +119,8 @@ export function ShoutoutsList() {
       );
     } else {
       setShoutouts(shoutoutsData || []);
-      setRequests(requestsData || []);
+      setMyRequests(myRequestsData || []);
+      setAllRequests(allRequestsData || []);
     }
 
     setLoading(false);
@@ -160,17 +180,23 @@ export function ShoutoutsList() {
     );
   }
 
+  const pendingMyRequests = myRequests.filter(r => r.status === 'pending');
+
   return (
   <>
     <Tabs defaultValue="shoutouts" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="shoutouts" className="flex items-center gap-2">
           <Heart className="h-4 w-4" />
-          Shout Outs ({shoutouts.length})
+          <span className="hidden sm:inline">Shout Outs</span> ({shoutouts.length})
         </TabsTrigger>
-        <TabsTrigger value="requests" className="flex items-center gap-2">
+        <TabsTrigger value="my-requests" className="flex items-center gap-2">
           <Megaphone className="h-4 w-4" />
-          Requests ({requests.length})
+          <span className="hidden sm:inline">My Requests</span> ({pendingMyRequests.length})
+        </TabsTrigger>
+        <TabsTrigger value="all-requests" className="flex items-center gap-2">
+          <ClipboardList className="h-4 w-4" />
+          <span className="hidden sm:inline">All Requests</span> ({allRequests.length})
         </TabsTrigger>
       </TabsList>
 
@@ -224,15 +250,70 @@ export function ShoutoutsList() {
         )}
       </TabsContent>
 
-      <TabsContent value="requests" className="space-y-4 mt-4">
-        {requests.length === 0 ? (
+      <TabsContent value="my-requests" className="space-y-4 mt-4">
+        {pendingMyRequests.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground">
+              No pending requests for you to answer
+            </CardContent>
+          </Card>
+        ) : (
+          pendingMyRequests.map((request) => (
+            <Card key={request.id}>
+              <CardHeader className="pb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base">
+                      Shoutout Request
+                    </CardTitle>
+                    {request.target_profile && (
+                      <p className="text-xs text-muted-foreground">
+                        For: {request.target_profile.full_name}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      {request.status}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedRequest(request);
+                        setAnswerDialogOpen(true);
+                      }}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-1" />
+                      Answer
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {request.message && (
+                  <p className="text-sm mb-2 text-muted-foreground">
+                    "{request.message}"
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(request.created_at), 'MMM dd, yyyy h:mm a')}
+                </p>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </TabsContent>
+
+      <TabsContent value="all-requests" className="space-y-4 mt-4">
+        {allRequests.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center text-muted-foreground">
               No requests sent yet
             </CardContent>
           </Card>
         ) : (
-          requests.map((request) => (
+          allRequests.map((request) => (
             <Card key={request.id}>
               <CardHeader className="pb-2">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -246,26 +327,11 @@ export function ShoutoutsList() {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant={request.status === 'completed' ? 'default' : 'secondary'}
-                    >
-                      {request.status}
-                    </Badge>
-                    {request.status === 'pending' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedRequest(request);
-                          setAnswerDialogOpen(true);
-                        }}
-                      >
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        Answer
-                      </Button>
-                    )}
-                  </div>
+                  <Badge
+                    variant={request.status === 'completed' ? 'default' : 'secondary'}
+                  >
+                    {request.status}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent>
