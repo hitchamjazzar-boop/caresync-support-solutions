@@ -10,9 +10,9 @@ import { CertificateGenerator } from '@/components/voting/CertificateGenerator';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 import { PublishWinnerDialog } from './PublishWinnerDialog';
 
-// Admin votes count as 40% weight, regular votes as 60%
-const ADMIN_VOTE_WEIGHT = 0.4;
-const REGULAR_VOTE_WEIGHT = 0.6;
+// Default weights when no admin weight is set (equal votes)
+const DEFAULT_ADMIN_WEIGHT = 0.5;
+const DEFAULT_REGULAR_WEIGHT = 0.5;
 
 interface Voter {
   voter_user_id: string;
@@ -42,6 +42,7 @@ interface VotingResultsProps {
   status: string;
   isPublished?: boolean;
   categoryName?: string;
+  categoryId?: string | null;
   month?: number;
   year?: number;
   onPublished?: () => void;
@@ -53,6 +54,7 @@ export const VotingResults = ({
   status, 
   isPublished = false,
   categoryName = 'Employee of the Month',
+  categoryId = null,
   month = new Date().getMonth() + 1,
   year = new Date().getFullYear(),
   onPublished,
@@ -60,12 +62,15 @@ export const VotingResults = ({
   const [results, setResults] = useState<VoteResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [goingLive, setGoingLive] = useState(false);
+  const [adminVoteWeight, setAdminVoteWeight] = useState<number | null>(null);
 
   const [expandedResults, setExpandedResults] = useState<Set<string>>(new Set());
 
   useEffect(() => {
+    fetchCategoryWeight();
     fetchResults();
-  }, [votingPeriodId]);
+  }, [votingPeriodId, categoryId]);
 
   const toggleExpanded = (userId: string) => {
     setExpandedResults(prev => {
@@ -77,6 +82,25 @@ export const VotingResults = ({
       }
       return next;
     });
+  };
+
+  const fetchCategoryWeight = async () => {
+    if (!categoryId) {
+      setAdminVoteWeight(null);
+      return;
+    }
+    
+    try {
+      const { data } = await supabase
+        .from('award_categories')
+        .select('admin_vote_weight')
+        .eq('id', categoryId)
+        .maybeSingle();
+      
+      setAdminVoteWeight(data?.admin_vote_weight ?? null);
+    } catch (error) {
+      console.error('Error fetching category weight:', error);
+    }
   };
 
   const fetchResults = async () => {
@@ -157,14 +181,16 @@ export const VotingResults = ({
           };
         }) || [];
 
-        // Calculate weighted score:
-        // Admin votes contribute 40% of total weight
-        // Regular votes contribute 60% of total weight
+        // Calculate weighted score based on category settings
+        // If adminVoteWeight is set in category, use it; otherwise equal weight
+        const effectiveAdminWeight = adminVoteWeight !== null ? adminVoteWeight / 100 : DEFAULT_ADMIN_WEIGHT;
+        const effectiveRegularWeight = adminVoteWeight !== null ? (100 - adminVoteWeight) / 100 : DEFAULT_REGULAR_WEIGHT;
+        
         const adminScore = totalAdminVotes > 0 
-          ? ((voteInfo?.adminVotes || 0) / totalAdminVotes) * ADMIN_VOTE_WEIGHT * 100
+          ? ((voteInfo?.adminVotes || 0) / totalAdminVotes) * effectiveAdminWeight * 100
           : 0;
         const regularScore = totalRegularVotes > 0
-          ? ((voteInfo?.regularVotes || 0) / totalRegularVotes) * REGULAR_VOTE_WEIGHT * 100
+          ? ((voteInfo?.regularVotes || 0) / totalRegularVotes) * effectiveRegularWeight * 100
           : 0;
         const weightedScore = adminScore + regularScore;
 
@@ -191,6 +217,30 @@ export const VotingResults = ({
       toast.error('Failed to load results');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoLive = async () => {
+    setGoingLive(true);
+    try {
+      const { error } = await supabase
+        .from('voting_periods')
+        .update({ 
+          is_published: true, 
+          published_at: new Date().toISOString(),
+          winner_id: results[0]?.nominated_user_id
+        })
+        .eq('id', votingPeriodId);
+
+      if (error) throw error;
+
+      toast.success('Results are now live!');
+      onPublished?.();
+    } catch (error: any) {
+      console.error('Error publishing results:', error);
+      toast.error('Failed to publish results');
+    } finally {
+      setGoingLive(false);
     }
   };
 
@@ -236,17 +286,36 @@ export const VotingResults = ({
       )}
 
       {status === 'closed' && isAdmin && !isPublished && (
-        <div className="flex items-center justify-between p-4 border rounded-lg bg-amber-500/10 border-amber-500/20">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border rounded-lg bg-amber-500/10 border-amber-500/20">
           <div className="flex items-center gap-2">
             <Eye className="h-5 w-5 text-amber-600" />
             <span className="text-sm font-medium">Results are private until published</span>
           </div>
-          {winner && (
-            <Button onClick={() => setPublishDialogOpen(true)} size="sm">
-              <Megaphone className="h-4 w-4 mr-2" />
-              Publish Winner
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={handleGoLive} 
+              disabled={goingLive || results.length === 0}
+              size="sm"
+              variant="default"
+            >
+              {goingLive ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Publishing...
+                </span>
+              ) : (
+                <>
+                  <Megaphone className="h-4 w-4 mr-2" />
+                  Go Live Results
+                </>
+              )}
             </Button>
-          )}
+            {winner && (
+              <Button onClick={() => setPublishDialogOpen(true)} size="sm" variant="outline">
+                Customize & Publish
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -283,9 +352,9 @@ export const VotingResults = ({
                           <Badge>{winner.vote_count} votes</Badge>
                           <Badge variant="outline">{winner.weighted_score.toFixed(1)}% score</Badge>
                         </div>
-                        {isAdmin && (
+                        {isAdmin && adminVoteWeight !== null && (
                           <div className="text-xs text-muted-foreground mt-1">
-                            Admin: {winner.admin_votes} ({ADMIN_VOTE_WEIGHT * 100}% weight) · Regular: {winner.regular_votes} ({REGULAR_VOTE_WEIGHT * 100}% weight)
+                            Admin: {winner.admin_votes} ({adminVoteWeight}% weight) · Regular: {winner.regular_votes} ({100 - adminVoteWeight}% weight)
                           </div>
                         )}
                       </div>
@@ -335,7 +404,7 @@ export const VotingResults = ({
                     <div className="flex items-center gap-2">
                       <div className="flex flex-col items-end">
                         <Badge variant="secondary">{result.vote_count} votes</Badge>
-                        {isAdmin && (
+                        {isAdmin && adminVoteWeight !== null && (
                           <span className="text-xs text-muted-foreground mt-1">
                             {result.weighted_score.toFixed(1)}% score
                           </span>

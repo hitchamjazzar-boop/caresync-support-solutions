@@ -318,6 +318,7 @@ export type Database = {
       }
       award_categories: {
         Row: {
+          admin_vote_weight: number | null
           color: string | null
           created_at: string
           created_by: string | null
@@ -328,6 +329,7 @@ export type Database = {
           name: string
         }
         Insert: {
+          admin_vote_weight?: number | null
           color?: string | null
           created_at?: string
           created_by?: string | null
@@ -338,6 +340,7 @@ export type Database = {
           name: string
         }
         Update: {
+          admin_vote_weight?: number | null
           color?: string | null
           created_at?: string
           created_by?: string | null
