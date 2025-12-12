@@ -1664,6 +1664,7 @@ export type Database = {
           is_published: boolean
           month: number
           published_at: string | null
+          requires_nomination: boolean
           status: string
           winner_id: string | null
           year: number
@@ -1677,6 +1678,7 @@ export type Database = {
           is_published?: boolean
           month: number
           published_at?: string | null
+          requires_nomination?: boolean
           status?: string
           winner_id?: string | null
           year: number
@@ -1690,6 +1692,7 @@ export type Database = {
           is_published?: boolean
           month?: number
           published_at?: string | null
+          requires_nomination?: boolean
           status?: string
           winner_id?: string | null
           year?: number
