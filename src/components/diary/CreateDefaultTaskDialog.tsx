@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +17,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -43,6 +53,8 @@ export const CreateDefaultTaskDialog = ({ open, onOpenChange }: CreateDefaultTas
   const [assignmentType, setAssignmentType] = useState<'all' | 'specific' | 'department'>('all');
   const [assignedTo, setAssignedTo] = useState<string[]>([]);
   const [assignedDepartments, setAssignedDepartments] = useState<string[]>([]);
+  const [isDaily, setIsDaily] = useState(true);
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -60,6 +72,8 @@ export const CreateDefaultTaskDialog = ({ open, onOpenChange }: CreateDefaultTas
           assignment_type: assignmentType,
           assigned_to: assignmentType === 'specific' ? assignedTo : null,
           assigned_departments: assignmentType === 'department' ? assignedDepartments : null,
+          is_daily: isDaily,
+          due_date: !isDaily && dueDate ? format(dueDate, 'yyyy-MM-dd') : null,
         });
       
       if (error) throw error;
@@ -86,6 +100,8 @@ export const CreateDefaultTaskDialog = ({ open, onOpenChange }: CreateDefaultTas
     setAssignmentType('all');
     setAssignedTo([]);
     setAssignedDepartments([]);
+    setIsDaily(true);
+    setDueDate(undefined);
     onOpenChange(false);
   };
 
@@ -93,6 +109,10 @@ export const CreateDefaultTaskDialog = ({ open, onOpenChange }: CreateDefaultTas
     e.preventDefault();
     if (!title.trim()) {
       toast({ title: 'Title is required', variant: 'destructive' });
+      return;
+    }
+    if (!isDaily && !dueDate) {
+      toast({ title: 'Due date is required for non-daily tasks', variant: 'destructive' });
       return;
     }
     createMutation.mutate();
@@ -187,6 +207,58 @@ export const CreateDefaultTaskDialog = ({ open, onOpenChange }: CreateDefaultTas
               placeholder="e.g., 30"
               min="1"
             />
+          </div>
+
+          {/* Task Type - Daily or Due Date */}
+          <div className="space-y-3">
+            <Label>Task Type</Label>
+            <RadioGroup
+              value={isDaily ? 'daily' : 'due-date'}
+              onValueChange={(v) => setIsDaily(v === 'daily')}
+              className="flex flex-col gap-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="daily" id="daily" />
+                <Label htmlFor="daily" className="font-normal cursor-pointer">
+                  Daily recurring task
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="due-date" id="due-date" />
+                <Label htmlFor="due-date" className="font-normal cursor-pointer">
+                  Task with specific due date
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {!isDaily && (
+              <div className="ml-6">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full justify-start text-left font-normal',
+                        !dueDate && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dueDate ? format(dueDate, 'PPP') : <span>Pick a due date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={dueDate}
+                      onSelect={setDueDate}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className={cn('p-3 pointer-events-auto')}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
           </div>
 
           <ClientSelector value={clientId} onChange={setClientId} />
