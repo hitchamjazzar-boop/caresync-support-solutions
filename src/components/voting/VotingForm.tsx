@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, Clock } from 'lucide-react';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
@@ -32,6 +33,7 @@ export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVot
   const { user } = useAuth();
   const [nominees, setNominees] = useState<Nominee[]>([]);
   const [selectedNominee, setSelectedNominee] = useState('');
+  const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetchingNominees, setFetchingNominees] = useState(true);
 
@@ -132,6 +134,11 @@ export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVot
       return;
     }
 
+    if (!reason.trim()) {
+      toast.error('Please provide a reason for your vote');
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase
@@ -139,7 +146,8 @@ export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVot
         .insert({
           voting_period_id: votingPeriodId,
           nominated_user_id: selectedNominee,
-          voter_user_id: user?.id
+          voter_user_id: user?.id,
+          reason: reason.trim()
         });
 
       if (error) throw error;
@@ -238,7 +246,20 @@ export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVot
         </div>
       </RadioGroup>
 
-      <Button type="submit" disabled={loading} className="w-full">
+      <div className="space-y-2">
+        <Label htmlFor="reason">Why are you voting for this person? *</Label>
+        <Textarea
+          id="reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Share your reason for voting for this employee..."
+          className="min-h-[100px]"
+          maxLength={500}
+        />
+        <p className="text-xs text-muted-foreground text-right">{reason.length}/500</p>
+      </div>
+
+      <Button type="submit" disabled={loading || !selectedNominee || !reason.trim()} className="w-full">
         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
         Submit Vote
       </Button>
