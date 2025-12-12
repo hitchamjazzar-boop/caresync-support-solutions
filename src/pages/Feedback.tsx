@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, MessageSquare, CheckCircle2, Clock } from 'lucide-react';
 import { FeedbackDialog } from '@/components/feedback/FeedbackDialog';
 import { FeedbackRequestCard } from '@/components/feedback/FeedbackRequestCard';
+import { FeedbackRequestsList } from '@/components/feedback/FeedbackRequestsList';
 import { SendFeedbackRequestDialog } from '@/components/feedback/SendFeedbackRequestDialog';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -205,6 +206,8 @@ export default function Feedback() {
       </div>
 
       {!isAdmin && <FeedbackRequestCard />}
+
+      {isAdmin && <FeedbackRequestsList />}
 
       {feedback.length === 0 ? (
         <Card>
