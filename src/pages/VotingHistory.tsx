@@ -4,8 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { History, Award, Trophy, Calendar, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { History, Award, Trophy, Calendar, Loader2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+import { useAdmin } from '@/hooks/useAdmin';
 
 interface AwardCategory {
   id: string;
@@ -43,12 +47,14 @@ const months = [
 ];
 
 export default function VotingHistory() {
+  const { isAdmin } = useAdmin();
   const [periods, setPeriods] = useState<VotingPeriodWithWinner[]>([]);
   const [categories, setCategories] = useState<AwardCategory[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -124,6 +130,27 @@ export default function VotingHistory() {
       console.error('Error fetching voting history:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (periodId: string) => {
+    setDeleting(periodId);
+    try {
+      // Delete related votes first
+      await supabase.from('employee_votes').delete().eq('voting_period_id', periodId);
+      // Delete related nominations
+      await supabase.from('employee_nominations').delete().eq('voting_period_id', periodId);
+      // Delete the voting period
+      const { error } = await supabase.from('voting_periods').delete().eq('id', periodId);
+      if (error) throw error;
+      
+      setPeriods(periods.filter(p => p.id !== periodId));
+      toast.success('Voting history entry deleted');
+    } catch (error: any) {
+      console.error('Error deleting voting period:', error);
+      toast.error('Failed to delete voting history');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -228,9 +255,38 @@ export default function VotingHistory() {
                       {months[period.month - 1]} {period.year}
                     </CardDescription>
                   </div>
-                  <Badge variant="secondary">
-                    {period.vote_count} vote{period.vote_count !== 1 ? 's' : ''}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      {period.vote_count} vote{period.vote_count !== 1 ? 's' : ''}
+                    </Badge>
+                    {isAdmin && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Voting History</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete this voting period and all associated votes. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDelete(period.id)}
+                              disabled={deleting === period.id}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {deleting === period.id ? 'Deleting...' : 'Delete'}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
