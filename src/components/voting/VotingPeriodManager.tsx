@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Calendar, Lock, Unlock, Loader2 } from 'lucide-react';
 
@@ -14,6 +15,7 @@ interface VotingPeriod {
   status: string;
   category_id: string | null;
   is_published: boolean;
+  requires_nomination: boolean;
 }
 
 interface AwardCategory {
@@ -33,6 +35,7 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [categoryId, setCategoryId] = useState<string>('');
   const [categories, setCategories] = useState<AwardCategory[]>([]);
+  const [requiresNomination, setRequiresNomination] = useState(true);
   const [loading, setLoading] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
@@ -83,6 +86,7 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
           year, 
           status: 'open',
           category_id: categoryId,
+          requires_nomination: requiresNomination,
         });
 
       if (error) throw error;
@@ -170,7 +174,7 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
                 )}
               </div>
               <div className="text-sm text-muted-foreground">
-                Status: {currentPeriod.status}
+                Status: {currentPeriod.status} • {currentPeriod.requires_nomination ? 'Requires Nomination' : 'Direct Voting'}
                 {currentPeriod.is_published && ' (Published)'}
               </div>
             </div>
@@ -251,6 +255,22 @@ export const VotingPeriodManager = ({ currentPeriod, onPeriodChange }: VotingPer
                 </Select>
               </div>
             </div>
+
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label>Require Nominations</Label>
+                <p className="text-xs text-muted-foreground">
+                  {requiresNomination 
+                    ? 'People must be nominated before voting' 
+                    : 'Vote directly from all employees'}
+                </p>
+              </div>
+              <Switch
+                checked={requiresNomination}
+                onCheckedChange={setRequiresNomination}
+              />
+            </div>
+
             <Button 
               onClick={handleCreatePeriod} 
               disabled={loading || !categoryId} 

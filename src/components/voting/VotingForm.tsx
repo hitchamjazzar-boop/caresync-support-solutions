@@ -24,10 +24,11 @@ interface Nominee {
 interface VotingFormProps {
   votingPeriodId: string;
   hasVoted: boolean;
+  requiresNomination: boolean;
   onVoted: () => void;
 }
 
-export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProps) => {
+export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVoted }: VotingFormProps) => {
   const { user } = useAuth();
   const [nominees, setNominees] = useState<Nominee[]>([]);
   const [selectedNominee, setSelectedNominee] = useState('');
@@ -35,10 +36,14 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
   const [fetchingNominees, setFetchingNominees] = useState(true);
 
   useEffect(() => {
-    fetchNominees();
-  }, [votingPeriodId]);
+    if (requiresNomination) {
+      fetchApprovedNominees();
+    } else {
+      fetchAllEmployees();
+    }
+  }, [votingPeriodId, requiresNomination]);
 
-  const fetchNominees = async () => {
+  const fetchApprovedNominees = async () => {
     try {
       // Only fetch approved nominations
       const { data, error } = await supabase
@@ -89,6 +94,37 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
     }
   };
 
+  const fetchAllEmployees = async () => {
+    try {
+      // Fetch all employees except the current user
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, position, photo_url')
+        .neq('id', user?.id || '')
+        .order('full_name');
+
+      if (profilesError) throw profilesError;
+
+      const allEmployees = profilesData?.map((profile) => ({
+        nominated_user_id: profile.id,
+        profiles: {
+          full_name: profile.full_name,
+          position: profile.position || 'N/A',
+          photo_url: profile.photo_url,
+        },
+        nomination_count: 0,
+        is_approved: true,
+      })) || [];
+
+      setNominees(allEmployees);
+    } catch (error: any) {
+      console.error('Error fetching employees:', error);
+      toast.error('Failed to load employees');
+    } finally {
+      setFetchingNominees(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedNominee) {
@@ -133,11 +169,13 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
       <div className="text-center py-8 space-y-2">
         <Clock className="h-12 w-12 mx-auto text-muted-foreground/50" />
         <p className="text-muted-foreground">
-          No approved nominees yet.
+          {requiresNomination ? 'No approved nominees yet.' : 'No employees available for voting.'}
         </p>
-        <p className="text-sm text-muted-foreground">
-          Nominations need to be approved by an admin before voting can begin.
-        </p>
+        {requiresNomination && (
+          <p className="text-sm text-muted-foreground">
+            Nominations need to be approved by an admin before voting can begin.
+          </p>
+        )}
       </div>
     );
   }
@@ -161,7 +199,7 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
       <div className="flex items-center justify-between">
         <Label>Vote for your choice</Label>
         <Badge variant="outline">
-          {nominees.length} approved {nominees.length === 1 ? 'nominee' : 'nominees'}
+          {nominees.length} {requiresNomination ? 'approved' : ''} {nominees.length === 1 ? 'candidate' : 'candidates'}
         </Badge>
       </div>
       
@@ -174,22 +212,24 @@ export const VotingForm = ({ votingPeriodId, hasVoted, onVoted }: VotingFormProp
                   value={nominee.nominated_user_id}
                   id={nominee.nominated_user_id}
                 />
-                  <Label
-                    htmlFor={nominee.nominated_user_id}
-                    className="flex items-center gap-3 cursor-pointer flex-1"
-                  >
-                    <ProfileAvatarWithBadges
-                      userId={nominee.nominated_user_id}
-                      photoUrl={nominee.profiles.photo_url}
-                      fullName={nominee.profiles.full_name}
-                      className="h-12 w-12"
-                    />
+                <Label
+                  htmlFor={nominee.nominated_user_id}
+                  className="flex items-center gap-3 cursor-pointer flex-1"
+                >
+                  <ProfileAvatarWithBadges
+                    userId={nominee.nominated_user_id}
+                    photoUrl={nominee.profiles.photo_url}
+                    fullName={nominee.profiles.full_name}
+                    className="h-12 w-12"
+                  />
                   <div className="flex-1">
                     <div className="font-medium">{nominee.profiles.full_name}</div>
                     <div className="text-sm text-muted-foreground">{nominee.profiles.position}</div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {nominee.nomination_count} {nominee.nomination_count === 1 ? 'nomination' : 'nominations'}
-                    </div>
+                    {requiresNomination && nominee.nomination_count > 0 && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {nominee.nomination_count} {nominee.nomination_count === 1 ? 'nomination' : 'nominations'}
+                      </div>
+                    )}
                   </div>
                 </Label>
               </div>

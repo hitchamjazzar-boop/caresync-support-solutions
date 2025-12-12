@@ -26,6 +26,7 @@ interface VotingPeriod {
   is_published: boolean;
   winner_id: string | null;
   announcement_message: string | null;
+  requires_nomination: boolean;
 }
 
 interface AwardCategory {
@@ -261,13 +262,15 @@ const EmployeeVoting = () => {
                 </div>
               </CardHeader>
               <CardContent className="p-4 sm:p-6 pt-0">
-                <Tabs defaultValue="nominate" className="w-full">
-                  <TabsList className="w-full grid grid-cols-3 h-auto">
-                    <TabsTrigger value="nominate" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
-                      <Users className="h-3 sm:h-4 w-3 sm:w-4" />
-                      <span className="hidden sm:inline">Nominate</span>
-                      <span className="sm:hidden">Nom.</span>
-                    </TabsTrigger>
+                <Tabs defaultValue={selectedPeriod.requires_nomination ? "nominate" : "vote"} className="w-full">
+                  <TabsList className={`w-full grid h-auto ${selectedPeriod.requires_nomination ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    {selectedPeriod.requires_nomination && (
+                      <TabsTrigger value="nominate" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
+                        <Users className="h-3 sm:h-4 w-3 sm:w-4" />
+                        <span className="hidden sm:inline">Nominate</span>
+                        <span className="sm:hidden">Nom.</span>
+                      </TabsTrigger>
+                    )}
                     <TabsTrigger value="vote" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 py-2">
                       <Vote className="h-3 sm:h-4 w-3 sm:w-4" />
                       Vote
@@ -278,28 +281,31 @@ const EmployeeVoting = () => {
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="nominate">
-                    {selectedPeriod.status === 'open' ? (
-                      <NominationForm 
-                        votingPeriodId={selectedPeriod.id}
-                        hasNominated={hasNominated}
-                        onNominated={() => {
-                          setHasNominated(true);
-                          fetchOpenPeriods();
-                        }}
-                      />
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        Voting period has closed
-                      </div>
-                    )}
-                  </TabsContent>
+                  {selectedPeriod.requires_nomination && (
+                    <TabsContent value="nominate">
+                      {selectedPeriod.status === 'open' ? (
+                        <NominationForm 
+                          votingPeriodId={selectedPeriod.id}
+                          hasNominated={hasNominated}
+                          onNominated={() => {
+                            setHasNominated(true);
+                            fetchOpenPeriods();
+                          }}
+                        />
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          Voting period has closed
+                        </div>
+                      )}
+                    </TabsContent>
+                  )}
 
                   <TabsContent value="vote">
                     {selectedPeriod.status === 'open' ? (
                       <VotingForm 
                         votingPeriodId={selectedPeriod.id}
                         hasVoted={hasVoted}
+                        requiresNomination={selectedPeriod.requires_nomination}
                         onVoted={() => {
                           setHasVoted(true);
                           fetchOpenPeriods();
