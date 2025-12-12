@@ -42,6 +42,9 @@ export function GiveShoutoutDialog({ trigger }: GiveShoutoutDialogProps) {
   useEffect(() => {
     if (open) {
       fetchEmployees();
+      // Reset form when dialog opens
+      setSelectedEmployee('');
+      setMessage('');
     }
   }, [open]);
 
@@ -93,14 +96,15 @@ export function GiveShoutoutDialog({ trigger }: GiveShoutoutDialogProps) {
         title: 'Shout out sent!',
         description: 'Your recognition has been submitted for review.',
       });
-      setOpen(false);
+      // Reset form but keep dialog open for another submission
       setSelectedEmployee('');
       setMessage('');
+      setOpen(false);
     } catch (error) {
       console.error('Error submitting shoutout:', error);
       toast({
         title: 'Error',
-        description: 'Failed to submit shout out.',
+        description: 'Failed to submit shout out. Please try again.',
         variant: 'destructive',
       });
     } finally {
