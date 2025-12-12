@@ -46,15 +46,22 @@ export function GiveShoutoutDialog({ trigger }: GiveShoutoutDialogProps) {
   }, [open]);
 
   const fetchEmployees = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('id, full_name')
       .neq('id', user?.id)
       .order('full_name');
     
+    console.log('Fetched employees:', data, 'Error:', error);
+    
     if (data) {
       setEmployees(data);
     }
+  };
+
+  const handleEmployeeChange = (value: string) => {
+    console.log('Employee selected:', value);
+    setSelectedEmployee(value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,7 +131,7 @@ export function GiveShoutoutDialog({ trigger }: GiveShoutoutDialogProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="colleague">Who would you like to recognize?</Label>
-            <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+            <Select value={selectedEmployee} onValueChange={handleEmployeeChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a colleague" />
               </SelectTrigger>
