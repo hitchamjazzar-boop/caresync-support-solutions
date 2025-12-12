@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ interface ShoutoutRequest {
 }
 
 export function ShoutoutsList() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [shoutouts, setShoutouts] = useState<Shoutout[]>([]);
   const [requests, setRequests] = useState<ShoutoutRequest[]>([]);
@@ -54,10 +56,11 @@ export function ShoutoutsList() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Fetch requests
+    // Fetch requests assigned to current user only
     const { data: requestsData } = await supabase
       .from('shoutout_requests')
       .select('*')
+      .eq('recipient_id', user?.id)
       .order('created_at', { ascending: false });
 
     // Get all unique user IDs
@@ -287,7 +290,6 @@ export function ShoutoutsList() {
         onOpenChange={setAnswerDialogOpen}
         requestId={selectedRequest.id}
         targetUserId={selectedRequest.target_user_id}
-        recipientId={selectedRequest.recipient_id}
         onSuccess={() => {
           fetchData();
           setSelectedRequest(null);

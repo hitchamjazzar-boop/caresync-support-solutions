@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +21,7 @@ interface FeedbackRequest {
 }
 
 export function FeedbackRequestsList() {
+  const { user } = useAuth();
   const [requests, setRequests] = useState<FeedbackRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [answerDialogOpen, setAnswerDialogOpen] = useState(false);
@@ -32,9 +34,11 @@ export function FeedbackRequestsList() {
   const fetchRequests = async () => {
     setLoading(true);
 
+    // Fetch requests assigned to current user only
     const { data: requestsData } = await supabase
       .from('feedback_requests')
       .select('*')
+      .eq('recipient_id', user?.id)
       .order('created_at', { ascending: false });
 
     if (requestsData && requestsData.length > 0) {
@@ -139,7 +143,6 @@ export function FeedbackRequestsList() {
           onOpenChange={setAnswerDialogOpen}
           requestId={selectedRequest.id}
           targetUserName={selectedRequest.target_profile?.full_name}
-          recipientId={selectedRequest.recipient_id}
           onSuccess={() => {
             fetchRequests();
             setSelectedRequest(null);
