@@ -287,6 +287,7 @@ export function ShoutoutsList() {
         onOpenChange={setAnswerDialogOpen}
         requestId={selectedRequest.id}
         targetUserId={selectedRequest.target_user_id}
+        recipientId={selectedRequest.recipient_id}
         onSuccess={() => {
           fetchData();
           setSelectedRequest(null);

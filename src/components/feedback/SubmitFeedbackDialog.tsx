@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/hooks/useAdmin';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ interface SubmitFeedbackDialogProps {
   onOpenChange: (open: boolean) => void;
   requestId: string;
   targetUserName?: string;
+  recipientId?: string; // The original request recipient (for admin answering on behalf)
   onSuccess?: () => void;
 }
 
@@ -22,13 +24,19 @@ export function SubmitFeedbackDialog({
   onOpenChange,
   requestId,
   targetUserName,
+  recipientId,
   onSuccess,
 }: SubmitFeedbackDialogProps) {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const { toast } = useToast();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Determine who the feedback should be "from"
+  // If admin is answering on behalf, use the original recipient
+  const fromUserId = isAdmin && recipientId ? recipientId : user?.id;
 
   const handleSubmit = async () => {
     if (!subject.trim() || !message.trim()) {
@@ -43,11 +51,11 @@ export function SubmitFeedbackDialog({
     setLoading(true);
 
     try {
-      // Insert the feedback
+      // Insert the feedback on behalf of the original recipient
       const { error: feedbackError } = await supabase
         .from('employee_feedback')
         .insert({
-          user_id: user?.id,
+          user_id: fromUserId,
           subject: subject.trim(),
           message: message.trim(),
         });
@@ -64,7 +72,7 @@ export function SubmitFeedbackDialog({
 
       toast({
         title: 'Success',
-        description: 'Your feedback has been submitted',
+        description: isAdmin && recipientId ? 'Feedback submitted on behalf of the user.' : 'Your feedback has been submitted',
       });
 
       onOpenChange(false);

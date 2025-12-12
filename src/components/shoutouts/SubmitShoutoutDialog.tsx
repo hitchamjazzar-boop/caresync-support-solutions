@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAdmin } from '@/hooks/useAdmin';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +31,7 @@ interface SubmitShoutoutDialogProps {
   onOpenChange: (open: boolean) => void;
   requestId: string;
   targetUserId?: string | null;
+  recipientId?: string | null; // The original request recipient (for admin answering on behalf)
   onSuccess?: () => void;
 }
 
@@ -38,14 +40,20 @@ export function SubmitShoutoutDialog({
   onOpenChange, 
   requestId,
   targetUserId,
+  recipientId,
   onSuccess 
 }: SubmitShoutoutDialogProps) {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [message, setMessage] = useState('');
+
+  // Determine who the shoutout should be "from"
+  // If admin is answering on behalf, use the original recipient
+  const fromUserId = isAdmin && recipientId ? recipientId : user?.id;
 
   useEffect(() => {
     if (open) {
@@ -61,7 +69,7 @@ export function SubmitShoutoutDialog({
     const { data } = await supabase
       .from('profiles')
       .select('id, full_name')
-      .neq('id', user?.id)
+      .neq('id', fromUserId) // Exclude the "from" user
       .order('full_name');
     
     if (data) {
@@ -71,16 +79,16 @@ export function SubmitShoutoutDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !selectedEmployee || !message.trim()) return;
+    if (!fromUserId || !selectedEmployee || !message.trim()) return;
 
     setLoading(true);
     try {
-      // Create the shoutout
+      // Create the shoutout on behalf of the original recipient
       const { error: shoutoutError } = await supabase
         .from('shoutouts')
         .insert({
           request_id: requestId,
-          from_user_id: user.id,
+          from_user_id: fromUserId,
           to_user_id: selectedEmployee,
           message: message.trim(),
         });
@@ -97,7 +105,7 @@ export function SubmitShoutoutDialog({
 
       toast({
         title: 'Shout out sent!',
-        description: 'Your recognition has been submitted.',
+        description: isAdmin && recipientId ? 'Shout out submitted on behalf of the user.' : 'Your recognition has been submitted.',
       });
       onOpenChange(false);
       setSelectedEmployee('');
