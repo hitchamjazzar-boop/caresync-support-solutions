@@ -13,13 +13,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -265,18 +258,17 @@ export function SendMemoDialog({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="memo">📝 Memo (General message)</SelectItem>
-                      <SelectItem value="reminder">🔔 Reminder (Action needed)</SelectItem>
-                      <SelectItem value="warning">⚠️ Warning (Important/Urgent)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <select
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value as MemoFormData['type'])}
+                      className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="memo">📝 Memo (General message)</option>
+                      <option value="reminder">🔔 Reminder (Action needed)</option>
+                      <option value="warning">⚠️ Warning (Important/Urgent)</option>
+                    </select>
+                  </FormControl>
                   <FormDescription>Choose the appropriate type based on urgency</FormDescription>
                   <FormMessage />
                 </FormItem>
