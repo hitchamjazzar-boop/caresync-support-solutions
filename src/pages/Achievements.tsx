@@ -24,11 +24,13 @@ interface AchievementType {
 }
 
 const Achievements = () => {
-  const { isAdmin } = useAdmin();
+  const { hasPermission, loading: adminLoading } = useAdmin();
   const [achievementTypes, setAchievementTypes] = useState<AchievementType[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [awardDialogOpen, setAwardDialogOpen] = useState(false);
+
+  const canManageAchievements = hasPermission('achievements');
 
   useEffect(() => {
     fetchAchievementTypes();
@@ -52,14 +54,22 @@ const Achievements = () => {
     }
   };
 
-  if (!isAdmin) {
+  if (adminLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="text-center">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!canManageAchievements) {
     return (
       <div className="container mx-auto p-6">
         <Card>
           <CardHeader>
             <CardTitle>Access Denied</CardTitle>
             <CardDescription>
-              You need administrator privileges to access this page.
+              You need the achievements permission to access this page.
             </CardDescription>
           </CardHeader>
         </Card>
