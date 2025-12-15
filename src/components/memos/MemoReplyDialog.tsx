@@ -1,20 +1,11 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, X } from 'lucide-react';
 
 interface MemoReplyDialogProps {
   memoId: string;
@@ -63,41 +54,55 @@ export function MemoReplyDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <MessageSquare className="h-4 w-4 mr-2" />
-          {buttonText}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
-        <DialogHeader>
-          <DialogTitle>Reply to Memo</DialogTitle>
-          <DialogDescription>
-            Replying to: <span className="font-medium">{memoTitle}</span>
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="reply-content">Your Reply</Label>
-            <Textarea
-              id="reply-content"
-              placeholder="Type your reply here..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              rows={5}
-            />
+    <>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+        <MessageSquare className="h-4 w-4 mr-2" />
+        {buttonText}
+      </Button>
+
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="relative w-full sm:max-w-[525px] max-h-[90vh] overflow-y-auto rounded-lg border bg-background p-6 shadow-lg">
+            <button
+              type="button"
+              className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              onClick={() => setOpen(false)}
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold leading-none tracking-tight">Reply to Memo</h2>
+              <p className="text-sm text-muted-foreground mt-1.5">
+                Replying to: <span className="font-medium">{memoTitle}</span>
+              </p>
+            </div>
+
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="reply-content">Your Reply</Label>
+                <Textarea
+                  id="reply-content"
+                  placeholder="Type your reply here..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={5}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+                Cancel
+              </Button>
+              <Button onClick={handleReply} disabled={loading || !content.trim()}>
+                {loading ? 'Sending...' : 'Send Reply'}
+              </Button>
+            </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
-            Cancel
-          </Button>
-          <Button onClick={handleReply} disabled={loading || !content.trim()}>
-            {loading ? 'Sending...' : 'Send Reply'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+    </>
   );
 }
