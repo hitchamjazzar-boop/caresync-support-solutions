@@ -47,7 +47,8 @@ interface Memo {
 
 export default function Memos() {
   const { user } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { hasPermission } = useAdmin();
+  const canSendMemos = hasPermission('memos');
   const [activeTab, setActiveTab] = useState<string>('received');
   const [memos, setMemos] = useState<Memo[]>([]);
   const [sentMemos, setSentMemos] = useState<Memo[]>([]);
@@ -376,7 +377,7 @@ export default function Memos() {
           <h1 className="text-2xl sm:text-3xl font-bold">My Memos</h1>
           <p className="text-sm sm:text-base text-muted-foreground">View and manage all your memos</p>
         </div>
-        {isAdmin && (
+        {canSendMemos && (
           <Button onClick={() => setSendMemoOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Send Memo
@@ -384,7 +385,7 @@ export default function Memos() {
         )}
       </div>
 
-      {isAdmin && (
+      {canSendMemos && (
         <SendMemoDialog open={sendMemoOpen} onOpenChange={setSendMemoOpen} />
       )}
 
