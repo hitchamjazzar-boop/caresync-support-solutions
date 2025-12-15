@@ -388,20 +388,37 @@ export default function Memos() {
         <SendMemoDialog open={sendMemoOpen} onOpenChange={setSendMemoOpen} />
       )}
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="received" className="gap-2">
-            <FileText className="h-4 w-4" />
+      <div className="flex flex-col gap-4">
+        {/* Tab buttons */}
+        <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground w-fit">
+          <button
+            type="button"
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+              activeTab === 'received'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'hover:text-foreground'
+            }`}
+            onClick={() => setActiveTab('received')}
+          >
+            <FileText className="h-4 w-4 mr-2" />
             Received
-          </TabsTrigger>
-          <TabsTrigger value="sent" className="gap-2">
-            <Send className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all ${
+              activeTab === 'sent'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'hover:text-foreground'
+            }`}
+            onClick={() => setActiveTab('sent')}
+          >
+            <Send className="h-4 w-4 mr-2" />
             Sent
-          </TabsTrigger>
-        </TabsList>
+          </button>
+        </div>
 
         {/* Filters */}
-        <Card className="mt-4">
+        <Card>
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="text-base sm:text-lg">Filters</CardTitle>
           </CardHeader>
@@ -443,30 +460,33 @@ export default function Memos() {
           </CardContent>
         </Card>
 
-        <TabsContent value="received" className="mt-4 space-y-3 sm:space-y-4">
-          {filteredMemos.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground text-sm sm:text-base">
-                No memos found
-              </CardContent>
-            </Card>
-          ) : (
-            filteredMemos.map((memo) => renderMemoCard(memo, false))
-          )}
-        </TabsContent>
-
-        <TabsContent value="sent" className="mt-4 space-y-3 sm:space-y-4">
-          {filteredMemos.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground text-sm sm:text-base">
-                No sent memos found
-              </CardContent>
-            </Card>
-          ) : (
-            filteredMemos.map((memo) => renderMemoCard(memo, true))
-          )}
-        </TabsContent>
-      </Tabs>
+        {/* Tab content */}
+        {activeTab === 'received' ? (
+          <div className="mt-4 space-y-3 sm:space-y-4">
+            {filteredMemos.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground text-sm sm:text-base">
+                  No memos found
+                </CardContent>
+              </Card>
+            ) : (
+              filteredMemos.map((memo) => renderMemoCard(memo, false))
+            )}
+          </div>
+        ) : (
+          <div className="mt-4 space-y-3 sm:space-y-4">
+            {filteredMemos.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground text-sm sm:text-base">
+                  No sent memos found
+                </CardContent>
+              </Card>
+            ) : (
+              filteredMemos.map((memo) => renderMemoCard(memo, true))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
