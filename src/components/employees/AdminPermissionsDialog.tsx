@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Shield } from 'lucide-react';
@@ -255,22 +254,23 @@ export function AdminPermissionsDialog({
               <Label className="text-sm font-medium">Select Permissions</Label>
               <div className="grid gap-2">
                 {PERMISSION_TYPES.map((perm) => (
-                  <div
+                  <label
                     key={perm.key}
-                    className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    className="flex items-start space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer"
                   >
-                    <Checkbox
-                      id={perm.key}
+                    <input
+                      type="checkbox"
                       checked={permissions.has(perm.key)}
-                      onCheckedChange={() => togglePermission(perm.key)}
+                      onChange={() => togglePermission(perm.key)}
+                      className="h-4 w-4 mt-0.5 rounded border-input"
                     />
                     <div className="flex-1">
-                      <Label htmlFor={perm.key} className="font-medium cursor-pointer">
+                      <span className="font-medium">
                         {perm.label}
-                      </Label>
+                      </span>
                       <p className="text-xs text-muted-foreground">{perm.description}</p>
                     </div>
-                  </div>
+                  </label>
                 ))}
               </div>
             </div>
