@@ -180,33 +180,47 @@ export function SendMemoDialog({
     return employees.find(e => e.id === id)?.full_name || 'Unknown';
   };
 
+  if (!open) {
+    return null;
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+      <div className="relative w-full sm:max-w-[600px] max-h-[90vh] overflow-y-auto rounded-lg border bg-background p-6 shadow-lg">
+        <button
+          type="button"
+          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          onClick={() => onOpenChange(false)}
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+
         <DialogHeader>
           <DialogTitle>Send Memo to Employees</DialogTitle>
           <DialogDescription>
-            Send a direct memo, reminder, or warning to one or more employees. They will see it prominently on their dashboard.
+            Send a direct memo, reminder, or warning to one or more employees. They will see it prominently on their
+            dashboard.
           </DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
             <FormField
               control={form.control}
               name="recipient_ids"
               render={() => (
                 <FormItem>
                   <FormLabel>Employees ({selectedIds.length} selected)</FormLabel>
-                  
+
                   {/* Selected employees badges */}
                   {selectedIds.length > 0 && (
                     <div className="flex flex-wrap gap-1 mb-2">
-                      {selectedIds.map(id => (
+                      {selectedIds.map((id) => (
                         <Badge key={id} variant="secondary" className="gap-1">
                           {getEmployeeName(id)}
-                          <X 
-                            className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                          <X
+                            className="h-3 w-3 cursor-pointer hover:text-destructive"
                             onClick={() => toggleEmployee(id)}
                           />
                         </Badge>
@@ -240,9 +254,7 @@ export function SendMemoDialog({
                           <span className="text-sm flex-1">
                             {employee.full_name}
                             {employee.department && (
-                              <span className="text-muted-foreground ml-1">
-                                - {employee.department}
-                              </span>
+                              <span className="text-muted-foreground ml-1">- {employee.department}</span>
                             )}
                           </span>
                         </div>
@@ -272,9 +284,7 @@ export function SendMemoDialog({
                       <SelectItem value="warning">⚠️ Warning (Important/Urgent)</SelectItem>
                     </SelectContent>
                   </Select>
-                  <FormDescription>
-                    Choose the appropriate type based on urgency
-                  </FormDescription>
+                  <FormDescription>Choose the appropriate type based on urgency</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -319,14 +329,9 @@ export function SendMemoDialog({
                 <FormItem>
                   <FormLabel>Expiration Date & Time (Optional)</FormLabel>
                   <FormControl>
-                    <Input
-                      type="datetime-local"
-                      {...field}
-                    />
+                    <Input type="datetime-local" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    Leave empty for memos that don't expire
-                  </FormDescription>
+                  <FormDescription>Leave empty for memos that don't expire</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -338,18 +343,11 @@ export function SendMemoDialog({
               render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                   <div className="space-y-0.5">
-                    <FormLabel className="text-base">
-                      Enable Auto-Escalation
-                    </FormLabel>
-                    <FormDescription>
-                      Automatically send a reminder if this memo remains unread
-                    </FormDescription>
+                    <FormLabel className="text-base">Enable Auto-Escalation</FormLabel>
+                    <FormDescription>Automatically send a reminder if this memo remains unread</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                 </FormItem>
               )}
@@ -381,20 +379,18 @@ export function SendMemoDialog({
             )}
 
             <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Sending...' : `Send Memo${selectedIds.length > 1 ? ` to ${selectedIds.length}` : ''}`}
+                {isSubmitting
+                  ? 'Sending...'
+                  : `Send Memo${selectedIds.length > 1 ? ` to ${selectedIds.length}` : ''}`}
               </Button>
             </div>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 }
