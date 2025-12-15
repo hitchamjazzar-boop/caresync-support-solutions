@@ -16,10 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
 
@@ -225,7 +222,7 @@ export function SendMemoDialog({
                   </div>
 
                   {/* Employee list with checkboxes */}
-                  <ScrollArea className="h-[150px] border rounded-md p-2">
+                  <div className="h-[150px] border rounded-md p-2 overflow-y-auto">
                     <div className="space-y-2">
                       {employees.map((employee) => (
                         <div
@@ -233,9 +230,11 @@ export function SendMemoDialog({
                           className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md cursor-pointer"
                           onClick={() => toggleEmployee(employee.id)}
                         >
-                          <Checkbox
+                          <input
+                            type="checkbox"
                             checked={selectedIds.includes(employee.id)}
-                            onCheckedChange={() => toggleEmployee(employee.id)}
+                            onChange={() => toggleEmployee(employee.id)}
+                            className="h-4 w-4 rounded border-input"
                           />
                           <span className="text-sm flex-1">
                             {employee.full_name}
@@ -246,7 +245,7 @@ export function SendMemoDialog({
                         </div>
                       ))}
                     </div>
-                  </ScrollArea>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
@@ -332,7 +331,12 @@ export function SendMemoDialog({
                     <FormDescription>Automatically send a reminder if this memo remains unread</FormDescription>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    <input
+                      type="checkbox"
+                      checked={field.value}
+                      onChange={(e) => field.onChange(e.target.checked)}
+                      className="h-5 w-5 rounded border-input"
+                    />
                   </FormControl>
                 </FormItem>
               )}
