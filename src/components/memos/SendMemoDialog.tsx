@@ -5,13 +5,6 @@ import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
   Form,
   FormControl,
   FormDescription,
@@ -196,13 +189,13 @@ export function SendMemoDialog({
           <X className="h-4 w-4" />
         </button>
 
-        <DialogHeader>
-          <DialogTitle>Send Memo to Employees</DialogTitle>
-          <DialogDescription>
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold leading-none tracking-tight">Send Memo to Employees</h2>
+          <p className="text-sm text-muted-foreground mt-1.5">
             Send a direct memo, reminder, or warning to one or more employees. They will see it prominently on their
             dashboard.
-          </DialogDescription>
-        </DialogHeader>
+          </p>
+        </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
