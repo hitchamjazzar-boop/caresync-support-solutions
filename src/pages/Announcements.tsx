@@ -140,50 +140,46 @@ export default function Announcements() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <h1 className="text-2xl sm:text-3xl font-bold">Announcements</h1>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          {isAdmin && (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={() => navigate('/announcement-analytics')}
-                className="flex-1 sm:flex-initial"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Analytics
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setEomDialogOpen(true)}
-                className="flex-1 sm:flex-initial"
-              >
-                <Award className="h-4 w-4 mr-2" />
-                Employee of Month
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setBirthdayDialogOpen(true)}
-                className="flex-1 sm:flex-initial"
-              >
-                <Cake className="h-4 w-4 mr-2" />
-                Birthday
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setPromotionDialogOpen(true)}
-                className="flex-1 sm:flex-initial"
-              >
-                <TrendingUp className="h-4 w-4 mr-2" />
-                Promotion
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setNewEmployeeDialogOpen(true)}
-                className="flex-1 sm:flex-initial"
-              >
-                <UserPlus className="h-4 w-4 mr-2" />
-                New Employee
-              </Button>
-            </>
-          )}
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/announcement-analytics')}
+            className="flex-1 sm:flex-initial"
+          >
+            <BarChart3 className="h-4 w-4 mr-2" />
+            Analytics
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setEomDialogOpen(true)}
+            className="flex-1 sm:flex-initial"
+          >
+            <Award className="h-4 w-4 mr-2" />
+            Employee of Month
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setBirthdayDialogOpen(true)}
+            className="flex-1 sm:flex-initial"
+          >
+            <Cake className="h-4 w-4 mr-2" />
+            Birthday
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setPromotionDialogOpen(true)}
+            className="flex-1 sm:flex-initial"
+          >
+            <TrendingUp className="h-4 w-4 mr-2" />
+            Promotion
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setNewEmployeeDialogOpen(true)}
+            className="flex-1 sm:flex-initial"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            New Employee
+          </Button>
           <Button onClick={handleCreateNew} className="flex-1 sm:flex-initial">
             <Plus className="h-4 w-4 mr-2" />
             Create
