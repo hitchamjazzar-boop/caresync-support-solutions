@@ -377,15 +377,16 @@ export default function Memos() {
           <p className="text-sm sm:text-base text-muted-foreground">View and manage all your memos</p>
         </div>
         {isAdmin && (
-          <>
-            <Button onClick={() => setSendMemoOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Send Memo
-            </Button>
-            <SendMemoDialog open={sendMemoOpen} onOpenChange={setSendMemoOpen} />
-          </>
+          <Button onClick={() => setSendMemoOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Send Memo
+          </Button>
         )}
       </div>
+
+      {isAdmin && (
+        <SendMemoDialog open={sendMemoOpen} onOpenChange={setSendMemoOpen} />
+      )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
