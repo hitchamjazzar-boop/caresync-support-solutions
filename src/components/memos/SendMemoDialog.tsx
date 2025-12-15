@@ -24,7 +24,7 @@ const memoSchema = z.object({
   recipient_ids: z.array(z.string()).min(1, 'Please select at least one employee'),
   type: z.enum(['memo', 'reminder', 'warning']),
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
-  content: z.string().min(1, 'Content is required').max(2000, 'Content must be less than 2000 characters'),
+  content: z.string().min(1, 'Content is required').max(50000, 'Content must be less than 50,000 characters'),
   expires_at: z.string().optional(),
   escalate_after_hours: z.number().min(1).max(168).optional(),
   enable_escalation: z.boolean().optional(),
@@ -225,10 +225,9 @@ export function SendMemoDialog({
                   <div className="h-[150px] border rounded-md p-2 overflow-y-auto">
                     <div className="space-y-2">
                       {employees.map((employee) => (
-                        <div
+                        <label
                           key={employee.id}
                           className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md cursor-pointer"
-                          onClick={() => toggleEmployee(employee.id)}
                         >
                           <input
                             type="checkbox"
@@ -242,7 +241,7 @@ export function SendMemoDialog({
                               <span className="text-muted-foreground ml-1">- {employee.department}</span>
                             )}
                           </span>
-                        </div>
+                        </label>
                       ))}
                     </div>
                   </div>
