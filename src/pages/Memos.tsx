@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { AlertTriangle, Bell, FileText, Search, Plus, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { MemoReplyDialog } from '@/components/memos/MemoReplyDialog';
@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
 import { useAdmin } from '@/hooks/useAdmin';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 interface Memo {
   id: string;
@@ -433,28 +433,32 @@ export default function Memos() {
                   className="pl-8 text-sm"
                 />
               </div>
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="text-sm">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="memo">Memo</SelectItem>
-                  <SelectItem value="reminder">Reminder</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Type</label>
+                <select
+                  value={filterType}
+                  onChange={(e) => setFilterType(e.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="all">All Types</option>
+                  <option value="memo">Memo</option>
+                  <option value="reminder">Reminder</option>
+                  <option value="warning">Warning</option>
+                </select>
+              </div>
               {activeTab === 'received' && (
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="text-sm">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="read">Read</SelectItem>
-                    <SelectItem value="unread">Unread</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Status</label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="read">Read</option>
+                    <option value="unread">Unread</option>
+                  </select>
+                </div>
               )}
             </div>
           </CardContent>
