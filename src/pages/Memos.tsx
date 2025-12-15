@@ -5,11 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, Bell, FileText, Search } from 'lucide-react';
+import { AlertTriangle, Bell, FileText, Search, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { MemoReplyDialog } from '@/components/memos/MemoReplyDialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
+import { Button } from '@/components/ui/button';
+import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
+import { useAdmin } from '@/hooks/useAdmin';
 interface Memo {
   id: string;
   title: string;
@@ -40,12 +42,14 @@ interface Memo {
 
 export default function Memos() {
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [memos, setMemos] = useState<Memo[]>([]);
   const [filteredMemos, setFilteredMemos] = useState<Memo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [sendMemoOpen, setSendMemoOpen] = useState(false);
 
   useEffect(() => {
     fetchMemos();
@@ -207,9 +211,20 @@ export default function Memos() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">My Memos</h1>
-        <p className="text-sm sm:text-base text-muted-foreground">View and manage all your memos</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold">My Memos</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">View and manage all your memos</p>
+        </div>
+        {isAdmin && (
+          <>
+            <Button onClick={() => setSendMemoOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Send Memo
+            </Button>
+            <SendMemoDialog open={sendMemoOpen} onOpenChange={setSendMemoOpen} />
+          </>
+        )}
       </div>
 
       {/* Filters */}
