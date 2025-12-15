@@ -106,7 +106,8 @@ export function SendMemoDialog({
     if (preSelectedEmployeeId) {
       form.setValue('recipient_ids', [preSelectedEmployeeId]);
     }
-  }, [preSelectedEmployeeId, form]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preSelectedEmployeeId]);
 
   const selectedIds = form.watch('recipient_ids');
 
