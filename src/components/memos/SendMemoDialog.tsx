@@ -31,10 +31,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { X } from 'lucide-react';
 
 const memoSchema = z.object({
-  recipient_id: z.string().min(1, 'Please select an employee'),
+  recipient_ids: z.array(z.string()).min(1, 'Please select at least one employee'),
   type: z.enum(['memo', 'reminder', 'warning']),
   title: z.string().min(1, 'Title is required').max(200, 'Title must be less than 200 characters'),
   content: z.string().min(1, 'Content is required').max(2000, 'Content must be less than 2000 characters'),
@@ -65,6 +69,7 @@ export function SendMemoDialog({
   const { user } = useAuth();
   const { toast } = useToast();
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -87,7 +92,7 @@ export function SendMemoDialog({
   const form = useForm<MemoFormData>({
     resolver: zodResolver(memoSchema),
     defaultValues: {
-      recipient_id: preSelectedEmployeeId || '',
+      recipient_ids: preSelectedEmployeeId ? [preSelectedEmployeeId] : [],
       type: 'memo',
       title: '',
       content: '',
@@ -99,9 +104,28 @@ export function SendMemoDialog({
 
   useEffect(() => {
     if (preSelectedEmployeeId) {
-      form.setValue('recipient_id', preSelectedEmployeeId);
+      form.setValue('recipient_ids', [preSelectedEmployeeId]);
     }
   }, [preSelectedEmployeeId, form]);
+
+  const selectedIds = form.watch('recipient_ids');
+
+  const toggleEmployee = (employeeId: string) => {
+    const current = form.getValues('recipient_ids');
+    if (current.includes(employeeId)) {
+      form.setValue('recipient_ids', current.filter(id => id !== employeeId));
+    } else {
+      form.setValue('recipient_ids', [...current, employeeId]);
+    }
+  };
+
+  const selectAll = () => {
+    form.setValue('recipient_ids', employees.map(e => e.id));
+  };
+
+  const clearAll = () => {
+    form.setValue('recipient_ids', []);
+  };
 
   const onSubmit = async (data: MemoFormData) => {
     if (!user?.id) {
@@ -113,24 +137,29 @@ export function SendMemoDialog({
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
+      // Create a memo for each recipient
+      const memos = data.recipient_ids.map(recipientId => ({
+        sender_id: user.id,
+        recipient_id: recipientId,
+        type: data.type,
+        title: data.title.trim(),
+        content: data.content.trim(),
+        expires_at: data.expires_at ? new Date(data.expires_at).toISOString() : null,
+        escalate_after_hours: data.enable_escalation ? data.escalate_after_hours : null,
+      }));
+
       const { error } = await supabase
         .from('memos')
-        .insert([{
-          sender_id: user.id,
-          recipient_id: data.recipient_id,
-          type: data.type,
-          title: data.title.trim(),
-          content: data.content.trim(),
-          expires_at: data.expires_at ? new Date(data.expires_at).toISOString() : null,
-          escalate_after_hours: data.enable_escalation ? data.escalate_after_hours : null,
-        }]);
+        .insert(memos);
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: 'Memo sent successfully',
+        description: `Memo sent to ${data.recipient_ids.length} employee${data.recipient_ids.length > 1 ? 's' : ''}`,
       });
 
       form.reset();
@@ -141,16 +170,22 @@ export function SendMemoDialog({
         description: error.message,
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const getEmployeeName = (id: string) => {
+    return employees.find(e => e.id === id)?.full_name || 'Unknown';
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Send Memo to Employee</DialogTitle>
+          <DialogTitle>Send Memo to Employees</DialogTitle>
           <DialogDescription>
-            Send a direct memo, reminder, or warning to an employee. They will see it prominently on their dashboard.
+            Send a direct memo, reminder, or warning to one or more employees. They will see it prominently on their dashboard.
           </DialogDescription>
         </DialogHeader>
 
@@ -158,25 +193,61 @@ export function SendMemoDialog({
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name="recipient_id"
-              render={({ field }) => (
+              name="recipient_ids"
+              render={() => (
                 <FormItem>
-                  <FormLabel>Employee</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an employee" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {employees.map((employee) => (
-                        <SelectItem key={employee.id} value={employee.id}>
-                          {employee.full_name}
-                          {employee.department && ` - ${employee.department}`}
-                        </SelectItem>
+                  <FormLabel>Employees ({selectedIds.length} selected)</FormLabel>
+                  
+                  {/* Selected employees badges */}
+                  {selectedIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {selectedIds.map(id => (
+                        <Badge key={id} variant="secondary" className="gap-1">
+                          {getEmployeeName(id)}
+                          <X 
+                            className="h-3 w-3 cursor-pointer hover:text-destructive" 
+                            onClick={() => toggleEmployee(id)}
+                          />
+                        </Badge>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                  )}
+
+                  {/* Select/Clear all buttons */}
+                  <div className="flex gap-2 mb-2">
+                    <Button type="button" variant="outline" size="sm" onClick={selectAll}>
+                      Select All
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={clearAll}>
+                      Clear All
+                    </Button>
+                  </div>
+
+                  {/* Employee list with checkboxes */}
+                  <ScrollArea className="h-[150px] border rounded-md p-2">
+                    <div className="space-y-2">
+                      {employees.map((employee) => (
+                        <div
+                          key={employee.id}
+                          className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md cursor-pointer"
+                          onClick={() => toggleEmployee(employee.id)}
+                        >
+                          <Checkbox
+                            checked={selectedIds.includes(employee.id)}
+                            onCheckedChange={() => toggleEmployee(employee.id)}
+                          />
+                          <span className="text-sm flex-1">
+                            {employee.full_name}
+                            {employee.department && (
+                              <span className="text-muted-foreground ml-1">
+                                - {employee.department}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
                   <FormMessage />
                 </FormItem>
               )}
@@ -316,8 +387,8 @@ export function SendMemoDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit">
-                Send Memo
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Sending...' : `Send Memo${selectedIds.length > 1 ? ` to ${selectedIds.length}` : ''}`}
               </Button>
             </div>
           </form>
