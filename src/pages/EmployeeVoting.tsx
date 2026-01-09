@@ -14,6 +14,7 @@ import { VotingResults } from '@/components/voting/VotingResults';
 import { VotingPeriodManager } from '@/components/voting/VotingPeriodManager';
 import { AwardCategoriesManager } from '@/components/voting/AwardCategoriesManager';
 import { NomineeApprovalManager } from '@/components/voting/NomineeApprovalManager';
+import { NominationsView } from '@/components/voting/NominationsView';
 
 interface VotingPeriod {
   id: string;
@@ -325,16 +326,19 @@ const EmployeeVoting = () => {
                   </TabsList>
 
                   {selectedPeriod.requires_nomination && (
-                    <TabsContent value="nominate">
+                    <TabsContent value="nominate" className="space-y-4">
                       {selectedPeriod.status === 'open' ? (
-                        <NominationForm 
-                          votingPeriodId={selectedPeriod.id}
-                          hasNominated={hasNominated}
-                          onNominated={() => {
-                            setHasNominated(true);
-                            fetchOpenPeriods();
-                          }}
-                        />
+                        <>
+                          <NominationForm 
+                            votingPeriodId={selectedPeriod.id}
+                            hasNominated={hasNominated}
+                            onNominated={() => {
+                              setHasNominated(true);
+                              fetchOpenPeriods();
+                            }}
+                          />
+                          <NominationsView votingPeriodId={selectedPeriod.id} />
+                        </>
                       ) : (
                         <div className="text-center py-8 text-muted-foreground">
                           Voting period has closed
