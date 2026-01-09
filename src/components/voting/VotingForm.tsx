@@ -236,11 +236,6 @@ export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVot
                   <div className="flex-1">
                     <div className="font-medium">{nominee.profiles.full_name}</div>
                     <div className="text-sm text-muted-foreground">{nominee.profiles.position}</div>
-                    {requiresNomination && nominee.nomination_count > 0 && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {nominee.nomination_count} {nominee.nomination_count === 1 ? 'nomination' : 'nominations'}
-                      </div>
-                    )}
                   </div>
                 </Label>
               </div>
