@@ -138,7 +138,7 @@ export const NominationsView = ({ votingPeriodId }: NominationsViewProps) => {
                 <div>
                   <div className="font-medium">{nom.profile.full_name}</div>
                   <div className="text-sm text-muted-foreground">
-                    {nom.profile.position || 'N/A'} • {nom.nomination_count} {nom.nomination_count === 1 ? 'nomination' : 'nominations'}
+                    {nom.profile.position || 'N/A'}
                   </div>
                 </div>
               </div>
