@@ -47,6 +47,7 @@ const EmployeeVoting = () => {
   const [hasVoted, setHasVoted] = useState(false);
   const [hasNominated, setHasNominated] = useState(false);
   const [adminTab, setAdminTab] = useState('period');
+  const [pendingNominationsCount, setPendingNominationsCount] = useState(0);
 
   useEffect(() => {
     fetchOpenPeriods();
@@ -55,8 +56,21 @@ const EmployeeVoting = () => {
   useEffect(() => {
     if (selectedPeriod) {
       fetchCategoryAndUserStatus(selectedPeriod);
+      if (isAdmin) {
+        fetchPendingNominationsCount(selectedPeriod.id);
+      }
     }
-  }, [selectedPeriod, user]);
+  }, [selectedPeriod, user, isAdmin]);
+
+  const fetchPendingNominationsCount = async (periodId: string) => {
+    const { count } = await supabase
+      .from('employee_nominations')
+      .select('*', { count: 'exact', head: true })
+      .eq('voting_period_id', periodId)
+      .is('is_approved', null);
+    
+    setPendingNominationsCount(count || 0);
+  };
 
   const fetchOpenPeriods = async () => {
     try {
@@ -188,7 +202,14 @@ const EmployeeVoting = () => {
               <TabsList className="w-full grid grid-cols-3 mb-4 h-auto">
                 <TabsTrigger value="period" className="text-xs sm:text-sm px-2 py-2">Voting Period</TabsTrigger>
                 <TabsTrigger value="categories" className="text-xs sm:text-sm px-2 py-2">Categories</TabsTrigger>
-                <TabsTrigger value="approvals" className="text-xs sm:text-sm px-2 py-2">Approvals</TabsTrigger>
+                <TabsTrigger value="approvals" className="text-xs sm:text-sm px-2 py-2 relative">
+                  Approvals
+                  {pendingNominationsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {pendingNominationsCount}
+                    </span>
+                  )}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="period">
@@ -206,7 +227,10 @@ const EmployeeVoting = () => {
                 {selectedPeriod ? (
                   <NomineeApprovalManager 
                     votingPeriodId={selectedPeriod.id}
-                    onApprovalChange={fetchOpenPeriods}
+                    onApprovalChange={() => {
+                      fetchOpenPeriods();
+                      fetchPendingNominationsCount(selectedPeriod.id);
+                    }}
                   />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">

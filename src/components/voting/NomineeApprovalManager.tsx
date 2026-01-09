@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Check, X, Clock, Users } from 'lucide-react';
+import { Check, X, Clock, Users, Eye, EyeOff } from 'lucide-react';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 interface Nomination {
@@ -144,12 +144,12 @@ export const NomineeApprovalManager = ({ votingPeriodId, onApprovalChange }: Nom
 
   const getStatusBadge = (isApproved: boolean | null) => {
     if (isApproved === null) {
-      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> Pending</Badge>;
+      return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> Pending Review</Badge>;
     }
     if (isApproved) {
-      return <Badge className="bg-green-600"><Check className="h-3 w-3 mr-1" /> Approved</Badge>;
+      return <Badge className="bg-green-600"><Eye className="h-3 w-3 mr-1" /> Visible to Voters</Badge>;
     }
-    return <Badge variant="destructive"><X className="h-3 w-3 mr-1" /> Rejected</Badge>;
+    return <Badge variant="destructive"><EyeOff className="h-3 w-3 mr-1" /> Hidden</Badge>;
   };
 
   // Group nominations by nominated user
@@ -168,25 +168,50 @@ export const NomineeApprovalManager = ({ votingPeriodId, onApprovalChange }: Nom
   const pendingCount = nominations.filter(n => n.is_approved === null).length;
   const approvedCount = nominations.filter(n => n.is_approved === true).length;
 
+  // Count unique approved nominees (users who can be voted for)
+  const approvedNominees = new Set(
+    nominations.filter(n => n.is_approved === true).map(n => n.nominated_user_id)
+  ).size;
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Nominee Approval
-            </CardTitle>
-            <CardDescription>
-              {pendingCount} pending, {approvedCount} approved
-            </CardDescription>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Manage Nominees
+              </CardTitle>
+              <CardDescription>
+                Review nominations and show approved nominees to voters
+              </CardDescription>
+            </div>
+            {pendingCount > 0 && (
+              <Button onClick={handleApproveAll} size="sm">
+                <Eye className="h-4 w-4 mr-2" />
+                Show All to Voters
+              </Button>
+            )}
           </div>
-          {pendingCount > 0 && (
-            <Button onClick={handleApproveAll} size="sm">
-              <Check className="h-4 w-4 mr-2" />
-              Approve All Pending
-            </Button>
-          )}
+          
+          {/* Status Summary */}
+          <div className="flex flex-wrap gap-2">
+            <Badge variant="secondary" className="text-sm">
+              <Clock className="h-3 w-3 mr-1" />
+              {pendingCount} pending review
+            </Badge>
+            <Badge className="bg-green-600 text-sm">
+              <Eye className="h-3 w-3 mr-1" />
+              {approvedNominees} visible to voters
+            </Badge>
+            {nominations.filter(n => n.is_approved === false).length > 0 && (
+              <Badge variant="destructive" className="text-sm">
+                <EyeOff className="h-3 w-3 mr-1" />
+                {nominations.filter(n => n.is_approved === false).length} hidden
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -242,11 +267,12 @@ export const NomineeApprovalManager = ({ votingPeriodId, onApprovalChange }: Nom
                             <div className="flex gap-1">
                               <Button
                                 size="sm"
-                                variant="ghost"
+                                variant="outline"
                                 onClick={() => handleApproval(nom.id, true)}
-                                className="h-8 text-green-600 hover:text-green-700"
+                                className="h-8 text-green-600 hover:text-green-700 hover:bg-green-50"
                               >
-                                <Check className="h-4 w-4" />
+                                <Eye className="h-4 w-4 mr-1" />
+                                Show
                               </Button>
                               <Button
                                 size="sm"
@@ -254,7 +280,7 @@ export const NomineeApprovalManager = ({ votingPeriodId, onApprovalChange }: Nom
                                 onClick={() => handleApproval(nom.id, false)}
                                 className="h-8 text-destructive hover:text-destructive"
                               >
-                                <X className="h-4 w-4" />
+                                <EyeOff className="h-4 w-4" />
                               </Button>
                             </div>
                           )}
