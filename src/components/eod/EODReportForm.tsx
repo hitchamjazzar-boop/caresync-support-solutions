@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import { Loader2, Upload, X, FileText, ListTodo } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
@@ -355,9 +356,20 @@ export const EODReportForm = () => {
             {errors.tasks_completed && (
               <p className="text-sm text-destructive">{errors.tasks_completed}</p>
             )}
-            <p className={`text-xs ${formData.tasks_completed.length < 1500 ? 'text-destructive' : 'text-muted-foreground'}`}>
-              {formData.tasks_completed.length.toLocaleString()}/20,000 characters (minimum 1,500)
-            </p>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Progress 
+                  value={Math.min((formData.tasks_completed.length / 1500) * 100, 100)} 
+                  className={`h-2 flex-1 ${formData.tasks_completed.length >= 1500 ? '[&>div]:bg-green-500' : '[&>div]:bg-primary'}`}
+                />
+                <span className={`text-xs font-medium min-w-[3rem] text-right ${formData.tasks_completed.length >= 1500 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  {formData.tasks_completed.length >= 1500 ? '✓ Met' : `${Math.round((formData.tasks_completed.length / 1500) * 100)}%`}
+                </span>
+              </div>
+              <p className={`text-xs ${formData.tasks_completed.length < 1500 ? 'text-muted-foreground' : 'text-green-600'}`}>
+                {formData.tasks_completed.length.toLocaleString()}/20,000 characters ({formData.tasks_completed.length < 1500 ? `${(1500 - formData.tasks_completed.length).toLocaleString()} more needed` : 'minimum met'})
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">
