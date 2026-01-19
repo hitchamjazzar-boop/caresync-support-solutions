@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { format } from 'date-fns';
 
 const eodSchema = z.object({
-  tasks_completed: z.string().trim().min(10, 'Please provide at least 10 characters').max(2000, 'Maximum 2000 characters'),
+  tasks_completed: z.string().trim().min(1500, 'Please provide at least 1,500 characters').max(20000, 'Maximum 20,000 characters'),
   client_updates: z.string().trim().max(1000, 'Maximum 1000 characters').optional(),
   content_liked: z.string().trim().max(1000, 'Maximum 1000 characters').optional(),
   issues: z.string().trim().max(1000, 'Maximum 1000 characters').optional(),
@@ -346,8 +346,8 @@ export const EODReportForm = () => {
             <Textarea
               id="tasks_completed"
               required
-              placeholder="Describe what you accomplished today..."
-              rows={4}
+              placeholder="Describe what you accomplished today... (minimum 1,500 characters)"
+              rows={8}
               value={formData.tasks_completed}
               onChange={(e) => setFormData({ ...formData, tasks_completed: e.target.value })}
               className={errors.tasks_completed ? 'border-destructive' : ''}
@@ -355,8 +355,8 @@ export const EODReportForm = () => {
             {errors.tasks_completed && (
               <p className="text-sm text-destructive">{errors.tasks_completed}</p>
             )}
-            <p className="text-xs text-muted-foreground">
-              {formData.tasks_completed.length}/2000 characters
+            <p className={`text-xs ${formData.tasks_completed.length < 1500 ? 'text-destructive' : 'text-muted-foreground'}`}>
+              {formData.tasks_completed.length.toLocaleString()}/20,000 characters (minimum 1,500)
             </p>
           </div>
 
