@@ -316,6 +316,44 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_breaks: {
+        Row: {
+          attendance_id: string
+          break_end: string | null
+          break_start: string
+          break_type: string
+          created_at: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          attendance_id: string
+          break_end?: string | null
+          break_start?: string
+          break_type: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          attendance_id?: string
+          break_end?: string | null
+          break_start?: string
+          break_type?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_breaks_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendance"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       award_categories: {
         Row: {
           admin_vote_weight: number | null

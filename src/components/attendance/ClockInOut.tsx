@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clock, Coffee, LogOut, Play } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Clock, Coffee, LogOut, Play, Pause, User, Timer, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -15,28 +21,76 @@ interface ActiveAttendance {
   status: string;
 }
 
+interface ActiveBreak {
+  id: string;
+  attendance_id: string;
+  break_type: string;
+  break_start: string;
+  break_end: string | null;
+  notes: string | null;
+}
+
+interface BreakRecord {
+  id: string;
+  break_type: string;
+  break_start: string;
+  break_end: string | null;
+}
+
+const BREAK_TYPES = [
+  { value: 'lunch', label: 'Lunch Break', icon: Coffee, color: 'text-orange-500' },
+  { value: 'coffee', label: 'Coffee Break', icon: Coffee, color: 'text-amber-600' },
+  { value: 'bathroom', label: 'Bathroom/CR', icon: User, color: 'text-blue-500' },
+  { value: 'personal', label: 'Personal Break', icon: Timer, color: 'text-purple-500' },
+  { value: 'other', label: 'Other', icon: MoreHorizontal, color: 'text-muted-foreground' },
+] as const;
+
 export const ClockInOut = () => {
   const { user } = useAuth();
   const [activeAttendance, setActiveAttendance] = useState<ActiveAttendance | null>(null);
+  const [activeBreak, setActiveBreak] = useState<ActiveBreak | null>(null);
+  const [todaysBreaks, setTodaysBreaks] = useState<BreakRecord[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!user) return;
 
-    // Fetch active attendance
     const fetchActiveAttendance = async () => {
-      const { data, error } = await supabase
+      // Fetch active attendance
+      const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance')
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching attendance:', error);
-      } else {
-        setActiveAttendance(data);
+      if (attendanceError) {
+        console.error('Error fetching attendance:', attendanceError);
+        return;
+      }
+
+      setActiveAttendance(attendanceData);
+
+      if (attendanceData) {
+        // Fetch active break (one that hasn't ended)
+        const { data: breakData } = await supabase
+          .from('attendance_breaks')
+          .select('*')
+          .eq('attendance_id', attendanceData.id)
+          .is('break_end', null)
+          .maybeSingle();
+
+        setActiveBreak(breakData);
+
+        // Fetch all breaks for today's session
+        const { data: allBreaks } = await supabase
+          .from('attendance_breaks')
+          .select('*')
+          .eq('attendance_id', attendanceData.id)
+          .order('break_start', { ascending: true });
+
+        setTodaysBreaks(allBreaks || []);
       }
     };
 
@@ -48,18 +102,29 @@ export const ClockInOut = () => {
     return () => clearInterval(timer);
   }, [user]);
 
-  const calculateHours = (clockIn: string, clockOut: string, lunchStart?: string | null, lunchEnd?: string | null) => {
+  const calculateTotalBreakTime = (breaks: BreakRecord[]) => {
+    return breaks.reduce((total, brk) => {
+      if (brk.break_end) {
+        const start = new Date(brk.break_start);
+        const end = new Date(brk.break_end);
+        return total + (end.getTime() - start.getTime());
+      } else if (brk.break_start) {
+        // Currently on this break
+        const start = new Date(brk.break_start);
+        return total + (new Date().getTime() - start.getTime());
+      }
+      return total;
+    }, 0);
+  };
+
+  const calculateHoursWithBreaks = (clockIn: string, clockOut: string, breaks: BreakRecord[]) => {
     const start = new Date(clockIn);
     const end = new Date(clockOut);
     let totalMinutes = (end.getTime() - start.getTime()) / 1000 / 60;
 
-    // Subtract lunch break if both start and end are recorded
-    if (lunchStart && lunchEnd) {
-      const lunchStartTime = new Date(lunchStart);
-      const lunchEndTime = new Date(lunchEnd);
-      const lunchMinutes = (lunchEndTime.getTime() - lunchStartTime.getTime()) / 1000 / 60;
-      totalMinutes -= lunchMinutes;
-    }
+    // Subtract all break times
+    const breakMinutes = calculateTotalBreakTime(breaks) / 1000 / 60;
+    totalMinutes -= breakMinutes;
 
     return (totalMinutes / 60).toFixed(2);
   };
@@ -79,7 +144,6 @@ export const ClockInOut = () => {
       console.error(error);
     } else {
       toast.success('Clocked in successfully!');
-      // Refetch attendance
       const { data } = await supabase
         .from('attendance')
         .select('*')
@@ -87,44 +151,64 @@ export const ClockInOut = () => {
         .eq('status', 'active')
         .maybeSingle();
       setActiveAttendance(data);
+      setTodaysBreaks([]);
+      setActiveBreak(null);
     }
 
     setLoading(false);
   };
 
-  const handleLunchStart = async () => {
-    if (!activeAttendance || activeAttendance.lunch_start) return;
+  const handleStartBreak = async (breakType: string) => {
+    if (!activeAttendance || activeBreak) return;
     setLoading(true);
 
-    const { error } = await supabase
-      .from('attendance')
-      .update({ lunch_start: new Date().toISOString() })
-      .eq('id', activeAttendance.id);
+    const { data, error } = await supabase
+      .from('attendance_breaks')
+      .insert({
+        attendance_id: activeAttendance.id,
+        break_type: breakType,
+        break_start: new Date().toISOString(),
+      })
+      .select()
+      .single();
 
     if (error) {
-      toast.error('Failed to start lunch break');
+      toast.error('Failed to start break');
+      console.error(error);
     } else {
-      toast.success('Lunch break started');
-      setActiveAttendance({ ...activeAttendance, lunch_start: new Date().toISOString() });
+      const breakLabel = BREAK_TYPES.find((b) => b.value === breakType)?.label || 'Break';
+      toast.success(`${breakLabel} started`);
+      setActiveBreak(data);
+      setTodaysBreaks([...todaysBreaks, data]);
     }
 
     setLoading(false);
   };
 
-  const handleLunchEnd = async () => {
-    if (!activeAttendance || !activeAttendance.lunch_start || activeAttendance.lunch_end) return;
+  const handleEndBreak = async () => {
+    if (!activeBreak) return;
     setLoading(true);
 
+    const breakEndTime = new Date().toISOString();
     const { error } = await supabase
-      .from('attendance')
-      .update({ lunch_end: new Date().toISOString() })
-      .eq('id', activeAttendance.id);
+      .from('attendance_breaks')
+      .update({ break_end: breakEndTime })
+      .eq('id', activeBreak.id);
 
     if (error) {
-      toast.error('Failed to end lunch break');
+      toast.error('Failed to end break');
+      console.error(error);
     } else {
-      toast.success('Lunch break ended');
-      setActiveAttendance({ ...activeAttendance, lunch_end: new Date().toISOString() });
+      const breakLabel = BREAK_TYPES.find((b) => b.value === activeBreak.break_type)?.label || 'Break';
+      toast.success(`${breakLabel} ended - back to work!`);
+      
+      // Update the break in todaysBreaks
+      setTodaysBreaks(
+        todaysBreaks.map((b) =>
+          b.id === activeBreak.id ? { ...b, break_end: breakEndTime } : b
+        )
+      );
+      setActiveBreak(null);
     }
 
     setLoading(false);
@@ -134,8 +218,14 @@ export const ClockInOut = () => {
     if (!activeAttendance || !user) return;
     setLoading(true);
 
-    // Check if EOD report exists for today
-    const today = new Date().toISOString().split('T')[0];
+    // Check if currently on break
+    if (activeBreak) {
+      toast.error('Please end your break before clocking out');
+      setLoading(false);
+      return;
+    }
+
+    // Check if EOD report exists
     const { data: eodReport, error: eodError } = await supabase
       .from('eod_reports')
       .select('id')
@@ -156,11 +246,18 @@ export const ClockInOut = () => {
     }
 
     const clockOutTime = new Date().toISOString();
-    const totalHours = calculateHours(
+    
+    // Fetch completed breaks for accurate calculation
+    const { data: completedBreaks } = await supabase
+      .from('attendance_breaks')
+      .select('*')
+      .eq('attendance_id', activeAttendance.id)
+      .not('break_end', 'is', null);
+
+    const totalHours = calculateHoursWithBreaks(
       activeAttendance.clock_in,
       clockOutTime,
-      activeAttendance.lunch_start,
-      activeAttendance.lunch_end
+      completedBreaks || []
     );
 
     const { error } = await supabase
@@ -177,6 +274,8 @@ export const ClockInOut = () => {
     } else {
       toast.success(`Clocked out successfully! Total hours: ${totalHours}`);
       setActiveAttendance(null);
+      setActiveBreak(null);
+      setTodaysBreaks([]);
     }
 
     setLoading(false);
@@ -201,22 +300,13 @@ export const ClockInOut = () => {
 
   const getElapsedTime = () => {
     if (!activeAttendance) return '00:00:00';
-    
+
     const start = new Date(activeAttendance.clock_in);
     const now = new Date();
     let elapsed = now.getTime() - start.getTime();
 
-    // Subtract lunch time if on lunch break
-    if (activeAttendance.lunch_start) {
-      const lunchStart = new Date(activeAttendance.lunch_start);
-      if (activeAttendance.lunch_end) {
-        const lunchEnd = new Date(activeAttendance.lunch_end);
-        elapsed -= (lunchEnd.getTime() - lunchStart.getTime());
-      } else {
-        // Currently on lunch, subtract current lunch time
-        elapsed -= (now.getTime() - lunchStart.getTime());
-      }
-    }
+    // Subtract all break times
+    elapsed -= calculateTotalBreakTime(todaysBreaks);
 
     const hours = Math.floor(elapsed / 1000 / 60 / 60);
     const minutes = Math.floor((elapsed / 1000 / 60) % 60);
@@ -225,7 +315,23 @@ export const ClockInOut = () => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const isOnLunchBreak = activeAttendance?.lunch_start && !activeAttendance?.lunch_end;
+  const formatBreakDuration = (ms: number) => {
+    const minutes = Math.floor(ms / 1000 / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
+  };
+
+  const getActiveBreakInfo = () => {
+    if (!activeBreak) return null;
+    const breakType = BREAK_TYPES.find((b) => b.value === activeBreak.break_type);
+    return breakType;
+  };
+
+  const activeBreakInfo = getActiveBreakInfo();
+  const totalBreakTime = calculateTotalBreakTime(todaysBreaks);
+  const completedBreaksCount = todaysBreaks.filter((b) => b.break_end).length;
 
   return (
     <Card className="shadow-lg">
@@ -242,9 +348,17 @@ export const ClockInOut = () => {
             <div className="rounded-lg bg-muted/50 p-4 text-center">
               <p className="text-sm font-medium text-muted-foreground">Time Worked Today</p>
               <p className="text-3xl font-bold text-primary">{getElapsedTime()}</p>
-              {isOnLunchBreak && (
-                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                  ☕ On lunch break
+              {activeBreak && activeBreakInfo && (
+                <div className="mt-2 flex items-center justify-center gap-1 text-xs">
+                  <Pause className={`h-3 w-3 ${activeBreakInfo.color}`} />
+                  <span className={activeBreakInfo.color}>
+                    On {activeBreakInfo.label.toLowerCase()}
+                  </span>
+                </div>
+              )}
+              {totalBreakTime > 0 && !activeBreak && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Total break time: {formatBreakDuration(totalBreakTime)} ({completedBreaksCount} break{completedBreaksCount !== 1 ? 's' : ''})
                 </p>
               )}
             </div>
@@ -256,50 +370,78 @@ export const ClockInOut = () => {
                   {new Date(activeAttendance.clock_in).toLocaleTimeString()}
                 </span>
               </div>
-              {activeAttendance.lunch_start && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Lunch started:</span>
-                  <span className="font-medium">
-                    {new Date(activeAttendance.lunch_start).toLocaleTimeString()}
-                  </span>
-                </div>
-              )}
-              {activeAttendance.lunch_end && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Lunch ended:</span>
-                  <span className="font-medium">
-                    {new Date(activeAttendance.lunch_end).toLocaleTimeString()}
-                  </span>
+              {todaysBreaks.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Today's Breaks:</p>
+                  {todaysBreaks.slice(-3).map((brk) => {
+                    const breakInfo = BREAK_TYPES.find((b) => b.value === brk.break_type);
+                    const Icon = breakInfo?.icon || Coffee;
+                    return (
+                      <div key={brk.id} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1">
+                          <Icon className={`h-3 w-3 ${breakInfo?.color || ''}`} />
+                          <span>{breakInfo?.label || brk.break_type}</span>
+                        </div>
+                        <span className="text-muted-foreground">
+                          {new Date(brk.break_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {brk.break_end ? (
+                            <> - {new Date(brk.break_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</>
+                          ) : (
+                            <span className="text-amber-500"> (ongoing)</span>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+                  {todaysBreaks.length > 3 && (
+                    <p className="text-xs text-muted-foreground">
+                      +{todaysBreaks.length - 3} more break(s)
+                    </p>
+                  )}
                 </div>
               )}
             </div>
 
             <div className="grid gap-2">
-              {!activeAttendance.lunch_start ? (
+              {activeBreak ? (
                 <Button
-                  onClick={handleLunchStart}
-                  disabled={loading}
-                  variant="outline"
-                  className="gap-2"
-                >
-                  <Coffee className="h-4 w-4" />
-                  Start Lunch Break
-                </Button>
-              ) : !activeAttendance.lunch_end ? (
-                <Button
-                  onClick={handleLunchEnd}
+                  onClick={handleEndBreak}
                   disabled={loading}
                   variant="outline"
                   className="gap-2"
                 >
                   <Play className="h-4 w-4" />
-                  End Lunch Break
+                  Resume Work
                 </Button>
-              ) : null}
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="gap-2" disabled={loading}>
+                      <Pause className="h-4 w-4" />
+                      Take a Break
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="center" className="w-48">
+                    {BREAK_TYPES.map((breakType) => {
+                      const Icon = breakType.icon;
+                      return (
+                        <DropdownMenuItem
+                          key={breakType.value}
+                          onClick={() => handleStartBreak(breakType.value)}
+                          className="gap-2 cursor-pointer"
+                        >
+                          <Icon className={`h-4 w-4 ${breakType.color}`} />
+                          {breakType.label}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
 
               <Button
                 onClick={handleClockOut}
-                disabled={loading || isOnLunchBreak}
+                disabled={loading || !!activeBreak}
                 variant="secondary"
                 className="gap-2"
               >
@@ -307,9 +449,9 @@ export const ClockInOut = () => {
                 Clock Out
               </Button>
 
-              {isOnLunchBreak ? (
+              {activeBreak ? (
                 <p className="text-xs text-center text-muted-foreground">
-                  Please end your lunch break before clocking out
+                  Please end your break before clocking out
                 </p>
               ) : (
                 <p className="text-xs text-center text-muted-foreground">
