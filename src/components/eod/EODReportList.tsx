@@ -46,7 +46,7 @@ interface EODReport {
 
 export const EODReportList = () => {
   const { user } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, hasPermission, loading: adminLoading } = useAdmin();
   const { toast } = useToast();
   const [reports, setReports] = useState<EODReport[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,15 +57,20 @@ export const EODReportList = () => {
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'name'>('newest');
 
-  useEffect(() => {
-    if (isAdmin) {
-      fetchEmployees();
-    }
-  }, [isAdmin]);
+  // Check if user can view all reports (admin or has reports permission)
+  const canViewAllReports = isAdmin || hasPermission('reports');
 
   useEffect(() => {
-    fetchReports();
-  }, [user, isAdmin, filter, selectedEmployee, dateFrom, dateTo, sortOrder]);
+    if (!adminLoading && canViewAllReports) {
+      fetchEmployees();
+    }
+  }, [adminLoading, canViewAllReports]);
+
+  useEffect(() => {
+    if (!adminLoading) {
+      fetchReports();
+    }
+  }, [user, adminLoading, canViewAllReports, filter, selectedEmployee, dateFrom, dateTo, sortOrder]);
 
   const fetchEmployees = async () => {
     try {
@@ -105,8 +110,8 @@ export const EODReportList = () => {
         query = query.gte('submitted_at', weekAgo.toISOString());
       }
 
-      // Non-admins can only see their own reports
-      if (!isAdmin) {
+      // Users without reports permission can only see their own reports
+      if (!canViewAllReports) {
         query = query.eq('user_id', user.id);
       } else if (selectedEmployee !== 'all') {
         query = query.eq('user_id', selectedEmployee);
@@ -217,7 +222,7 @@ export const EODReportList = () => {
                 {format(new Date(report.submitted_at), 'hh:mm a')}
               </p>
             </div>
-            {isAdmin && (
+            {canViewAllReports && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" size="icon">
@@ -338,8 +343,8 @@ export const EODReportList = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              {/* Employee Filter (Admin only) */}
-              {isAdmin && (
+              {/* Employee Filter (users with reports permission) */}
+              {canViewAllReports && (
                 <div>
                   <label className="text-sm font-medium mb-2 block">Employee</label>
                   <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
