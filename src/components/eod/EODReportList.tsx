@@ -478,7 +478,40 @@ export const EODReportList = () => {
       </div>
 
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">Loading reports...</div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-muted" />
+                    <div className="space-y-2">
+                      <div className="h-4 w-32 bg-muted rounded" />
+                      <div className="h-3 w-24 bg-muted rounded" />
+                    </div>
+                  </div>
+                  <div className="text-right space-y-2">
+                    <div className="h-6 w-24 bg-muted rounded" />
+                    <div className="h-3 w-16 bg-muted rounded ml-auto" />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="h-4 w-32 bg-muted rounded" />
+                  <div className="h-3 w-full bg-muted rounded" />
+                  <div className="h-3 w-full bg-muted rounded" />
+                  <div className="h-3 w-3/4 bg-muted rounded" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-28 bg-muted rounded" />
+                  <div className="h-3 w-full bg-muted rounded" />
+                  <div className="h-3 w-2/3 bg-muted rounded" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : reports.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8 text-muted-foreground">
