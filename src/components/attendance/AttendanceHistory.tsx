@@ -11,11 +11,33 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Edit } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Calendar, Clock, Edit, Coffee, User, Timer, MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+
+const BREAK_TYPES = [
+  { value: 'lunch', label: 'Lunch', icon: Coffee, color: 'text-orange-500' },
+  { value: 'coffee', label: 'Coffee', icon: Coffee, color: 'text-amber-600' },
+  { value: 'bathroom', label: 'CR', icon: User, color: 'text-blue-500' },
+  { value: 'personal', label: 'Personal', icon: Timer, color: 'text-purple-500' },
+  { value: 'other', label: 'Other', icon: MoreHorizontal, color: 'text-muted-foreground' },
+] as const;
+
+interface BreakRecord {
+  id: string;
+  attendance_id: string;
+  break_type: string;
+  break_start: string;
+  break_end: string | null;
+}
 
 interface AttendanceRecord {
   id: string;
@@ -38,6 +60,7 @@ export const AttendanceHistory = () => {
   const [employees, setEmployees] = useState<Array<{ id: string; full_name: string }>>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
+  const [breaksMap, setBreaksMap] = useState<Record<string, BreakRecord[]>>({});
 
   useEffect(() => {
     if (!user) return;
@@ -105,6 +128,27 @@ export const AttendanceHistory = () => {
         console.error(error);
       } else {
         setRecords(data || []);
+        
+        // Fetch breaks for all attendance records
+        if (data && data.length > 0) {
+          const attendanceIds = data.map((r) => r.id);
+          const { data: breaksData } = await supabase
+            .from('attendance_breaks')
+            .select('*')
+            .in('attendance_id', attendanceIds)
+            .order('break_start', { ascending: true });
+
+          if (breaksData) {
+            const breaksByAttendance = breaksData.reduce((acc, brk) => {
+              if (!acc[brk.attendance_id]) {
+                acc[brk.attendance_id] = [];
+              }
+              acc[brk.attendance_id].push(brk);
+              return acc;
+            }, {} as Record<string, BreakRecord[]>);
+            setBreaksMap(breaksByAttendance);
+          }
+        }
       }
 
       setLoading(false);
@@ -135,6 +179,38 @@ export const AttendanceHistory = () => {
     const end = new Date(lunchEnd);
     const minutes = (end.getTime() - start.getTime()) / 1000 / 60;
     return `${Math.round(minutes)} min`;
+  };
+
+  const calculateTotalBreakTime = (breaks: BreakRecord[]) => {
+    return breaks.reduce((total, brk) => {
+      if (brk.break_end) {
+        const start = new Date(brk.break_start);
+        const end = new Date(brk.break_end);
+        return total + (end.getTime() - start.getTime());
+      }
+      return total;
+    }, 0);
+  };
+
+  const formatBreakDuration = (ms: number) => {
+    const minutes = Math.floor(ms / 1000 / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
+  };
+
+  const getBreaksSummary = (attendanceId: string) => {
+    const breaks = breaksMap[attendanceId] || [];
+    if (breaks.length === 0) return null;
+    
+    const totalTime = calculateTotalBreakTime(breaks);
+    const breakCounts = breaks.reduce((acc, brk) => {
+      acc[brk.break_type] = (acc[brk.break_type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return { totalTime, breakCounts, breaks };
   };
 
   const getTotalHours = () => {
@@ -220,42 +296,102 @@ export const AttendanceHistory = () => {
                   <TableHead>Date</TableHead>
                   <TableHead>Clock In</TableHead>
                   <TableHead>Clock Out</TableHead>
-                  <TableHead>Lunch</TableHead>
+                  <TableHead>Breaks</TableHead>
                   <TableHead>Total Hours</TableHead>
                   <TableHead>Status</TableHead>
                   {isAdmin && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {records.map((record) => (
-                  <TableRow key={record.id}>
-                    {isAdmin && (
-                      <TableCell className="font-medium">
-                        {profilesMap[record.user_id] || 'Unknown'}
-                      </TableCell>
-                    )}
-                    <TableCell className="font-medium">{formatDate(record.clock_in)}</TableCell>
-                    <TableCell>{formatTime(record.clock_in)}</TableCell>
-                    <TableCell>{formatTime(record.clock_out)}</TableCell>
-                    <TableCell>{calculateLunchDuration(record.lunch_start, record.lunch_end)}</TableCell>
-                    <TableCell>
-                      {record.total_hours ? (
-                        <span className="font-semibold">{record.total_hours.toFixed(2)}</span>
-                      ) : (
-                        '-'
+                {records.map((record) => {
+                  const breaksSummary = getBreaksSummary(record.id);
+                  
+                  return (
+                    <TableRow key={record.id}>
+                      {isAdmin && (
+                        <TableCell className="font-medium">
+                          {profilesMap[record.user_id] || 'Unknown'}
+                        </TableCell>
                       )}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(record.status)}</TableCell>
-                    {isAdmin && (
+                      <TableCell className="font-medium">{formatDate(record.clock_in)}</TableCell>
+                      <TableCell>{formatTime(record.clock_in)}</TableCell>
+                      <TableCell>{formatTime(record.clock_out)}</TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm" className="gap-1">
-                          <Edit className="h-3 w-3" />
-                          Edit
-                        </Button>
+                        {breaksSummary ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="flex items-center gap-1 cursor-help">
+                                  <span className="text-sm">
+                                    {formatBreakDuration(breaksSummary.totalTime)}
+                                  </span>
+                                  <div className="flex -space-x-1">
+                                    {Object.entries(breaksSummary.breakCounts).slice(0, 3).map(([type, count]) => {
+                                      const breakInfo = BREAK_TYPES.find(b => b.value === type);
+                                      const Icon = breakInfo?.icon || Coffee;
+                                      return (
+                                        <div 
+                                          key={type} 
+                                          className={`h-4 w-4 rounded-full bg-muted flex items-center justify-center ${breakInfo?.color || ''}`}
+                                        >
+                                          <Icon className="h-2.5 w-2.5" />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="max-w-xs">
+                                <div className="space-y-1 text-xs">
+                                  <p className="font-medium">Break Details:</p>
+                                  {breaksSummary.breaks.map((brk) => {
+                                    const breakInfo = BREAK_TYPES.find(b => b.value === brk.break_type);
+                                    const duration = brk.break_end 
+                                      ? formatBreakDuration(new Date(brk.break_end).getTime() - new Date(brk.break_start).getTime())
+                                      : 'ongoing';
+                                    return (
+                                      <div key={brk.id} className="flex justify-between gap-4">
+                                        <span>{breakInfo?.label || brk.break_type}</span>
+                                        <span className="text-muted-foreground">
+                                          {new Date(brk.break_start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                          {' - '}
+                                          {brk.break_end 
+                                            ? new Date(brk.break_end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                            : '...'
+                                          }
+                                          {' '}({duration})
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          // Fallback to old lunch column for legacy data
+                          calculateLunchDuration(record.lunch_start, record.lunch_end)
+                        )}
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell>
+                        {record.total_hours ? (
+                          <span className="font-semibold">{record.total_hours.toFixed(2)}</span>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(record.status)}</TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <Button variant="ghost" size="sm" className="gap-1">
+                            <Edit className="h-3 w-3" />
+                            Edit
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
