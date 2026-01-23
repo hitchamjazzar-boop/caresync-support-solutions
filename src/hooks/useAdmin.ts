@@ -6,6 +6,7 @@ export type AdminPermission =
   | 'employees' 
   | 'attendance' 
   | 'payroll' 
+  | 'reports'
   | 'announcements' 
   | 'shoutouts' 
   | 'feedback' 
