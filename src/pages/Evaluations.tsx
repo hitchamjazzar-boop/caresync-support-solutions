@@ -54,9 +54,9 @@ const Evaluations = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [preselectedEmployeeId, setPreselectedEmployeeId] = useState<string | null>(null);
 
-  // Handle link-based evaluation requests
+  // Handle link-based evaluation requests (supports both createFor and evaluateTarget params)
   useEffect(() => {
-    const evaluateTarget = searchParams.get('evaluateTarget');
+    const evaluateTarget = searchParams.get('evaluateTarget') || searchParams.get('createFor');
     if (evaluateTarget && user) {
       // Check if user is trying to evaluate themselves
       if (evaluateTarget === user.id) {
