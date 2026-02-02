@@ -1,19 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageSquare, Target, BookOpen, Flag, ClipboardList } from "lucide-react";
+import { MessageSquare, Target, BookOpen } from "lucide-react";
 
 interface FeedbackSectionProps {
   strengths: string;
   areasForImprovement: string;
   trainingNeeded: string;
-  goalsNextPeriod: string;
-  actionPlan: string;
   onStrengthsChange: (value: string) => void;
   onAreasChange: (value: string) => void;
   onTrainingChange: (value: string) => void;
-  onGoalsChange: (value: string) => void;
-  onActionPlanChange: (value: string) => void;
   readOnly?: boolean;
 }
 
@@ -21,13 +17,9 @@ export const FeedbackSection = ({
   strengths,
   areasForImprovement,
   trainingNeeded,
-  goalsNextPeriod,
-  actionPlan,
   onStrengthsChange,
   onAreasChange,
   onTrainingChange,
-  onGoalsChange,
-  onActionPlanChange,
   readOnly = false
 }: FeedbackSectionProps) => {
   const feedbackFields = [
@@ -57,24 +49,6 @@ export const FeedbackSection = ({
       onChange: onTrainingChange,
       placeholder: 'Recommend training programs, courses, or support...',
       description: 'What resources would help their development?'
-    },
-    {
-      id: 'goals',
-      label: 'Goals for Next Period',
-      icon: Flag,
-      value: goalsNextPeriod,
-      onChange: onGoalsChange,
-      placeholder: 'Set specific, measurable goals for the next review period...',
-      description: 'What should the employee focus on achieving?'
-    },
-    {
-      id: 'action',
-      label: 'Action Plan',
-      icon: ClipboardList,
-      value: actionPlan,
-      onChange: onActionPlanChange,
-      placeholder: 'Outline specific steps and timeline for improvement...',
-      description: 'What concrete steps will be taken?'
     }
   ];
 

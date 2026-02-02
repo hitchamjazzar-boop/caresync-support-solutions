@@ -19,7 +19,6 @@ import {
 import { EvaluationSectionCard } from "@/components/evaluations/EvaluationSectionCard";
 import { ScoreSummary } from "@/components/evaluations/ScoreSummary";
 import { FeedbackSection } from "@/components/evaluations/FeedbackSection";
-import { KPISection, KPIData } from "@/components/evaluations/KPISection";
 import { EVALUATION_SECTIONS, getOverallResult } from "@/lib/evaluationConstants";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -80,13 +79,10 @@ const EvaluationDetail = () => {
   const [employee, setEmployee] = useState<Profile | null>(null);
   const [reviewer, setReviewer] = useState<Profile | null>(null);
   const [sectionScores, setSectionScores] = useState<SectionScore[]>([]);
-  const [kpis, setKpis] = useState<KPIData[]>([]);
   const [feedback, setFeedback] = useState({
     strengths: '',
     areas_for_improvement: '',
-    training_needed: '',
-    goals_next_period: '',
-    action_plan: ''
+    training_needed: ''
   });
   const [includeLeadership, setIncludeLeadership] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -116,9 +112,7 @@ const EvaluationDetail = () => {
       setFeedback({
         strengths: evalData.strengths || '',
         areas_for_improvement: evalData.areas_for_improvement || '',
-        training_needed: evalData.training_needed || '',
-        goals_next_period: evalData.goals_next_period || '',
-        action_plan: evalData.action_plan || ''
+        training_needed: evalData.training_needed || ''
       });
 
       // Fetch profiles
@@ -151,19 +145,6 @@ const EvaluationDetail = () => {
       });
       setSectionScores(allSections);
 
-      // Fetch KPIs
-      const { data: kpiData } = await supabase
-        .from('evaluation_kpis')
-        .select('*')
-        .eq('evaluation_id', id);
-
-      setKpis(kpiData?.map(k => ({
-        id: k.id,
-        metric_name: k.metric_name,
-        target_value: k.target_value || '',
-        actual_value: k.actual_value || '',
-        notes: k.notes || ''
-      })) || []);
 
     } catch (error: any) {
       toast({ title: "Error", description: error.message, variant: "destructive" });
@@ -244,17 +225,14 @@ const EvaluationDetail = () => {
           submitted_at: submit ? new Date().toISOString() : null,
           strengths: feedback.strengths || null,
           areas_for_improvement: feedback.areas_for_improvement || null,
-          training_needed: feedback.training_needed || null,
-          goals_next_period: feedback.goals_next_period || null,
-          action_plan: feedback.action_plan || null
+          training_needed: feedback.training_needed || null
         })
         .eq('id', id);
 
       if (evalError) throw evalError;
 
-      // Delete existing section scores and KPIs
+      // Delete existing section scores
       await supabase.from('evaluation_section_scores').delete().eq('evaluation_id', id);
-      await supabase.from('evaluation_kpis').delete().eq('evaluation_id', id);
 
       // Insert section scores
       const scoresToInsert = sectionScores
@@ -272,20 +250,6 @@ const EvaluationDetail = () => {
           .from('evaluation_section_scores')
           .insert(scoresToInsert);
         if (scoresError) throw scoresError;
-      }
-
-      // Insert KPIs
-      if (kpis.length > 0) {
-        const { error: kpiError } = await supabase
-          .from('evaluation_kpis')
-          .insert(kpis.map(k => ({
-            evaluation_id: id,
-            metric_name: k.metric_name,
-            target_value: k.target_value || null,
-            actual_value: k.actual_value || null,
-            notes: k.notes || null
-          })));
-        if (kpiError) throw kpiError;
       }
 
       // Update assignment status if submitting
@@ -359,9 +323,7 @@ const EvaluationDetail = () => {
           finalized_at: new Date().toISOString(),
           strengths: feedback.strengths || null,
           areas_for_improvement: feedback.areas_for_improvement || null,
-          training_needed: feedback.training_needed || null,
-          goals_next_period: feedback.goals_next_period || null,
-          action_plan: feedback.action_plan || null
+          training_needed: feedback.training_needed || null
         })
         .eq('id', id);
 
@@ -382,19 +344,6 @@ const EvaluationDetail = () => {
 
       if (scoresToInsert.length > 0) {
         await supabase.from('evaluation_section_scores').insert(scoresToInsert);
-      }
-
-      // Save KPIs
-      await supabase.from('evaluation_kpis').delete().eq('evaluation_id', id);
-      
-      if (kpis.length > 0) {
-        await supabase.from('evaluation_kpis').insert(kpis.map(k => ({
-          evaluation_id: id,
-          metric_name: k.metric_name,
-          target_value: k.target_value || null,
-          actual_value: k.actual_value || null,
-          notes: k.notes || null
-        })));
       }
 
       toast({ 
@@ -582,28 +531,15 @@ const EvaluationDetail = () => {
             );
           })}
 
-          {/* KPIs - Hidden from employees viewing their own evaluation, editable by admin on submitted */}
-          {showKPIAndFeedback && (
-            <KPISection
-              kpis={kpis}
-              onKPIsChange={setKpis}
-              readOnly={isReadOnly && !canAdminEditKPIFeedback}
-            />
-          )}
-
           {/* Feedback - Hidden from employees viewing their own evaluation, editable by admin on submitted */}
           {showKPIAndFeedback && (
             <FeedbackSection
               strengths={feedback.strengths}
               areasForImprovement={feedback.areas_for_improvement}
               trainingNeeded={feedback.training_needed}
-              goalsNextPeriod={feedback.goals_next_period}
-              actionPlan={feedback.action_plan}
               onStrengthsChange={(v) => setFeedback(f => ({ ...f, strengths: v }))}
               onAreasChange={(v) => setFeedback(f => ({ ...f, areas_for_improvement: v }))}
               onTrainingChange={(v) => setFeedback(f => ({ ...f, training_needed: v }))}
-              onGoalsChange={(v) => setFeedback(f => ({ ...f, goals_next_period: v }))}
-              onActionPlanChange={(v) => setFeedback(f => ({ ...f, action_plan: v }))}
               readOnly={isReadOnly && !canAdminEditKPIFeedback}
             />
           )}
