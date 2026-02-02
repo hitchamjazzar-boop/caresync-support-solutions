@@ -59,7 +59,14 @@ export const ClockInOut = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [showEarlyClockOutDialog, setShowEarlyClockOutDialog] = useState(false);
-  const [pendingClockOutData, setPendingClockOutData] = useState<{ hours: number; minutes: number } | null>(null);
+  const [pendingClockOutData, setPendingClockOutData] = useState<{
+    hours: number;
+    minutes: number;
+    requiredHours: number;
+    requiredMinutes: number;
+    lunchExcess: number;
+    otherExcess: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -291,11 +298,30 @@ export const ClockInOut = () => {
     
     const workedHours = Math.floor(elapsedMs / 1000 / 60 / 60);
     const workedMinutes = Math.floor((elapsedMs / 1000 / 60) % 60);
-    const totalWorkedHours = elapsedMs / 1000 / 60 / 60;
+    const totalWorkedMinutes = elapsedMs / 1000 / 60;
 
-    // Check if under 8 hours
-    if (totalWorkedHours < 8) {
-      setPendingClockOutData({ hours: workedHours, minutes: workedMinutes });
+    // Calculate excess break time
+    const currentLunchMinutes = calculateBreakTimeByType(todaysBreaks, 'lunch') / 1000 / 60;
+    const currentOtherMinutes = calculateBreakTimeByType(todaysBreaks, 'other') / 1000 / 60;
+    const lunchExcess = Math.max(0, currentLunchMinutes - LUNCH_LIMIT_MINUTES);
+    const otherExcess = Math.max(0, currentOtherMinutes - OTHER_BREAK_LIMIT_MINUTES);
+    const totalExcessMinutes = lunchExcess + otherExcess;
+
+    // Required work time = 8 hours + excess breaks
+    const requiredMinutes = (8 * 60) + totalExcessMinutes;
+    const requiredHours = Math.floor(requiredMinutes / 60);
+    const requiredMins = Math.round(requiredMinutes % 60);
+
+    // Check if under required time
+    if (totalWorkedMinutes < requiredMinutes) {
+      setPendingClockOutData({
+        hours: workedHours,
+        minutes: workedMinutes,
+        requiredHours,
+        requiredMinutes: requiredMins,
+        lunchExcess: Math.round(lunchExcess),
+        otherExcess: Math.round(otherExcess),
+      });
       setShowEarlyClockOutDialog(true);
       setLoading(false);
       return;
@@ -478,7 +504,9 @@ export const ClockInOut = () => {
                       <li>• Other breaks: {Math.round(otherBreakMinutes)}m used (15m allowed) — {Math.round(otherBreakMinutes - OTHER_BREAK_LIMIT_MINUTES)}m over</li>
                     )}
                   </ul>
-                  <p className="mt-1 text-xs">You still need to complete 8 hours of work today.</p>
+                  <p className="mt-1.5 text-xs font-medium text-destructive">
+                    You need to work an extra {Math.round((lunchOverLimit ? lunchBreakMinutes - LUNCH_LIMIT_MINUTES : 0) + (otherOverLimit ? otherBreakMinutes - OTHER_BREAK_LIMIT_MINUTES : 0))}m today to cover your breaks.
+                  </p>
                 </AlertDescription>
               </Alert>
             )}
@@ -594,6 +622,10 @@ export const ClockInOut = () => {
         onOpenChange={setShowEarlyClockOutDialog}
         workedHours={pendingClockOutData?.hours || 0}
         workedMinutes={pendingClockOutData?.minutes || 0}
+        requiredHours={pendingClockOutData?.requiredHours || 8}
+        requiredMinutes={pendingClockOutData?.requiredMinutes || 0}
+        lunchExcess={pendingClockOutData?.lunchExcess || 0}
+        otherExcess={pendingClockOutData?.otherExcess || 0}
         onConfirm={executeClockOut}
       />
     </Card>
