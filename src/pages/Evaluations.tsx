@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Send, ClipboardCheck, Users, Clock, FileText, FolderKanban } from "lucide-react";
+import { Plus, Send, ClipboardCheck, Users, Clock, FileText, FolderKanban, Loader2 } from "lucide-react";
 import { CreateEvaluationDialog } from "@/components/evaluations/CreateEvaluationDialog";
 import { CreateCampaignDialog } from "@/components/evaluations/CreateCampaignDialog";
 import { RequestEvaluationDialog } from "@/components/evaluations/RequestEvaluationDialog";
@@ -16,6 +16,16 @@ import { EvaluationRequestCard } from "@/components/evaluations/EvaluationReques
 import { CampaignList } from "@/components/evaluations/CampaignList";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface EvaluationRequest {
   id: string;
@@ -58,6 +68,9 @@ const Evaluations = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [preselectedEmployeeId, setPreselectedEmployeeId] = useState<string | null>(null);
   const [campaignRefresh, setCampaignRefresh] = useState(0);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [requestToDelete, setRequestToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Handle link-based evaluation requests (supports both createFor and evaluateTarget params)
   useEffect(() => {
@@ -223,6 +236,33 @@ const Evaluations = () => {
     } else {
       // Self-evaluation - coming soon
       toast({ title: "Coming soon", description: "Self-evaluation form will be available soon" });
+    }
+  };
+
+  const handleDeleteRequest = (requestId: string) => {
+    setRequestToDelete(requestId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteRequest = async () => {
+    if (!requestToDelete) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('evaluation_requests')
+        .delete()
+        .eq('id', requestToDelete);
+
+      if (error) throw error;
+      toast({ title: "Success", description: "Request deleted successfully" });
+      fetchStats();
+      fetchPendingRequests();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setRequestToDelete(null);
     }
   };
 
@@ -398,6 +438,8 @@ const Evaluations = () => {
                       key={request.id}
                       request={request}
                       onStartEvaluation={handleStartEvaluation}
+                      onDelete={handleDeleteRequest}
+                      showDelete={true}
                     />
                   ))}
                 </div>
@@ -440,6 +482,28 @@ const Evaluations = () => {
           fetchPendingRequests();
         }}
       />
+
+      {/* Delete Request Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Request</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this evaluation request? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteRequest}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

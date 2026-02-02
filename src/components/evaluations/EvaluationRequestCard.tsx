@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { ClipboardList, Calendar, Clock, User, Users, ArrowRight } from "lucide-react";
+import { ClipboardList, Calendar, Clock, User, Users, ArrowRight, Trash2 } from "lucide-react";
 import { REVIEW_TYPES } from "@/lib/evaluationConstants";
 
 interface EvaluationRequest {
@@ -26,9 +26,11 @@ interface EvaluationRequest {
 interface EvaluationRequestCardProps {
   request: EvaluationRequest;
   onStartEvaluation: (requestId: string, targetEmployeeId?: string | null) => void;
+  onDelete?: (requestId: string) => void;
+  showDelete?: boolean;
 }
 
-export const EvaluationRequestCard = ({ request, onStartEvaluation }: EvaluationRequestCardProps) => {
+export const EvaluationRequestCard = ({ request, onStartEvaluation, onDelete, showDelete }: EvaluationRequestCardProps) => {
   const reviewTypeLabel = REVIEW_TYPES.find(t => t.value === request.review_type)?.label || request.review_type;
   const isOverdue = request.due_date && new Date(request.due_date) < new Date() && request.status === 'pending';
   const isPeerEvaluation = !!request.target_employee_id;
@@ -50,9 +52,21 @@ export const EvaluationRequestCard = ({ request, onStartEvaluation }: Evaluation
               </>
             )}
           </CardTitle>
-          <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
-            {isOverdue ? 'Overdue' : request.status}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={isOverdue ? 'destructive' : 'secondary'}>
+              {isOverdue ? 'Overdue' : request.status}
+            </Badge>
+            {showDelete && onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-destructive hover:text-destructive"
+                onClick={() => onDelete(request.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
