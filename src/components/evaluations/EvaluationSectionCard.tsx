@@ -104,14 +104,17 @@ export const EvaluationSectionCard = ({
         {/* Comments */}
         <div className="space-y-2">
           <Label htmlFor={`section-${sectionNumber}-comments`} className="text-sm font-medium">
-            Comments
+            Comments <span className="text-destructive">*</span>
           </Label>
+          {!readOnly && !comments.trim() && (
+            <p className="text-xs text-destructive">Required</p>
+          )}
           <Textarea
             id={`section-${sectionNumber}-comments`}
             value={comments}
             onChange={(e) => onCommentsChange(e.target.value)}
             placeholder="Add specific observations, examples, or feedback..."
-            className="min-h-[80px] resize-none"
+            className={`min-h-[80px] resize-none ${!readOnly && !comments.trim() ? 'border-destructive' : ''}`}
             disabled={readOnly}
           />
         </div>

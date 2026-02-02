@@ -186,9 +186,35 @@ const Evaluations = () => {
 
   const handleStartEvaluation = async (requestId: string, targetEmployeeId?: string | null) => {
     if (targetEmployeeId) {
-      // Peer evaluation - navigate to create evaluation for specific employee
-      navigate(`/evaluations?createFor=${targetEmployeeId}&requestId=${requestId}`);
-      setCreateDialogOpen(true);
+      // Peer evaluation - create the evaluation directly and navigate to it
+      try {
+        const { data: evaluation, error } = await supabase
+          .from('employee_evaluations')
+          .insert({
+            employee_id: targetEmployeeId,
+            reviewer_id: user!.id,
+            evaluation_type: 'peer_review',
+            status: 'draft',
+            include_leadership: false,
+            max_possible_score: 45,
+            total_score: 0
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        // Update the request status to completed
+        await supabase
+          .from('evaluation_requests')
+          .update({ status: 'completed' })
+          .eq('id', requestId);
+
+        toast({ title: "Success", description: "Evaluation started" });
+        navigate(`/evaluations/${evaluation.id}`);
+      } catch (error: any) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      }
     } else {
       // Self-evaluation - coming soon
       toast({ title: "Coming soon", description: "Self-evaluation form will be available soon" });

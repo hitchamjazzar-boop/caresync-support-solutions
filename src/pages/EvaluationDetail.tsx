@@ -200,11 +200,22 @@ const EvaluationDetail = () => {
         ? sectionScores 
         : sectionScores.filter(s => s.section_number !== 9);
       
-      const missingSections = sectionsToValidate.filter(s => s.rating === null);
-      if (missingSections.length > 0) {
+      const missingRatings = sectionsToValidate.filter(s => s.rating === null);
+      const missingComments = sectionsToValidate.filter(s => !s.comments?.trim());
+      
+      if (missingRatings.length > 0) {
         toast({ 
           title: "Incomplete Evaluation", 
-          description: `Please rate all sections before submitting. Missing: ${missingSections.map(s => `Section ${s.section_number}`).join(', ')}`,
+          description: `Please rate all sections before submitting. Missing ratings: ${missingRatings.map(s => `Section ${s.section_number}`).join(', ')}`,
+          variant: "destructive" 
+        });
+        return;
+      }
+      
+      if (missingComments.length > 0) {
+        toast({ 
+          title: "Comments Required", 
+          description: `Please add comments for all sections. Missing comments: ${missingComments.map(s => `Section ${s.section_number}`).join(', ')}`,
           variant: "destructive" 
         });
         return;
