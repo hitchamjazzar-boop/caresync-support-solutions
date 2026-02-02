@@ -133,6 +133,20 @@ export const ClockInOut = () => {
     if (!user) return;
     setLoading(true);
 
+    // Check if user already has an active attendance to prevent duplicates
+    const { data: existingActive } = await supabase
+      .from('attendance')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (existingActive) {
+      toast.error('You already have an active session. Please clock out first.');
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.from('attendance').insert({
       user_id: user.id,
       clock_in: new Date().toISOString(),
