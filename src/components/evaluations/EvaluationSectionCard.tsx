@@ -59,7 +59,12 @@ export const EvaluationSectionCard = ({
 
         {/* Rating Selection */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Rating</Label>
+          <Label className="text-sm font-medium">
+            Rating <span className="text-destructive">*</span>
+          </Label>
+          {!readOnly && rating === null && (
+            <p className="text-xs text-destructive">Required</p>
+          )}
           <RadioGroup
             value={rating?.toString() || ""}
             onValueChange={(value) => onRatingChange(parseInt(value))}

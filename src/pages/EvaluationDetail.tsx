@@ -193,6 +193,24 @@ const EvaluationDetail = () => {
 
   const handleSave = async (submit = false) => {
     if (!evaluation || !id) return;
+
+    // Validation for submission
+    if (submit) {
+      const sectionsToValidate = includeLeadership 
+        ? sectionScores 
+        : sectionScores.filter(s => s.section_number !== 9);
+      
+      const missingSections = sectionsToValidate.filter(s => s.rating === null);
+      if (missingSections.length > 0) {
+        toast({ 
+          title: "Incomplete Evaluation", 
+          description: `Please rate all sections before submitting. Missing: ${missingSections.map(s => `Section ${s.section_number}`).join(', ')}`,
+          variant: "destructive" 
+        });
+        return;
+      }
+    }
+
     setIsSaving(true);
 
     try {

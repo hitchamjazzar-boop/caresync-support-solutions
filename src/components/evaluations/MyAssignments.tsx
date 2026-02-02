@@ -7,8 +7,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { ClipboardList, CheckCircle, Loader2 } from "lucide-react";
+import { ClipboardList, CheckCircle, Loader2, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Assignment {
   id: string;
@@ -37,6 +47,9 @@ export const MyAssignments = () => {
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] = useState<Assignment | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -135,6 +148,34 @@ export const MyAssignments = () => {
     }
   };
 
+  const handleDeleteClick = (assignment: Assignment) => {
+    setAssignmentToDelete(assignment);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!assignmentToDelete || !assignmentToDelete.evaluation_id) return;
+    setIsDeleting(true);
+    try {
+      // Delete section scores first
+      await supabase.from('evaluation_section_scores').delete().eq('evaluation_id', assignmentToDelete.evaluation_id);
+      // Delete KPIs
+      await supabase.from('evaluation_kpis').delete().eq('evaluation_id', assignmentToDelete.evaluation_id);
+      // Delete evaluation
+      const { error } = await supabase.from('employee_evaluations').delete().eq('id', assignmentToDelete.evaluation_id);
+      
+      if (error) throw error;
+      toast({ title: "Success", description: "Evaluation deleted successfully." });
+      fetchAssignments();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setAssignmentToDelete(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-8">
@@ -178,7 +219,7 @@ export const MyAssignments = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 {assignment.status === 'submitted' ? (
                   <Badge variant="default" className="bg-green-500/10 text-green-500">
                     <CheckCircle className="h-3 w-3 mr-1" />
@@ -194,11 +235,45 @@ export const MyAssignments = () => {
                 >
                   {assignment.evaluation_id ? 'Continue' : 'Start'} Evaluation
                 </Button>
+                
+                {assignment.evaluation_id && assignment.status !== 'submitted' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteClick(assignment)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
       ))}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Evaluation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete your draft evaluation for {assignmentToDelete?.employee?.full_name}? 
+              This will remove all your scores and comments. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
