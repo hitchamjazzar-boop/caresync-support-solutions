@@ -204,14 +204,9 @@ const Evaluations = () => {
 
         if (error) throw error;
 
-        // Update the request status to completed
-        await supabase
-          .from('evaluation_requests')
-          .update({ status: 'completed' })
-          .eq('id', requestId);
-
         toast({ title: "Success", description: "Evaluation started" });
-        navigate(`/evaluations/${evaluation.id}`);
+        // Pass requestId as query param so it can be marked complete on submission
+        navigate(`/evaluations/${evaluation.id}?requestId=${requestId}`);
       } catch (error: any) {
         toast({ title: "Error", description: error.message, variant: "destructive" });
       }
