@@ -15,6 +15,10 @@ interface EarlyClockOutDialogProps {
   onOpenChange: (open: boolean) => void;
   workedHours: number;
   workedMinutes: number;
+  requiredHours: number;
+  requiredMinutes: number;
+  lunchExcess: number;
+  otherExcess: number;
   onConfirm: () => void;
 }
 
@@ -23,14 +27,19 @@ export const EarlyClockOutDialog = ({
   onOpenChange,
   workedHours,
   workedMinutes,
+  requiredHours,
+  requiredMinutes,
+  lunchExcess,
+  otherExcess,
   onConfirm,
 }: EarlyClockOutDialogProps) => {
-  const requiredHours = 8;
   const totalWorkedMinutes = workedHours * 60 + workedMinutes;
-  const requiredMinutes = requiredHours * 60;
-  const shortfallMinutes = requiredMinutes - totalWorkedMinutes;
+  const totalRequiredMinutes = requiredHours * 60 + requiredMinutes;
+  const shortfallMinutes = totalRequiredMinutes - totalWorkedMinutes;
   const shortfallHours = Math.floor(shortfallMinutes / 60);
-  const shortfallMins = shortfallMinutes % 60;
+  const shortfallMins = Math.round(shortfallMinutes % 60);
+
+  const hasBreakOvertime = lunchExcess > 0 || otherExcess > 0;
 
   const formatTime = (hours: number, minutes: number) => {
     if (hours === 0) return `${minutes}m`;
@@ -50,7 +59,7 @@ export const EarlyClockOutDialog = ({
           </div>
           <AlertDialogDescription asChild>
             <div className="space-y-4 pt-2">
-              <p>You're about to clock out before completing 8 hours of work.</p>
+              <p>You're about to clock out before completing your required work hours.</p>
               
               <div className="rounded-lg bg-muted p-4 space-y-2">
                 <div className="flex justify-between text-sm">
@@ -58,10 +67,32 @@ export const EarlyClockOutDialog = ({
                   <span className="font-semibold">{formatTime(workedHours, workedMinutes)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Required:</span>
-                  <span className="font-medium">{requiredHours} hours</span>
+                  <span className="text-muted-foreground">Base requirement:</span>
+                  <span className="font-medium">8h</span>
                 </div>
-                <div className="border-t pt-2 flex justify-between text-sm">
+                
+                {hasBreakOvertime && (
+                  <>
+                    {lunchExcess > 0 && (
+                      <div className="flex justify-between text-sm text-amber-600 dark:text-amber-500">
+                        <span>+ Lunch overtime:</span>
+                        <span className="font-medium">{lunchExcess}m</span>
+                      </div>
+                    )}
+                    {otherExcess > 0 && (
+                      <div className="flex justify-between text-sm text-amber-600 dark:text-amber-500">
+                        <span>+ Break overtime:</span>
+                        <span className="font-medium">{otherExcess}m</span>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <div className="border-t pt-2 flex justify-between text-sm font-medium">
+                  <span className="text-muted-foreground">Total required:</span>
+                  <span>{formatTime(requiredHours, requiredMinutes)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Shortfall:</span>
                   <span className="font-semibold text-amber-600 dark:text-amber-500">
                     {formatTime(shortfallHours, shortfallMins)}
