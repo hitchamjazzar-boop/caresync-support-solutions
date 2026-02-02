@@ -204,6 +204,21 @@ const EvaluationDetail = () => {
         });
         return;
       }
+
+      // Validate Feedback & Development fields
+      const missingFeedback: string[] = [];
+      if (!feedback.strengths?.trim()) missingFeedback.push('Strengths');
+      if (!feedback.areas_for_improvement?.trim()) missingFeedback.push('Areas for Improvement');
+      if (!feedback.training_needed?.trim()) missingFeedback.push('Training Needed');
+      
+      if (missingFeedback.length > 0) {
+        toast({ 
+          title: "Feedback Required", 
+          description: `Please complete all Feedback & Development fields: ${missingFeedback.join(', ')}`,
+          variant: "destructive" 
+        });
+        return;
+      }
     }
 
     setIsSaving(true);
