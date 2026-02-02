@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Search, Eye, FileText, ClipboardCheck } from "lucide-react";
+import { Search, Eye, FileText, ClipboardCheck, Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getResultBadgeVariant, REVIEW_TYPES } from "@/lib/evaluationConstants";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +44,7 @@ interface EvaluationListProps {
 
 export const EvaluationList = ({ employeeId, showFilters = true }: EvaluationListProps) => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -243,8 +245,17 @@ export const EvaluationList = ({ employeeId, showFilters = true }: EvaluationLis
                         size="sm"
                         onClick={() => navigate(`/evaluations/${evaluation.id}`)}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
+                        {evaluation.status === 'draft' && evaluation.reviewer_id === user?.id ? (
+                          <>
+                            <Pencil className="h-4 w-4 mr-1" />
+                            Edit
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </>
+                        )}
                       </Button>
                     </TableCell>
                   </TableRow>
