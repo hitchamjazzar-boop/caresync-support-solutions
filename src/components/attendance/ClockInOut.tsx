@@ -8,7 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Clock, Coffee, LogOut, Play, Pause, User, Timer, MoreHorizontal, Briefcase } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Clock, Coffee, LogOut, Play, Pause, User, Timer, MoreHorizontal, Briefcase, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
@@ -46,6 +47,9 @@ const BREAK_TYPES = [
   { value: 'personal', label: 'Personal Break', icon: Timer, color: 'text-purple-500' },
   { value: 'other', label: 'Other', icon: MoreHorizontal, color: 'text-muted-foreground' },
 ] as const;
+
+const LUNCH_LIMIT_MINUTES = 60;
+const OTHER_BREAK_LIMIT_MINUTES = 15;
 
 export const ClockInOut = () => {
   const { user } = useAuth();
@@ -119,6 +123,22 @@ export const ClockInOut = () => {
       }
       return total;
     }, 0);
+  };
+
+  const calculateBreakTimeByType = (breaks: BreakRecord[], type: 'lunch' | 'other') => {
+    return breaks
+      .filter((brk) => (type === 'lunch' ? brk.break_type === 'lunch' : brk.break_type !== 'lunch'))
+      .reduce((total, brk) => {
+        if (brk.break_end) {
+          const start = new Date(brk.break_start);
+          const end = new Date(brk.break_end);
+          return total + (end.getTime() - start.getTime());
+        } else if (brk.break_start) {
+          const start = new Date(brk.break_start);
+          return total + (new Date().getTime() - start.getTime());
+        }
+        return total;
+      }, 0);
   };
 
   const calculateHoursWithBreaks = (clockIn: string, clockOut: string, breaks: BreakRecord[]) => {
@@ -378,6 +398,13 @@ export const ClockInOut = () => {
   const activeBreakInfo = getActiveBreakInfo();
   const totalBreakTime = calculateTotalBreakTime(todaysBreaks);
   const completedBreaksCount = todaysBreaks.filter((b) => b.break_end).length;
+  
+  // Calculate break time by type for warnings
+  const lunchBreakMinutes = calculateBreakTimeByType(todaysBreaks, 'lunch') / 1000 / 60;
+  const otherBreakMinutes = calculateBreakTimeByType(todaysBreaks, 'other') / 1000 / 60;
+  const lunchOverLimit = lunchBreakMinutes > LUNCH_LIMIT_MINUTES;
+  const otherOverLimit = otherBreakMinutes > OTHER_BREAK_LIMIT_MINUTES;
+  const hasBreakWarning = lunchOverLimit || otherOverLimit;
 
   const getStatusInfo = () => {
     if (!activeAttendance) {
@@ -436,6 +463,25 @@ export const ClockInOut = () => {
                 </p>
               )}
             </div>
+
+            {/* Break Limit Warning */}
+            {hasBreakWarning && (
+              <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <span className="font-medium">You've exceeded your break limit!</span>
+                  <ul className="mt-1 space-y-0.5 text-xs">
+                    {lunchOverLimit && (
+                      <li>• Lunch: {Math.round(lunchBreakMinutes)}m used (60m allowed) — {Math.round(lunchBreakMinutes - LUNCH_LIMIT_MINUTES)}m over</li>
+                    )}
+                    {otherOverLimit && (
+                      <li>• Other breaks: {Math.round(otherBreakMinutes)}m used (15m allowed) — {Math.round(otherBreakMinutes - OTHER_BREAK_LIMIT_MINUTES)}m over</li>
+                    )}
+                  </ul>
+                  <p className="mt-1 text-xs">You still need to complete 8 hours of work today.</p>
+                </AlertDescription>
+              </Alert>
+            )}
 
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
