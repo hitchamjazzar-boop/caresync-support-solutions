@@ -316,8 +316,12 @@ const EvaluationDetail = () => {
 
   // Determine if read-only: submitted/finalized evaluations are read-only, OR if user is not the reviewer
   const isReviewer = evaluation?.reviewer_id === user?.id;
+  const isEmployee = evaluation?.employee_id === user?.id && !isReviewer;
   const isSubmitted = evaluation?.status === 'submitted';
   const isReadOnly = isSubmitted || evaluation?.status === 'finalized' || (!isAdmin && !isReviewer);
+  
+  // Employees viewing their own evaluation shouldn't see KPIs and Feedback sections
+  const showKPIAndFeedback = isAdmin || isReviewer;
 
   if (isLoading) {
     return (
@@ -458,27 +462,31 @@ const EvaluationDetail = () => {
             );
           })}
 
-          {/* KPIs */}
-          <KPISection
-            kpis={kpis}
-            onKPIsChange={setKpis}
-            readOnly={isReadOnly}
-          />
+          {/* KPIs - Hidden from employees viewing their own evaluation */}
+          {showKPIAndFeedback && (
+            <KPISection
+              kpis={kpis}
+              onKPIsChange={setKpis}
+              readOnly={isReadOnly}
+            />
+          )}
 
-          {/* Feedback */}
-          <FeedbackSection
-            strengths={feedback.strengths}
-            areasForImprovement={feedback.areas_for_improvement}
-            trainingNeeded={feedback.training_needed}
-            goalsNextPeriod={feedback.goals_next_period}
-            actionPlan={feedback.action_plan}
-            onStrengthsChange={(v) => setFeedback(f => ({ ...f, strengths: v }))}
-            onAreasChange={(v) => setFeedback(f => ({ ...f, areas_for_improvement: v }))}
-            onTrainingChange={(v) => setFeedback(f => ({ ...f, training_needed: v }))}
-            onGoalsChange={(v) => setFeedback(f => ({ ...f, goals_next_period: v }))}
-            onActionPlanChange={(v) => setFeedback(f => ({ ...f, action_plan: v }))}
-            readOnly={isReadOnly}
-          />
+          {/* Feedback - Hidden from employees viewing their own evaluation */}
+          {showKPIAndFeedback && (
+            <FeedbackSection
+              strengths={feedback.strengths}
+              areasForImprovement={feedback.areas_for_improvement}
+              trainingNeeded={feedback.training_needed}
+              goalsNextPeriod={feedback.goals_next_period}
+              actionPlan={feedback.action_plan}
+              onStrengthsChange={(v) => setFeedback(f => ({ ...f, strengths: v }))}
+              onAreasChange={(v) => setFeedback(f => ({ ...f, areas_for_improvement: v }))}
+              onTrainingChange={(v) => setFeedback(f => ({ ...f, training_needed: v }))}
+              onGoalsChange={(v) => setFeedback(f => ({ ...f, goals_next_period: v }))}
+              onActionPlanChange={(v) => setFeedback(f => ({ ...f, action_plan: v }))}
+              readOnly={isReadOnly}
+            />
+          )}
         </div>
 
         {/* Score Summary */}
