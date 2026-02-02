@@ -290,33 +290,32 @@ export const ClockInOut = () => {
       return;
     }
 
-    // Calculate current worked hours (excluding breaks)
+    // Calculate total elapsed time (clock-in to now) - breaks are INCLUDED in the 8 hours
     const now = new Date();
     const start = new Date(activeAttendance.clock_in);
-    let elapsedMs = now.getTime() - start.getTime();
-    elapsedMs -= calculateTotalBreakTime(todaysBreaks);
+    const elapsedMs = now.getTime() - start.getTime();
+    const totalElapsedMinutes = elapsedMs / 1000 / 60;
     
-    const workedHours = Math.floor(elapsedMs / 1000 / 60 / 60);
-    const workedMinutes = Math.floor((elapsedMs / 1000 / 60) % 60);
-    const totalWorkedMinutes = elapsedMs / 1000 / 60;
+    const elapsedHours = Math.floor(totalElapsedMinutes / 60);
+    const elapsedMins = Math.floor(totalElapsedMinutes % 60);
 
-    // Calculate excess break time
+    // Calculate excess break time (only time OVER the limits)
     const currentLunchMinutes = calculateBreakTimeByType(todaysBreaks, 'lunch') / 1000 / 60;
     const currentOtherMinutes = calculateBreakTimeByType(todaysBreaks, 'other') / 1000 / 60;
     const lunchExcess = Math.max(0, currentLunchMinutes - LUNCH_LIMIT_MINUTES);
     const otherExcess = Math.max(0, currentOtherMinutes - OTHER_BREAK_LIMIT_MINUTES);
     const totalExcessMinutes = lunchExcess + otherExcess;
 
-    // Required work time = 8 hours + excess breaks
+    // Required elapsed time = 8 hours + any excess break time
     const requiredMinutes = (8 * 60) + totalExcessMinutes;
     const requiredHours = Math.floor(requiredMinutes / 60);
     const requiredMins = Math.round(requiredMinutes % 60);
 
-    // Check if under required time
-    if (totalWorkedMinutes < requiredMinutes) {
+    // Check if under required elapsed time
+    if (totalElapsedMinutes < requiredMinutes) {
       setPendingClockOutData({
-        hours: workedHours,
-        minutes: workedMinutes,
+        hours: elapsedHours,
+        minutes: elapsedMins,
         requiredHours,
         requiredMinutes: requiredMins,
         lunchExcess: Math.round(lunchExcess),

@@ -63,7 +63,7 @@ export const EarlyClockOutDialog = ({
               
               <div className="rounded-lg bg-muted p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Time worked:</span>
+                  <span className="text-muted-foreground">Time elapsed:</span>
                   <span className="font-semibold">{formatTime(workedHours, workedMinutes)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
