@@ -6,12 +6,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Send, ClipboardCheck, Users, Clock, FileText } from "lucide-react";
+import { Plus, Send, ClipboardCheck, Users, Clock, FileText, FolderKanban } from "lucide-react";
 import { CreateEvaluationDialog } from "@/components/evaluations/CreateEvaluationDialog";
+import { CreateCampaignDialog } from "@/components/evaluations/CreateCampaignDialog";
 import { RequestEvaluationDialog } from "@/components/evaluations/RequestEvaluationDialog";
 import { RequestPeerEvaluationDialog } from "@/components/evaluations/RequestPeerEvaluationDialog";
 import { EvaluationList } from "@/components/evaluations/EvaluationList";
 import { EvaluationRequestCard } from "@/components/evaluations/EvaluationRequestCard";
+import { CampaignList } from "@/components/evaluations/CampaignList";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -38,6 +40,7 @@ interface Stats {
   draft: number;
   finalized: number;
   pendingRequests: number;
+  campaigns: number;
 }
 
 const Evaluations = () => {
@@ -46,13 +49,15 @@ const Evaluations = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [campaignDialogOpen, setCampaignDialogOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [peerRequestDialogOpen, setPeerRequestDialogOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<EvaluationRequest[]>([]);
   const [myPendingRequests, setMyPendingRequests] = useState<EvaluationRequest[]>([]);
-  const [stats, setStats] = useState<Stats>({ total: 0, draft: 0, finalized: 0, pendingRequests: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, draft: 0, finalized: 0, pendingRequests: 0, campaigns: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [preselectedEmployeeId, setPreselectedEmployeeId] = useState<string | null>(null);
+  const [campaignRefresh, setCampaignRefresh] = useState(0);
 
   // Handle link-based evaluation requests (supports both createFor and evaluateTarget params)
   useEffect(() => {
@@ -95,12 +100,17 @@ const Evaluations = () => {
         .select('status')
         .eq('status', 'pending');
 
+      const { data: campaigns } = await supabase
+        .from('evaluation_campaigns')
+        .select('id');
+
       if (evaluations) {
         setStats({
           total: evaluations.length,
           draft: evaluations.filter(e => e.status === 'draft').length,
           finalized: evaluations.filter(e => e.status === 'finalized').length,
-          pendingRequests: requests?.length || 0
+          pendingRequests: requests?.length || 0,
+          campaigns: campaigns?.length || 0
         });
       }
     } catch (error: any) {
@@ -255,6 +265,10 @@ const Evaluations = () => {
         <div className="flex flex-wrap gap-2">
           {isAdmin && (
             <>
+              <Button variant="outline" onClick={() => setCampaignDialogOpen(true)}>
+                <FolderKanban className="h-4 w-4 mr-2" />
+                Create Campaign
+              </Button>
               <Button variant="outline" onClick={() => setRequestDialogOpen(true)}>
                 <Send className="h-4 w-4 mr-2" />
                 Request Self-Evaluation
@@ -339,14 +353,24 @@ const Evaluations = () => {
         <TabsList>
           <TabsTrigger value="evaluations">My Evaluations</TabsTrigger>
           {isAdmin && (
-            <TabsTrigger value="requests">
-              Pending Requests
-              {stats.pendingRequests > 0 && (
-                <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
-                  {stats.pendingRequests}
-                </span>
-              )}
-            </TabsTrigger>
+            <>
+              <TabsTrigger value="campaigns">
+                Campaigns
+                {stats.campaigns > 0 && (
+                  <span className="ml-2 bg-secondary text-secondary-foreground rounded-full px-2 py-0.5 text-xs">
+                    {stats.campaigns}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="requests">
+                Pending Requests
+                {stats.pendingRequests > 0 && (
+                  <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
+                    {stats.pendingRequests}
+                  </span>
+                )}
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -355,26 +379,31 @@ const Evaluations = () => {
         </TabsContent>
 
         {isAdmin && (
-          <TabsContent value="requests">
-            {pendingRequests.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <Send className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                  <p className="text-muted-foreground">No pending evaluation requests</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4">
-                {pendingRequests.map(request => (
-                  <EvaluationRequestCard
-                    key={request.id}
-                    request={request}
-                    onStartEvaluation={handleStartEvaluation}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
+          <>
+            <TabsContent value="campaigns">
+              <CampaignList refreshTrigger={campaignRefresh} />
+            </TabsContent>
+            <TabsContent value="requests">
+              {pendingRequests.length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <Send className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground">No pending evaluation requests</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {pendingRequests.map(request => (
+                    <EvaluationRequestCard
+                      key={request.id}
+                      request={request}
+                      onStartEvaluation={handleStartEvaluation}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </>
         )}
       </Tabs>
 
@@ -386,6 +415,14 @@ const Evaluations = () => {
           if (!open) setPreselectedEmployeeId(null);
         }}
         preselectedEmployeeId={preselectedEmployeeId}
+      />
+      <CreateCampaignDialog
+        open={campaignDialogOpen}
+        onOpenChange={setCampaignDialogOpen}
+        onSuccess={() => {
+          fetchStats();
+          setCampaignRefresh(prev => prev + 1);
+        }}
       />
       <RequestEvaluationDialog
         open={requestDialogOpen}
