@@ -19,7 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Calendar, Clock, Edit, Coffee, User, Timer, MoreHorizontal } from 'lucide-react';
+import { Calendar, Clock, Edit, Coffee, User, Timer, MoreHorizontal, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -220,10 +220,32 @@ export const AttendanceHistory = () => {
       .toFixed(2);
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, attendanceId: string) => {
+    if (status === 'active') {
+      // Check if currently on a break
+      const breaks = breaksMap[attendanceId] || [];
+      const activeBreak = breaks.find(brk => !brk.break_end);
+      
+      if (activeBreak) {
+        const breakInfo = BREAK_TYPES.find(b => b.value === activeBreak.break_type);
+        const Icon = breakInfo?.icon || Coffee;
+        return (
+          <Badge variant="secondary" className="gap-1 animate-pulse">
+            <Icon className={`h-3 w-3 ${breakInfo?.color || ''}`} />
+            On {breakInfo?.label || 'Break'}
+          </Badge>
+        );
+      }
+      
+      return (
+        <Badge variant="default" className="gap-1">
+          <Briefcase className="h-3 w-3" />
+          Working
+        </Badge>
+      );
+    }
+    
     switch (status) {
-      case 'active':
-        return <Badge variant="default">Active</Badge>;
       case 'completed':
         return <Badge variant="secondary">Completed</Badge>;
       case 'corrected':
@@ -380,7 +402,7 @@ export const AttendanceHistory = () => {
                           '-'
                         )}
                       </TableCell>
-                      <TableCell>{getStatusBadge(record.status)}</TableCell>
+                      <TableCell>{getStatusBadge(record.status, record.id)}</TableCell>
                       {isAdmin && (
                         <TableCell>
                           <Button variant="ghost" size="sm" className="gap-1">
