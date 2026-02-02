@@ -8,8 +8,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Clock, Coffee, LogOut, Play, Pause, User, Timer, MoreHorizontal } from 'lucide-react';
+import { Clock, Coffee, LogOut, Play, Pause, User, Timer, MoreHorizontal, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ActiveAttendance {
@@ -347,6 +348,23 @@ export const ClockInOut = () => {
   const totalBreakTime = calculateTotalBreakTime(todaysBreaks);
   const completedBreaksCount = todaysBreaks.filter((b) => b.break_end).length;
 
+  const getStatusInfo = () => {
+    if (!activeAttendance) {
+      return { label: 'Not Clocked In', variant: 'outline' as const, icon: Clock };
+    }
+    if (activeBreak && activeBreakInfo) {
+      return { 
+        label: `On ${activeBreakInfo.label}`, 
+        variant: 'secondary' as const, 
+        icon: activeBreakInfo.icon,
+        color: activeBreakInfo.color
+      };
+    }
+    return { label: 'Working...', variant: 'default' as const, icon: Briefcase };
+  };
+
+  const statusInfo = getStatusInfo();
+
   return (
     <Card className="shadow-lg">
       <CardHeader className="text-center">
@@ -355,6 +373,17 @@ export const ClockInOut = () => {
         </div>
         <CardTitle className="text-3xl">{formatTime(currentTime)}</CardTitle>
         <p className="text-sm text-muted-foreground">{formatDate(currentTime)}</p>
+        
+        {/* Status Badge */}
+        <div className="mt-3 flex justify-center">
+          <Badge 
+            variant={statusInfo.variant} 
+            className={`gap-1.5 px-3 py-1 text-sm ${activeBreak ? 'animate-pulse' : ''}`}
+          >
+            <statusInfo.icon className={`h-3.5 w-3.5 ${statusInfo.color || ''}`} />
+            {statusInfo.label}
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {activeAttendance ? (
