@@ -1,0 +1,481 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/useAdmin";
+import { toast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { 
+  ArrowLeft, Save, CheckCircle, User, Calendar, 
+  FileText, Loader2, AlertTriangle 
+} from "lucide-react";
+import { EvaluationSectionCard } from "@/components/evaluations/EvaluationSectionCard";
+import { ScoreSummary } from "@/components/evaluations/ScoreSummary";
+import { FeedbackSection } from "@/components/evaluations/FeedbackSection";
+import { KPISection, KPIData } from "@/components/evaluations/KPISection";
+import { EVALUATION_SECTIONS, getOverallResult } from "@/lib/evaluationConstants";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+interface SectionScore {
+  section_number: number;
+  section_name: string;
+  rating: number | null;
+  comments: string;
+}
+
+interface Evaluation {
+  id: string;
+  employee_id: string;
+  reviewer_id: string;
+  evaluation_type: string;
+  status: string;
+  include_leadership: boolean;
+  total_score: number | null;
+  max_possible_score: number | null;
+  overall_result: string | null;
+  strengths: string | null;
+  areas_for_improvement: string | null;
+  training_needed: string | null;
+  goals_next_period: string | null;
+  action_plan: string | null;
+  created_at: string;
+  finalized_at: string | null;
+}
+
+interface Profile {
+  id: string;
+  full_name: string;
+  photo_url: string | null;
+  position: string | null;
+  department: string | null;
+}
+
+const EvaluationDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isAdmin } = useAdmin();
+  
+  const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
+  const [employee, setEmployee] = useState<Profile | null>(null);
+  const [reviewer, setReviewer] = useState<Profile | null>(null);
+  const [sectionScores, setSectionScores] = useState<SectionScore[]>([]);
+  const [kpis, setKpis] = useState<KPIData[]>([]);
+  const [feedback, setFeedback] = useState({
+    strengths: '',
+    areas_for_improvement: '',
+    training_needed: '',
+    goals_next_period: '',
+    action_plan: ''
+  });
+  const [includeLeadership, setIncludeLeadership] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
+
+  useEffect(() => {
+    if (id) {
+      fetchEvaluation();
+    }
+  }, [id]);
+
+  const fetchEvaluation = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch evaluation
+      const { data: evalData, error: evalError } = await supabase
+        .from('employee_evaluations')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (evalError) throw evalError;
+      setEvaluation(evalData);
+      setIncludeLeadership(evalData.include_leadership);
+      setFeedback({
+        strengths: evalData.strengths || '',
+        areas_for_improvement: evalData.areas_for_improvement || '',
+        training_needed: evalData.training_needed || '',
+        goals_next_period: evalData.goals_next_period || '',
+        action_plan: evalData.action_plan || ''
+      });
+
+      // Fetch profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, photo_url, position, department')
+        .in('id', [evalData.employee_id, evalData.reviewer_id]);
+
+      if (profiles) {
+        setEmployee(profiles.find(p => p.id === evalData.employee_id) || null);
+        setReviewer(profiles.find(p => p.id === evalData.reviewer_id) || null);
+      }
+
+      // Fetch section scores
+      const { data: scores } = await supabase
+        .from('evaluation_section_scores')
+        .select('*')
+        .eq('evaluation_id', id)
+        .order('section_number');
+
+      // Initialize all sections
+      const allSections = EVALUATION_SECTIONS.map(section => {
+        const existingScore = scores?.find(s => s.section_number === section.number);
+        return {
+          section_number: section.number,
+          section_name: section.name,
+          rating: existingScore?.rating || null,
+          comments: existingScore?.comments || ''
+        };
+      });
+      setSectionScores(allSections);
+
+      // Fetch KPIs
+      const { data: kpiData } = await supabase
+        .from('evaluation_kpis')
+        .select('*')
+        .eq('evaluation_id', id);
+
+      setKpis(kpiData?.map(k => ({
+        id: k.id,
+        metric_name: k.metric_name,
+        target_value: k.target_value || '',
+        actual_value: k.actual_value || '',
+        notes: k.notes || ''
+      })) || []);
+
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      navigate('/evaluations');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSectionRatingChange = (sectionNumber: number, rating: number) => {
+    setSectionScores(prev => prev.map(s => 
+      s.section_number === sectionNumber ? { ...s, rating } : s
+    ));
+  };
+
+  const handleSectionCommentsChange = (sectionNumber: number, comments: string) => {
+    setSectionScores(prev => prev.map(s => 
+      s.section_number === sectionNumber ? { ...s, comments } : s
+    ));
+  };
+
+  const calculateTotalScore = () => {
+    const sectionsToCount = includeLeadership 
+      ? sectionScores 
+      : sectionScores.filter(s => s.section_number !== 9);
+    return sectionsToCount.reduce((sum, s) => sum + (s.rating || 0), 0);
+  };
+
+  const getMaxScore = () => includeLeadership ? 50 : 45;
+
+  const handleSave = async (finalize = false) => {
+    if (!evaluation || !id) return;
+    setIsSaving(true);
+
+    try {
+      const totalScore = calculateTotalScore();
+      const maxScore = getMaxScore();
+      const result = getOverallResult(totalScore, maxScore);
+
+      // Update evaluation
+      const { error: evalError } = await supabase
+        .from('employee_evaluations')
+        .update({
+          include_leadership: includeLeadership,
+          total_score: totalScore,
+          max_possible_score: maxScore,
+          overall_result: result,
+          status: finalize ? 'finalized' : 'draft',
+          finalized_at: finalize ? new Date().toISOString() : null,
+          strengths: feedback.strengths || null,
+          areas_for_improvement: feedback.areas_for_improvement || null,
+          training_needed: feedback.training_needed || null,
+          goals_next_period: feedback.goals_next_period || null,
+          action_plan: feedback.action_plan || null
+        })
+        .eq('id', id);
+
+      if (evalError) throw evalError;
+
+      // Delete existing section scores and KPIs
+      await supabase.from('evaluation_section_scores').delete().eq('evaluation_id', id);
+      await supabase.from('evaluation_kpis').delete().eq('evaluation_id', id);
+
+      // Insert section scores
+      const scoresToInsert = sectionScores
+        .filter(s => includeLeadership || s.section_number !== 9)
+        .map(s => ({
+          evaluation_id: id,
+          section_number: s.section_number,
+          section_name: s.section_name,
+          rating: s.rating,
+          comments: s.comments || null
+        }));
+
+      if (scoresToInsert.length > 0) {
+        const { error: scoresError } = await supabase
+          .from('evaluation_section_scores')
+          .insert(scoresToInsert);
+        if (scoresError) throw scoresError;
+      }
+
+      // Insert KPIs
+      if (kpis.length > 0) {
+        const { error: kpiError } = await supabase
+          .from('evaluation_kpis')
+          .insert(kpis.map(k => ({
+            evaluation_id: id,
+            metric_name: k.metric_name,
+            target_value: k.target_value || null,
+            actual_value: k.actual_value || null,
+            notes: k.notes || null
+          })));
+        if (kpiError) throw kpiError;
+      }
+
+      toast({ 
+        title: finalize ? "Evaluation Finalized" : "Saved", 
+        description: finalize 
+          ? "The evaluation has been finalized and is now visible to the employee"
+          : "Changes saved successfully" 
+      });
+
+      if (finalize) {
+        navigate('/evaluations');
+      } else {
+        fetchEvaluation();
+      }
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+      setFinalizeDialogOpen(false);
+    }
+  };
+
+  const isReadOnly = evaluation?.status === 'finalized' || !isAdmin;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-32 w-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            {[1, 2, 3].map(i => (
+              <Skeleton key={i} className="h-48 w-full" />
+            ))}
+          </div>
+          <Skeleton className="h-64" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!evaluation) {
+    return (
+      <div className="text-center py-12">
+        <AlertTriangle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+        <h2 className="text-xl font-semibold mb-2">Evaluation Not Found</h2>
+        <Button variant="outline" onClick={() => navigate('/evaluations')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Evaluations
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/evaluations')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Performance Evaluation</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant={evaluation.status === 'finalized' ? 'default' : 'outline'}>
+                {evaluation.status}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                Created {format(new Date(evaluation.created_at), 'MMM d, yyyy')}
+              </span>
+            </div>
+          </div>
+        </div>
+        {!isReadOnly && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Draft
+            </Button>
+            <Button onClick={() => setFinalizeDialogOpen(true)} disabled={isSaving}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Finalize
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Employee Info */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src={employee?.photo_url || ''} />
+                <AvatarFallback className="text-lg">
+                  {employee?.full_name?.charAt(0) || '?'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h2 className="text-lg font-semibold">{employee?.full_name}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {employee?.position} • {employee?.department}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <User className="h-4 w-4" />
+                <span>Reviewer: {reviewer?.full_name}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-muted-foreground">
+                <FileText className="h-4 w-4" />
+                <span className="capitalize">{evaluation.evaluation_type.replace('_', ' ')}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Leadership Toggle */}
+      {!isReadOnly && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-base font-medium">Include Leadership Section</Label>
+                <p className="text-sm text-muted-foreground">
+                  Section 9 - For supervisory/management roles (Max score: {includeLeadership ? '50' : '45'})
+                </p>
+              </div>
+              <Switch
+                checked={includeLeadership}
+                onCheckedChange={setIncludeLeadership}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Sections */}
+        <div className="lg:col-span-2 space-y-4">
+          {EVALUATION_SECTIONS.map((section) => {
+            if (section.number === 9 && !includeLeadership) return null;
+            const score = sectionScores.find(s => s.section_number === section.number);
+            return (
+              <EvaluationSectionCard
+                key={section.number}
+                sectionNumber={section.number}
+                sectionName={section.name}
+                criteria={section.criteria}
+                rating={score?.rating || null}
+                comments={score?.comments || ''}
+                onRatingChange={(rating) => handleSectionRatingChange(section.number, rating)}
+                onCommentsChange={(comments) => handleSectionCommentsChange(section.number, comments)}
+                readOnly={isReadOnly}
+                optional={section.optional}
+              />
+            );
+          })}
+
+          {/* KPIs */}
+          <KPISection
+            kpis={kpis}
+            onKPIsChange={setKpis}
+            readOnly={isReadOnly}
+          />
+
+          {/* Feedback */}
+          <FeedbackSection
+            strengths={feedback.strengths}
+            areasForImprovement={feedback.areas_for_improvement}
+            trainingNeeded={feedback.training_needed}
+            goalsNextPeriod={feedback.goals_next_period}
+            actionPlan={feedback.action_plan}
+            onStrengthsChange={(v) => setFeedback(f => ({ ...f, strengths: v }))}
+            onAreasChange={(v) => setFeedback(f => ({ ...f, areas_for_improvement: v }))}
+            onTrainingChange={(v) => setFeedback(f => ({ ...f, training_needed: v }))}
+            onGoalsChange={(v) => setFeedback(f => ({ ...f, goals_next_period: v }))}
+            onActionPlanChange={(v) => setFeedback(f => ({ ...f, action_plan: v }))}
+            readOnly={isReadOnly}
+          />
+        </div>
+
+        {/* Score Summary */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-20">
+            <ScoreSummary
+              totalScore={calculateTotalScore()}
+              maxScore={getMaxScore()}
+              includeLeadership={includeLeadership}
+              sectionScores={sectionScores.map(s => ({
+                sectionNumber: s.section_number,
+                rating: s.rating
+              }))}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Finalize Dialog */}
+      <AlertDialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalize Evaluation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Once finalized, this evaluation will be visible to the employee and cannot be edited.
+              Are you sure you want to finalize this evaluation?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleSave(true)}>
+              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Finalize
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+
+export default EvaluationDetail;

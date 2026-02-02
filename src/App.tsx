@@ -36,6 +36,8 @@ import EmployeeInvoices from "./pages/EmployeeInvoices";
 import Shoutouts from "./pages/Shoutouts";
 import AdminManagement from "./pages/AdminManagement";
 import Diary from "./pages/Diary";
+import Evaluations from "./pages/Evaluations";
+import EvaluationDetail from "./pages/EvaluationDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -333,6 +335,26 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Diary />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/evaluations"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <Evaluations />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/evaluations/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <EvaluationDetail />
                   </Layout>
                 </ProtectedRoute>
               }

@@ -757,6 +757,80 @@ export type Database = {
           },
         ]
       }
+      employee_evaluations: {
+        Row: {
+          action_plan: string | null
+          areas_for_improvement: string | null
+          created_at: string
+          employee_id: string
+          evaluation_type: string
+          finalized_at: string | null
+          goals_next_period: string | null
+          id: string
+          include_leadership: boolean
+          max_possible_score: number | null
+          overall_result: string | null
+          period_id: string | null
+          reviewer_id: string
+          status: string
+          strengths: string | null
+          submitted_at: string | null
+          total_score: number | null
+          training_needed: string | null
+          updated_at: string
+        }
+        Insert: {
+          action_plan?: string | null
+          areas_for_improvement?: string | null
+          created_at?: string
+          employee_id: string
+          evaluation_type?: string
+          finalized_at?: string | null
+          goals_next_period?: string | null
+          id?: string
+          include_leadership?: boolean
+          max_possible_score?: number | null
+          overall_result?: string | null
+          period_id?: string | null
+          reviewer_id: string
+          status?: string
+          strengths?: string | null
+          submitted_at?: string | null
+          total_score?: number | null
+          training_needed?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action_plan?: string | null
+          areas_for_improvement?: string | null
+          created_at?: string
+          employee_id?: string
+          evaluation_type?: string
+          finalized_at?: string | null
+          goals_next_period?: string | null
+          id?: string
+          include_leadership?: boolean
+          max_possible_score?: number | null
+          overall_result?: string | null
+          period_id?: string | null
+          reviewer_id?: string
+          status?: string
+          strengths?: string | null
+          submitted_at?: string | null
+          total_score?: number | null
+          training_needed?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_evaluations_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_feedback: {
         Row: {
           admin_response: string | null
@@ -984,6 +1058,168 @@ export type Database = {
             columns: ["attendance_id"]
             isOneToOne: false
             referencedRelation: "attendance"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_kpis: {
+        Row: {
+          actual_value: string | null
+          created_at: string
+          evaluation_id: string
+          id: string
+          metric_name: string
+          notes: string | null
+          target_value: string | null
+        }
+        Insert: {
+          actual_value?: string | null
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          metric_name: string
+          notes?: string | null
+          target_value?: string | null
+        }
+        Update: {
+          actual_value?: string | null
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          metric_name?: string
+          notes?: string | null
+          target_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_kpis_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "employee_evaluations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_periods: {
+        Row: {
+          created_at: string
+          created_by: string
+          end_date: string
+          id: string
+          is_active: boolean
+          name: string
+          review_type: string
+          start_date: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          end_date: string
+          id?: string
+          is_active?: boolean
+          name: string
+          review_type: string
+          start_date: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          review_type?: string
+          start_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      evaluation_requests: {
+        Row: {
+          admin_id: string
+          created_at: string
+          due_date: string | null
+          employee_id: string
+          expires_at: string | null
+          id: string
+          message: string | null
+          period_id: string | null
+          review_type: string
+          status: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string
+          due_date?: string | null
+          employee_id: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          period_id?: string | null
+          review_type: string
+          status?: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string
+          due_date?: string | null
+          employee_id?: string
+          expires_at?: string | null
+          id?: string
+          message?: string | null
+          period_id?: string | null
+          review_type?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_requests_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_section_scores: {
+        Row: {
+          comments: string | null
+          created_at: string
+          evaluation_id: string
+          id: string
+          rating: number | null
+          section_name: string
+          section_number: number
+          updated_at: string
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          rating?: number | null
+          section_name: string
+          section_number: number
+          updated_at?: string
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          rating?: number | null
+          section_name?: string
+          section_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_section_scores_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "employee_evaluations"
             referencedColumns: ["id"]
           },
         ]

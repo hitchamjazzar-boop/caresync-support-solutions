@@ -1,6 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, Receipt, Heart, Shield, Bell, ListTodo, type LucideIcon } from 'lucide-react';
+import { LogOut, Users, Clock, FileText, BarChart3, Calendar, DollarSign, User, Megaphone, Network, Mail, MessageSquare, ImageIcon, Vote, Award, Gift, Home, ChevronRight, Settings, Receipt, Heart, Shield, Bell, ListTodo, ClipboardCheck, type LucideIcon } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -122,6 +122,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const settingsNavigation: NavigationItem[] = [
     { name: 'Admin Management', href: '/admin-management', icon: Shield, adminOnly: true },
+    { name: 'Evaluations', href: '/evaluations', icon: ClipboardCheck, adminOnly: true },
     { name: 'Calendar Settings', href: '/calendar/settings', icon: Settings, permission: 'calendar' },
     { name: 'Manage Achievements', href: '/achievements', icon: Award, permission: 'achievements' },
     { name: 'Memo Analytics', href: '/memo-analytics', icon: BarChart3, permission: 'memos' },
