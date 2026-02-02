@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Send, ClipboardCheck, Users, Clock, FileText, FolderKanban, Loader2 } from "lucide-react";
+import { Plus, Send, ClipboardCheck, Users, Clock, FileText, FolderKanban, Loader2, ClipboardList } from "lucide-react";
 import { CreateEvaluationDialog } from "@/components/evaluations/CreateEvaluationDialog";
 import { CreateCampaignDialog } from "@/components/evaluations/CreateCampaignDialog";
 import { RequestEvaluationDialog } from "@/components/evaluations/RequestEvaluationDialog";
@@ -14,6 +14,7 @@ import { RequestPeerEvaluationDialog } from "@/components/evaluations/RequestPee
 import { EvaluationList } from "@/components/evaluations/EvaluationList";
 import { EvaluationRequestCard } from "@/components/evaluations/EvaluationRequestCard";
 import { CampaignList } from "@/components/evaluations/CampaignList";
+import { MyAssignments } from "@/components/evaluations/MyAssignments";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -51,6 +52,7 @@ interface Stats {
   finalized: number;
   pendingRequests: number;
   campaigns: number;
+  myAssignments: number;
 }
 
 const Evaluations = () => {
@@ -64,7 +66,7 @@ const Evaluations = () => {
   const [peerRequestDialogOpen, setPeerRequestDialogOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<EvaluationRequest[]>([]);
   const [myPendingRequests, setMyPendingRequests] = useState<EvaluationRequest[]>([]);
-  const [stats, setStats] = useState<Stats>({ total: 0, draft: 0, finalized: 0, pendingRequests: 0, campaigns: 0 });
+  const [stats, setStats] = useState<Stats>({ total: 0, draft: 0, finalized: 0, pendingRequests: 0, campaigns: 0, myAssignments: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [preselectedEmployeeId, setPreselectedEmployeeId] = useState<string | null>(null);
   const [campaignRefresh, setCampaignRefresh] = useState(0);
@@ -117,13 +119,35 @@ const Evaluations = () => {
         .from('evaluation_campaigns')
         .select('id');
 
+      // Fetch my pending assignments (for campaigns I'm assigned to review)
+      const { data: myAssignments } = await supabase
+        .from('evaluation_assignments')
+        .select('id, status, campaign_id')
+        .eq('reviewer_id', user?.id || '')
+        .eq('status', 'pending');
+
+      // Filter to only count assignments for open campaigns
+      let openAssignmentsCount = 0;
+      if (myAssignments && myAssignments.length > 0) {
+        const campaignIds = [...new Set(myAssignments.map(a => a.campaign_id))];
+        const { data: openCampaigns } = await supabase
+          .from('evaluation_campaigns')
+          .select('id')
+          .in('id', campaignIds)
+          .eq('status', 'open');
+        
+        const openCampaignIds = new Set(openCampaigns?.map(c => c.id) || []);
+        openAssignmentsCount = myAssignments.filter(a => openCampaignIds.has(a.campaign_id)).length;
+      }
+
       if (evaluations) {
         setStats({
           total: evaluations.length,
           draft: evaluations.filter(e => e.status === 'draft').length,
           finalized: evaluations.filter(e => e.status === 'finalized').length,
           pendingRequests: requests?.length || 0,
-          campaigns: campaigns?.length || 0
+          campaigns: campaigns?.length || 0,
+          myAssignments: openAssignmentsCount
         });
       }
     } catch (error: any) {
@@ -392,6 +416,14 @@ const Evaluations = () => {
       <Tabs defaultValue="evaluations" className="space-y-4">
         <TabsList>
           <TabsTrigger value="evaluations">My Evaluations</TabsTrigger>
+          <TabsTrigger value="assignments">
+            My Assignments
+            {stats.myAssignments > 0 && (
+              <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
+                {stats.myAssignments}
+              </span>
+            )}
+          </TabsTrigger>
           {isAdmin && (
             <>
               <TabsTrigger value="campaigns">
@@ -416,6 +448,10 @@ const Evaluations = () => {
 
         <TabsContent value="evaluations">
           <EvaluationList />
+        </TabsContent>
+
+        <TabsContent value="assignments">
+          <MyAssignments />
         </TabsContent>
 
         {isAdmin && (
