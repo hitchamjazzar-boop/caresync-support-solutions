@@ -5,11 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { REVIEW_TYPES } from "@/lib/evaluationConstants";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users, UserCheck } from "lucide-react";
 
 interface RequestPeerEvaluationDialogProps {
   open: boolean;
@@ -31,6 +32,7 @@ export const RequestPeerEvaluationDialog = ({
 }: RequestPeerEvaluationDialogProps) => {
   const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [requestAllEmployees, setRequestAllEmployees] = useState(true);
   const [reviewerId, setReviewerId] = useState<string>('');
   const [targetEmployeeId, setTargetEmployeeId] = useState<string>('');
   const [reviewType, setReviewType] = useState<string>('quarterly');
@@ -43,6 +45,7 @@ export const RequestPeerEvaluationDialog = ({
     if (open) {
       fetchEmployees();
       // Reset form
+      setRequestAllEmployees(true);
       setReviewerId('');
       setTargetEmployeeId('');
       setMessage('');
@@ -66,12 +69,17 @@ export const RequestPeerEvaluationDialog = ({
   };
 
   const handleRequest = async () => {
-    if (!reviewerId || !targetEmployeeId || !user) return;
+    if (!targetEmployeeId || !user) return;
+    
+    if (!requestAllEmployees && !reviewerId) {
+      toast({ title: "Error", description: "Please select a reviewer", variant: "destructive" });
+      return;
+    }
 
-    if (reviewerId === targetEmployeeId) {
+    if (!requestAllEmployees && reviewerId === targetEmployeeId) {
       toast({ 
         title: "Invalid Selection", 
-        description: "The reviewer cannot evaluate themselves. Use 'Request Self-Evaluation' instead.", 
+        description: "The reviewer cannot evaluate themselves.", 
         variant: "destructive" 
       });
       return;
@@ -79,27 +87,54 @@ export const RequestPeerEvaluationDialog = ({
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('evaluation_requests')
-        .insert({
+      if (requestAllEmployees) {
+        // Request all employees (except the target) to evaluate the target
+        const reviewers = employees.filter(e => e.id !== targetEmployeeId);
+        
+        const requests = reviewers.map(reviewer => ({
           admin_id: user.id,
-          employee_id: reviewerId,
+          employee_id: reviewer.id,
           target_employee_id: targetEmployeeId,
           review_type: reviewType,
           message: message || null,
           due_date: dueDate || null,
           status: 'pending'
+        }));
+
+        const { error } = await supabase
+          .from('evaluation_requests')
+          .insert(requests);
+
+        if (error) throw error;
+
+        const target = employees.find(e => e.id === targetEmployeeId);
+        toast({ 
+          title: "Requests Sent", 
+          description: `${reviewers.length} employees have been asked to evaluate ${target?.full_name}` 
         });
+      } else {
+        // Single reviewer request
+        const { error } = await supabase
+          .from('evaluation_requests')
+          .insert({
+            admin_id: user.id,
+            employee_id: reviewerId,
+            target_employee_id: targetEmployeeId,
+            review_type: reviewType,
+            message: message || null,
+            due_date: dueDate || null,
+            status: 'pending'
+          });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const reviewer = employees.find(e => e.id === reviewerId);
-      const target = employees.find(e => e.id === targetEmployeeId);
-
-      toast({ 
-        title: "Request Sent", 
-        description: `${reviewer?.full_name} has been asked to evaluate ${target?.full_name}` 
-      });
+        const reviewer = employees.find(e => e.id === reviewerId);
+        const target = employees.find(e => e.id === targetEmployeeId);
+        toast({ 
+          title: "Request Sent", 
+          description: `${reviewer?.full_name} has been asked to evaluate ${target?.full_name}` 
+        });
+      }
       
       onOpenChange(false);
       onSuccess?.();
@@ -110,6 +145,8 @@ export const RequestPeerEvaluationDialog = ({
     }
   };
 
+  const eligibleReviewerCount = employees.filter(e => e.id !== targetEmployeeId).length;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -119,16 +156,16 @@ export const RequestPeerEvaluationDialog = ({
             Request Peer Evaluation
           </DialogTitle>
           <DialogDescription>
-            Ask an employee to evaluate one of their colleagues
+            Ask employees to evaluate one of their colleagues
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label>Who should do the evaluation? *</Label>
-            <Select value={reviewerId} onValueChange={setReviewerId}>
+            <Label>Who should be evaluated? *</Label>
+            <Select value={targetEmployeeId} onValueChange={setTargetEmployeeId}>
               <SelectTrigger>
-                <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select reviewer"} />
+                <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select employee to evaluate"} />
               </SelectTrigger>
               <SelectContent>
                 {employees.map((emp) => (
@@ -145,28 +182,48 @@ export const RequestPeerEvaluationDialog = ({
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Who should be evaluated? *</Label>
-            <Select value={targetEmployeeId} onValueChange={setTargetEmployeeId}>
-              <SelectTrigger>
-                <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select employee to evaluate"} />
-              </SelectTrigger>
-              <SelectContent>
-                {employees
-                  .filter(emp => emp.id !== reviewerId)
-                  .map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      <div className="flex flex-col">
-                        <span>{emp.full_name}</span>
-                        {emp.position && (
-                          <span className="text-xs text-muted-foreground">{emp.position}</span>
-                        )}
-                      </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <Label className="text-base flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                Request from all employees
+              </Label>
+              <p className="text-sm text-muted-foreground">
+                {targetEmployeeId 
+                  ? `${eligibleReviewerCount} employees will be asked to evaluate`
+                  : "Select an employee first"}
+              </p>
+            </div>
+            <Switch
+              checked={requestAllEmployees}
+              onCheckedChange={setRequestAllEmployees}
+            />
           </div>
+
+          {!requestAllEmployees && (
+            <div className="space-y-2">
+              <Label>Who should do the evaluation? *</Label>
+              <Select value={reviewerId} onValueChange={setReviewerId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select reviewer"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {employees
+                    .filter(emp => emp.id !== targetEmployeeId)
+                    .map((emp) => (
+                      <SelectItem key={emp.id} value={emp.id}>
+                        <div className="flex flex-col">
+                          <span>{emp.full_name}</span>
+                          {emp.position && (
+                            <span className="text-xs text-muted-foreground">{emp.position}</span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Review Type</Label>
@@ -195,7 +252,7 @@ export const RequestPeerEvaluationDialog = ({
           </div>
 
           <div className="space-y-2">
-            <Label>Message to Reviewer (Optional)</Label>
+            <Label>Message to Reviewers (Optional)</Label>
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -209,9 +266,14 @@ export const RequestPeerEvaluationDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleRequest} disabled={!reviewerId || !targetEmployeeId || isLoading}>
+          <Button 
+            onClick={handleRequest} 
+            disabled={!targetEmployeeId || (!requestAllEmployees && !reviewerId) || isLoading}
+          >
             {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Send Request
+            {requestAllEmployees 
+              ? `Send to ${eligibleReviewerCount} Employees` 
+              : "Send Request"}
           </Button>
         </DialogFooter>
       </DialogContent>
