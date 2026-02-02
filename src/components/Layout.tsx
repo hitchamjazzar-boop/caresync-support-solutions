@@ -125,6 +125,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'Calendar Settings', href: '/calendar/settings', icon: Settings, permission: 'calendar' },
     { name: 'Manage Achievements', href: '/achievements', icon: Award, permission: 'achievements' },
     { name: 'Memo Analytics', href: '/memo-analytics', icon: BarChart3, permission: 'memos' },
+    { name: 'Attendance Analytics', href: '/attendance/analytics', icon: BarChart3, permission: 'attendance' },
   ];
 
   const allNavigation = [...mainNavigation, ...settingsNavigation];

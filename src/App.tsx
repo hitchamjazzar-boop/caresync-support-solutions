@@ -17,6 +17,7 @@ import OrgChart from "./pages/OrgChart";
 import Employees from "./pages/Employees";
 import EmployeeProfile from "./pages/EmployeeProfile";
 import Attendance from "./pages/Attendance";
+import AttendanceAnalytics from "./pages/AttendanceAnalytics";
 import Schedules from "./pages/Schedules";
 import Reports from "./pages/Reports";
 import Payroll from "./pages/Payroll";
@@ -144,6 +145,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <Attendance />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/attendance/analytics"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <AttendanceAnalytics />
                   </Layout>
                 </ProtectedRoute>
               }

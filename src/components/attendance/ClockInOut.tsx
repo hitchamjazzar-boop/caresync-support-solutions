@@ -12,6 +12,7 @@ import { Clock, Coffee, LogOut, Play, Pause, User, Timer, MoreHorizontal, Briefc
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { EarlyClockOutDialog } from './EarlyClockOutDialog';
 
 interface ActiveAttendance {
   id: string;
@@ -53,6 +54,8 @@ export const ClockInOut = () => {
   const [todaysBreaks, setTodaysBreaks] = useState<BreakRecord[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
+  const [showEarlyClockOutDialog, setShowEarlyClockOutDialog] = useState(false);
+  const [pendingClockOutData, setPendingClockOutData] = useState<{ hours: number; minutes: number } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -260,6 +263,32 @@ export const ClockInOut = () => {
       return;
     }
 
+    // Calculate current worked hours (excluding breaks)
+    const now = new Date();
+    const start = new Date(activeAttendance.clock_in);
+    let elapsedMs = now.getTime() - start.getTime();
+    elapsedMs -= calculateTotalBreakTime(todaysBreaks);
+    
+    const workedHours = Math.floor(elapsedMs / 1000 / 60 / 60);
+    const workedMinutes = Math.floor((elapsedMs / 1000 / 60) % 60);
+    const totalWorkedHours = elapsedMs / 1000 / 60 / 60;
+
+    // Check if under 8 hours
+    if (totalWorkedHours < 8) {
+      setPendingClockOutData({ hours: workedHours, minutes: workedMinutes });
+      setShowEarlyClockOutDialog(true);
+      setLoading(false);
+      return;
+    }
+
+    // Proceed with clock out
+    await executeClockOut();
+  };
+
+  const executeClockOut = async () => {
+    if (!activeAttendance) return;
+    setLoading(true);
+
     const clockOutTime = new Date().toISOString();
     
     // Fetch completed breaks for accurate calculation
@@ -293,6 +322,8 @@ export const ClockInOut = () => {
       setTodaysBreaks([]);
     }
 
+    setShowEarlyClockOutDialog(false);
+    setPendingClockOutData(null);
     setLoading(false);
   };
 
@@ -510,6 +541,15 @@ export const ClockInOut = () => {
           </Button>
         )}
       </CardContent>
+
+      {/* Early Clock-Out Warning Dialog */}
+      <EarlyClockOutDialog
+        open={showEarlyClockOutDialog}
+        onOpenChange={setShowEarlyClockOutDialog}
+        workedHours={pendingClockOutData?.hours || 0}
+        workedMinutes={pendingClockOutData?.minutes || 0}
+        onConfirm={executeClockOut}
+      />
     </Card>
   );
 };
