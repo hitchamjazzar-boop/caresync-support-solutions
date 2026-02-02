@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { 
   ArrowLeft, CheckCircle, Users, Loader2, 
-  ClipboardCheck, AlertTriangle, Eye
+  ClipboardCheck, AlertTriangle, Eye, Trash2
 } from "lucide-react";
 import { EVALUATION_SECTIONS, getOverallResult } from "@/lib/evaluationConstants";
 import {
@@ -74,7 +74,9 @@ const CampaignDetail = () => {
   const [aggregatedScores, setAggregatedScores] = useState<AggregatedScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFinalizing, setIsFinalizing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -193,6 +195,28 @@ const CampaignDetail = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+    setIsDeleting(true);
+    try {
+      // Delete evaluations first
+      await supabase.from('employee_evaluations').delete().eq('campaign_id', id);
+      // Delete assignments
+      await supabase.from('evaluation_assignments').delete().eq('campaign_id', id);
+      // Delete campaign
+      const { error } = await supabase.from('evaluation_campaigns').delete().eq('id', id);
+      
+      if (error) throw error;
+      toast({ title: "Success", description: "Campaign deleted successfully." });
+      navigate('/evaluations');
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   const submittedCount = assignments.filter(a => a.status === 'submitted').length;
   const totalAssignments = assignments.length;
   const totalScore = aggregatedScores.reduce((sum, s) => sum + s.average_rating, 0);
@@ -246,12 +270,18 @@ const CampaignDetail = () => {
             </div>
           </div>
         </div>
-        {campaign.status !== 'finalized' && submittedCount > 0 && (
-          <Button onClick={() => setFinalizeDialogOpen(true)} disabled={isFinalizing}>
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Finalize Campaign
+        <div className="flex gap-2">
+          {campaign.status !== 'finalized' && submittedCount > 0 && (
+            <Button onClick={() => setFinalizeDialogOpen(true)} disabled={isFinalizing}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Finalize Campaign
+            </Button>
+          )}
+          <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
           </Button>
-        )}
+        </div>
       </div>
 
       {/* Employee Info */}
@@ -432,6 +462,26 @@ const CampaignDetail = () => {
             <AlertDialogAction onClick={handleFinalize}>
               {isFinalizing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Finalize
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Campaign</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete this evaluation campaign and all associated submissions.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
