@@ -17,6 +17,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { format, parseISO } from 'date-fns';
 import {
@@ -31,6 +37,8 @@ import {
   TrendingUp,
   FileText,
   Wallet,
+  QrCode,
+  ZoomIn,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
@@ -55,6 +63,7 @@ interface Profile {
   account_holder_name: string | null;
   account_number: string | null;
   routing_number: string | null;
+  qr_code_url: string | null;
 }
 
 interface AttendanceRecord {
@@ -95,6 +104,7 @@ export default function EmployeeProfile() {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [payroll, setPayroll] = useState<PayrollRecord[]>([]);
   const [eodReports, setEODReports] = useState<EODReport[]>([]);
+  const [qrPreviewOpen, setQrPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -489,6 +499,32 @@ export default function EmployeeProfile() {
                     )}
                   </div>
                 )}
+
+                {/* QR Code Section */}
+                {profile.qr_code_url && (
+                  <div className="mt-6 pt-6 border-t">
+                    <div className="flex items-center gap-2 mb-4">
+                      <QrCode className="h-4 w-4 text-muted-foreground" />
+                      <Label className="text-sm font-medium">Payment QR Code</Label>
+                    </div>
+                    <div 
+                      className="relative w-fit cursor-pointer group"
+                      onClick={() => setQrPreviewOpen(true)}
+                    >
+                      <img
+                        src={profile.qr_code_url}
+                        alt="Payment QR Code"
+                        className="max-w-[150px] rounded-lg border border-border shadow-sm transition-transform group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-background/60 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                        <ZoomIn className="h-6 w-6 text-foreground" />
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Click to preview
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
@@ -660,6 +696,24 @@ export default function EmployeeProfile() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* QR Code Preview Dialog */}
+      <Dialog open={qrPreviewOpen} onOpenChange={setQrPreviewOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{profile?.full_name}'s QR Code</DialogTitle>
+          </DialogHeader>
+          {profile?.qr_code_url && (
+            <div className="flex justify-center p-4">
+              <img
+                src={profile.qr_code_url}
+                alt="Payment QR Code"
+                className="max-w-full rounded-lg"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
