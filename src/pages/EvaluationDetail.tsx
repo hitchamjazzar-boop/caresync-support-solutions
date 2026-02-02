@@ -90,6 +90,7 @@ const EvaluationDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
+  const [adminFinalizeDialogOpen, setAdminFinalizeDialogOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -314,11 +315,92 @@ const EvaluationDetail = () => {
     }
   };
 
+  // Admin finalize - creates official evaluation with KPIs and Feedback
+  const handleAdminFinalize = async () => {
+    if (!evaluation || !id || !isAdmin) return;
+
+    setIsSaving(true);
+
+    try {
+      const totalScore = calculateTotalScore();
+      const maxScore = getMaxScore();
+      const result = getOverallResult(totalScore, maxScore);
+
+      // Update evaluation to finalized status
+      const { error: evalError } = await supabase
+        .from('employee_evaluations')
+        .update({
+          include_leadership: includeLeadership,
+          total_score: totalScore,
+          max_possible_score: maxScore,
+          overall_result: result,
+          status: 'finalized',
+          finalized_at: new Date().toISOString(),
+          strengths: feedback.strengths || null,
+          areas_for_improvement: feedback.areas_for_improvement || null,
+          training_needed: feedback.training_needed || null,
+          goals_next_period: feedback.goals_next_period || null,
+          action_plan: feedback.action_plan || null
+        })
+        .eq('id', id);
+
+      if (evalError) throw evalError;
+
+      // Save section scores
+      await supabase.from('evaluation_section_scores').delete().eq('evaluation_id', id);
+      
+      const scoresToInsert = sectionScores
+        .filter(s => includeLeadership || s.section_number !== 9)
+        .map(s => ({
+          evaluation_id: id,
+          section_number: s.section_number,
+          section_name: s.section_name,
+          rating: s.rating,
+          comments: s.comments || null
+        }));
+
+      if (scoresToInsert.length > 0) {
+        await supabase.from('evaluation_section_scores').insert(scoresToInsert);
+      }
+
+      // Save KPIs
+      await supabase.from('evaluation_kpis').delete().eq('evaluation_id', id);
+      
+      if (kpis.length > 0) {
+        await supabase.from('evaluation_kpis').insert(kpis.map(k => ({
+          evaluation_id: id,
+          metric_name: k.metric_name,
+          target_value: k.target_value || null,
+          actual_value: k.actual_value || null,
+          notes: k.notes || null
+        })));
+      }
+
+      toast({ 
+        title: "Evaluation Finalized", 
+        description: "The evaluation has been finalized and is now visible to the employee."
+      });
+
+      fetchEvaluation();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+      setAdminFinalizeDialogOpen(false);
+    }
+  };
+
   // Determine if read-only: submitted/finalized evaluations are read-only, OR if user is not the reviewer
   const isReviewer = evaluation?.reviewer_id === user?.id;
   const isEmployee = evaluation?.employee_id === user?.id && !isReviewer;
   const isSubmitted = evaluation?.status === 'submitted';
-  const isReadOnly = isSubmitted || evaluation?.status === 'finalized' || (!isAdmin && !isReviewer);
+  const isFinalized = evaluation?.status === 'finalized';
+  
+  // Regular users can't edit submitted/finalized, but admins can edit KPI/Feedback on submitted
+  const isReadOnly = isFinalized || (!isAdmin && (isSubmitted || !isReviewer));
+  
+  // Admin can edit KPI/Feedback on submitted evaluations (before finalizing)
+  const canAdminEditKPIFeedback = isAdmin && isSubmitted && !isFinalized;
   
   // Employees viewing their own evaluation shouldn't see KPIs and Feedback sections
   const showKPIAndFeedback = isAdmin || isReviewer;
@@ -373,18 +455,28 @@ const EvaluationDetail = () => {
             </div>
           </div>
         </div>
-        {!isReadOnly && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
-              {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              Save Draft
-            </Button>
-            <Button onClick={() => setFinalizeDialogOpen(true)} disabled={isSaving}>
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {!isReadOnly && (
+            <>
+              <Button variant="outline" onClick={() => handleSave(false)} disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Save Draft
+              </Button>
+              <Button onClick={() => setFinalizeDialogOpen(true)} disabled={isSaving}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Submit
+              </Button>
+            </>
+          )}
+          {/* Admin Finalize Button - shown for submitted evaluations */}
+          {isAdmin && isSubmitted && !isFinalized && (
+            <Button onClick={() => setAdminFinalizeDialogOpen(true)} disabled={isSaving} variant="default">
               <CheckCircle className="h-4 w-4 mr-2" />
-              Submit
+              Finalize for Employee
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Employee Info */}
@@ -462,16 +554,16 @@ const EvaluationDetail = () => {
             );
           })}
 
-          {/* KPIs - Hidden from employees viewing their own evaluation */}
+          {/* KPIs - Hidden from employees viewing their own evaluation, editable by admin on submitted */}
           {showKPIAndFeedback && (
             <KPISection
               kpis={kpis}
               onKPIsChange={setKpis}
-              readOnly={isReadOnly}
+              readOnly={isReadOnly && !canAdminEditKPIFeedback}
             />
           )}
 
-          {/* Feedback - Hidden from employees viewing their own evaluation */}
+          {/* Feedback - Hidden from employees viewing their own evaluation, editable by admin on submitted */}
           {showKPIAndFeedback && (
             <FeedbackSection
               strengths={feedback.strengths}
@@ -484,7 +576,7 @@ const EvaluationDetail = () => {
               onTrainingChange={(v) => setFeedback(f => ({ ...f, training_needed: v }))}
               onGoalsChange={(v) => setFeedback(f => ({ ...f, goals_next_period: v }))}
               onActionPlanChange={(v) => setFeedback(f => ({ ...f, action_plan: v }))}
-              readOnly={isReadOnly}
+              readOnly={isReadOnly && !canAdminEditKPIFeedback}
             />
           )}
         </div>
@@ -520,6 +612,27 @@ const EvaluationDetail = () => {
             <AlertDialogAction onClick={() => handleSave(true)}>
               {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Submit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Admin Finalize Dialog */}
+      <AlertDialog open={adminFinalizeDialogOpen} onOpenChange={setAdminFinalizeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalize Evaluation for Employee</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will finalize the evaluation and make it visible to the employee. 
+              Make sure you have added KPIs and feedback before finalizing.
+              The employee will see the ratings and comments but not the KPIs and Feedback sections.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleAdminFinalize}>
+              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Finalize
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
