@@ -52,8 +52,11 @@ interface BreakTimeReportProps {
   loading: boolean;
 }
 
-const BREAK_LIMIT_MINUTES = 15;
-const WARNING_MINUTES = 20;
+// Lunch break has a separate 60-minute limit
+const LUNCH_LIMIT_MINUTES = 60;
+// Other breaks (coffee, bathroom, personal, other) share a 15-minute limit
+const OTHER_BREAK_LIMIT_MINUTES = 15;
+const OTHER_WARNING_MINUTES = 20;
 
 export const BreakTimeReport = ({ records, loading }: BreakTimeReportProps) => {
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -68,6 +71,19 @@ export const BreakTimeReport = ({ records, loading }: BreakTimeReportProps) => {
       }
       return next;
     });
+  };
+
+  const calculateBreakMinutes = (breaks: BreakRecord[], type: 'lunch' | 'other') => {
+    return breaks
+      .filter((brk) => (type === 'lunch' ? brk.break_type === 'lunch' : brk.break_type !== 'lunch'))
+      .reduce((total, brk) => {
+        if (brk.break_end) {
+          const start = new Date(brk.break_start);
+          const end = new Date(brk.break_end);
+          return total + (end.getTime() - start.getTime()) / 1000 / 60;
+        }
+        return total;
+      }, 0);
   };
 
   const calculateTotalBreakMinutes = (breaks: BreakRecord[]) => {
@@ -88,14 +104,18 @@ export const BreakTimeReport = ({ records, loading }: BreakTimeReportProps) => {
     return `${hours}h ${mins}m`;
   };
 
-  const getStatusBadge = (totalMinutes: number) => {
-    if (totalMinutes <= BREAK_LIMIT_MINUTES) {
-      return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">OK</Badge>;
+  const getStatusBadge = (lunchMinutes: number, otherMinutes: number) => {
+    const lunchOver = lunchMinutes > LUNCH_LIMIT_MINUTES;
+    const otherOver = otherMinutes > OTHER_BREAK_LIMIT_MINUTES;
+    const otherWarning = otherMinutes > OTHER_BREAK_LIMIT_MINUTES && otherMinutes <= OTHER_WARNING_MINUTES;
+
+    if (lunchOver || otherOver) {
+      return <Badge variant="destructive">Over Limit</Badge>;
     }
-    if (totalMinutes <= WARNING_MINUTES) {
+    if (otherWarning) {
       return <Badge className="bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border-amber-500/20">Warning</Badge>;
     }
-    return <Badge variant="destructive">Over Limit</Badge>;
+    return <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20">OK</Badge>;
   };
 
   if (loading) {
@@ -123,14 +143,15 @@ export const BreakTimeReport = ({ records, loading }: BreakTimeReportProps) => {
             <TableHead>Employee</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Work Hours</TableHead>
-            <TableHead>Total Break Time</TableHead>
-            <TableHead>Break Count</TableHead>
+            <TableHead>Lunch (60m max)</TableHead>
+            <TableHead>Other Breaks (15m max)</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {records.map((record) => {
-            const totalBreakMinutes = calculateTotalBreakMinutes(record.breaks);
+            const lunchMinutes = calculateBreakMinutes(record.breaks, 'lunch');
+            const otherMinutes = calculateBreakMinutes(record.breaks, 'other');
             const isExpanded = expandedRows.has(record.id);
             const hasBreaks = record.breaks.length > 0;
 
@@ -169,12 +190,16 @@ export const BreakTimeReport = ({ records, loading }: BreakTimeReportProps) => {
                       {record.total_hours ? `${record.total_hours.toFixed(1)}h` : record.status === 'active' ? 'In progress' : '-'}
                     </TableCell>
                     <TableCell>
-                      <span className={totalBreakMinutes > BREAK_LIMIT_MINUTES ? 'text-destructive font-medium' : ''}>
-                        {formatMinutes(totalBreakMinutes)}
+                      <span className={lunchMinutes > LUNCH_LIMIT_MINUTES ? 'text-destructive font-medium' : ''}>
+                        {formatMinutes(lunchMinutes)}
                       </span>
                     </TableCell>
-                    <TableCell>{record.breaks.length}</TableCell>
-                    <TableCell>{getStatusBadge(totalBreakMinutes)}</TableCell>
+                    <TableCell>
+                      <span className={otherMinutes > OTHER_BREAK_LIMIT_MINUTES ? 'text-destructive font-medium' : ''}>
+                        {formatMinutes(otherMinutes)}
+                      </span>
+                    </TableCell>
+                    <TableCell>{getStatusBadge(lunchMinutes, otherMinutes)}</TableCell>
                   </TableRow>
                   <CollapsibleContent asChild>
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
