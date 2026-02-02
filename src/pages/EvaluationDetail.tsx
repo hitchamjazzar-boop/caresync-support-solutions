@@ -297,19 +297,19 @@ const EvaluationDetail = () => {
           .eq('reviewer_id', user?.id);
       }
 
-      // Mark the evaluation request as completed when submitting
+      // Mark the evaluation request as submitted when submitting
       // Match by requestId from URL, or by matching reviewer and target employee
       if (submit) {
         if (requestId) {
           await supabase
             .from('evaluation_requests')
-            .update({ status: 'completed' })
+            .update({ status: 'submitted' })
             .eq('id', requestId);
         } else {
-          // Find and complete any matching pending request
+          // Find and mark any matching pending request as submitted
           await supabase
             .from('evaluation_requests')
-            .update({ status: 'completed' })
+            .update({ status: 'submitted' })
             .eq('employee_id', user?.id)
             .eq('target_employee_id', evaluation.employee_id)
             .eq('status', 'pending');
