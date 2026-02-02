@@ -57,6 +57,7 @@ interface Evaluation {
   action_plan: string | null;
   created_at: string;
   finalized_at: string | null;
+  campaign_id: string | null;
 }
 
 interface Profile {
@@ -190,7 +191,7 @@ const EvaluationDetail = () => {
 
   const getMaxScore = () => includeLeadership ? 50 : 45;
 
-  const handleSave = async (finalize = false) => {
+  const handleSave = async (submit = false) => {
     if (!evaluation || !id) return;
     setIsSaving(true);
 
@@ -207,8 +208,8 @@ const EvaluationDetail = () => {
           total_score: totalScore,
           max_possible_score: maxScore,
           overall_result: result,
-          status: finalize ? 'finalized' : 'draft',
-          finalized_at: finalize ? new Date().toISOString() : null,
+          status: submit ? 'submitted' : 'draft',
+          submitted_at: submit ? new Date().toISOString() : null,
           strengths: feedback.strengths || null,
           areas_for_improvement: feedback.areas_for_improvement || null,
           training_needed: feedback.training_needed || null,
@@ -255,14 +256,23 @@ const EvaluationDetail = () => {
         if (kpiError) throw kpiError;
       }
 
+      // Update assignment status if submitting
+      if (submit && evaluation.campaign_id) {
+        await supabase
+          .from('evaluation_assignments')
+          .update({ status: 'submitted', submitted_at: new Date().toISOString() })
+          .eq('campaign_id', evaluation.campaign_id)
+          .eq('reviewer_id', user?.id);
+      }
+
       toast({ 
-        title: finalize ? "Evaluation Finalized" : "Saved", 
-        description: finalize 
-          ? "The evaluation has been finalized and is now visible to the employee"
+        title: submit ? "Evaluation Submitted" : "Saved", 
+        description: submit 
+          ? "Your evaluation has been submitted successfully"
           : "Changes saved successfully" 
       });
 
-      if (finalize) {
+      if (submit) {
         navigate('/evaluations');
       } else {
         fetchEvaluation();
@@ -275,9 +285,10 @@ const EvaluationDetail = () => {
     }
   };
 
-  // Determine if read-only: finalized evaluations are read-only, OR if user is not the reviewer
+  // Determine if read-only: submitted/finalized evaluations are read-only, OR if user is not the reviewer
   const isReviewer = evaluation?.reviewer_id === user?.id;
-  const isReadOnly = evaluation?.status === 'finalized' || (!isAdmin && !isReviewer);
+  const isSubmitted = evaluation?.status === 'submitted';
+  const isReadOnly = isSubmitted || evaluation?.status === 'finalized' || (!isAdmin && !isReviewer);
 
   if (isLoading) {
     return (
@@ -335,12 +346,10 @@ const EvaluationDetail = () => {
               {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save Draft
             </Button>
-            {isAdmin && (
-              <Button onClick={() => setFinalizeDialogOpen(true)} disabled={isSaving}>
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Finalize
-              </Button>
-            )}
+            <Button onClick={() => setFinalizeDialogOpen(true)} disabled={isSaving}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Submit
+            </Button>
           </div>
         )}
       </div>
@@ -459,21 +468,21 @@ const EvaluationDetail = () => {
         </div>
       </div>
 
-      {/* Finalize Dialog */}
+      {/* Submit Dialog */}
       <AlertDialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Finalize Evaluation</AlertDialogTitle>
+            <AlertDialogTitle>Submit Evaluation</AlertDialogTitle>
             <AlertDialogDescription>
-              Once finalized, this evaluation will be visible to the employee and cannot be edited.
-              Are you sure you want to finalize this evaluation?
+              Once submitted, you cannot edit this evaluation. The admin will review all submissions
+              before finalizing the results. Are you sure you want to submit?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => handleSave(true)}>
               {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Finalize
+              Submit
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
