@@ -1,103 +1,98 @@
 
 
-## Break Time Report & Early Clock-Out Warning
+## Updated Break Time & Clock-Out Logic
 
-### Overview
-This plan implements two key features:
-1. **Attendance Analytics Report** - A new admin-only page showing break time analysis with alerts for employees exceeding the 15-minute daily break limit
-2. **Early Clock-Out Confirmation** - A warning dialog when employees try to clock out before completing 8 hours of work
+### Current vs New Logic
 
----
+**Current Logic:**
+- Fixed 8-hour requirement
+- Warning shows if worked < 8 hours
+- Doesn't account for break overages in required time
 
-### Feature 1: Attendance Analytics Report (Admin Only)
+**New Logic:**
+- Base requirement: 8 hours
+- Free lunch: 60 minutes (anything over must be made up)
+- Free other breaks: 15 minutes (anything over must be made up)
+- **Required time = 8 hours + excess lunch time + excess other breaks time**
 
-**New Page: `src/pages/AttendanceAnalytics.tsx`**
+### Example Scenarios
 
-This will include:
+| Lunch Used | Other Breaks | Excess | Required Work Time |
+|------------|--------------|--------|-------------------|
+| 60m | 15m | 0m | 8h 0m |
+| 60m | 25m | 10m | 8h 10m |
+| 70m | 15m | 10m | 8h 10m |
+| 70m | 25m | 20m | 8h 20m |
+| 45m | 10m | 0m | 8h 0m |
 
-**Summary Cards:**
-- Total employees tracked today
-- Employees currently working
-- Employees on break
-- Employees exceeding break limit (flagged in red)
+### Implementation Changes
 
-**Main Report Table:**
-| Employee | Date | Total Work Hours | Total Break Time | Break Count | Status |
-|----------|------|------------------|------------------|-------------|--------|
-| John Doe | Feb 2 | 7.5h | 22m | 3 | Over Limit |
-| Jane Smith | Feb 2 | 8.2h | 12m | 2 | OK |
+**File: `src/components/attendance/ClockInOut.tsx`**
 
-**Break Breakdown (expandable per employee):**
-- Lunch: 10m (10:30 - 10:40)
-- Coffee: 5m (14:00 - 14:05)
-- Bathroom: 7m (16:00 - 16:07)
+Update `handleClockOut` to calculate dynamic required time:
 
-**Visual Indicators:**
-- Green badge: Under 15 minutes total breaks
-- Yellow badge: 15-20 minutes (warning)
-- Red badge: Over 20 minutes (exceeded)
+```text
+// Calculate excess break time
+const lunchExcess = Math.max(0, lunchBreakMinutes - 60);
+const otherExcess = Math.max(0, otherBreakMinutes - 15);
+const totalExcessMinutes = lunchExcess + otherExcess;
 
-**Filters:**
-- Date range picker (Today, This Week, This Month, Custom)
-- Employee dropdown
-- "Show only exceeded" toggle
+// Required work time = 8 hours + excess breaks
+const requiredMinutes = (8 * 60) + totalExcessMinutes;
+const totalWorkedMinutes = (workedHours * 60) + workedMinutes;
 
----
-
-### Feature 2: Early Clock-Out Confirmation
-
-**Modified: `src/components/attendance/ClockInOut.tsx`**
-
-When an employee clicks "Clock Out":
-
-1. **Calculate worked hours** (excluding breaks)
-2. **If under 8 hours**, show an AlertDialog:
-
-```
-Are you sure you want to clock out early?
-
-You've only worked 6h 45m today.
-Required: 8 hours
-Shortfall: 1h 15m
-
-This will be recorded in your attendance history.
-
-[Continue Clock Out] [Cancel]
+if (totalWorkedMinutes < requiredMinutes) {
+  // Show early clock-out dialog with dynamic required time
+}
 ```
 
-3. **If at or over 8 hours**, proceed normally with success toast
+**File: `src/components/attendance/EarlyClockOutDialog.tsx`**
 
----
+Update to accept dynamic required time and show breakdown:
 
-### Technical Implementation
+- New props: `requiredHours`, `requiredMinutes`, `lunchExcess`, `otherExcess`
+- Show why extra time is needed if breaks were exceeded
+- Display: "You need to make up 10m due to exceeded breaks"
 
-**Files to Create:**
-1. `src/pages/AttendanceAnalytics.tsx` - Main analytics page
-2. `src/components/attendance/BreakTimeReport.tsx` - Report table component
-3. `src/components/attendance/EarlyClockOutDialog.tsx` - Confirmation dialog
+**Updated Warning Message:**
 
-**Files to Modify:**
-1. `src/App.tsx` - Add route `/attendance/analytics`
-2. `src/components/attendance/ClockInOut.tsx` - Add early clock-out check
-3. `src/components/Layout.tsx` - Add navigation link (admin only)
+```text
+┌────────────────────────────────────────┐
+│  ⚠️ Clock out early?                   │
+├────────────────────────────────────────┤
+│  Time worked:      7h 45m              │
+│  Base requirement: 8h 0m               │
+│  + Lunch overtime: 10m (70m used)      │
+│  + Break overtime: 5m (20m used)       │
+│  ────────────────────────────          │
+│  Total required:   8h 15m              │
+│  Shortfall:        30m                 │
+├────────────────────────────────────────┤
+│  [Cancel]  [Continue Clock Out]        │
+└────────────────────────────────────────┘
+```
 
-**Data Flow:**
-- Query `attendance` table for date range
-- Join with `attendance_breaks` for break details
-- Join with `profiles` for employee names
-- Calculate totals and flag violations
+**Updated Break Warning (already visible while working):**
 
----
+If they exceed limits, show message like:
+> "You've exceeded your break limit! You need to work an extra 10m today to cover your breaks."
 
-### Database
-No database changes required - all data already exists in `attendance` and `attendance_breaks` tables.
+### Files to Modify
 
----
+1. **`src/components/attendance/ClockInOut.tsx`**
+   - Calculate excess break time
+   - Pass dynamic required time to dialog
+   - Update warning message to show time owed
+
+2. **`src/components/attendance/EarlyClockOutDialog.tsx`**
+   - Accept new props for dynamic requirements
+   - Show breakdown of base time + excess breaks
+   - Display specific overtime amounts
 
 ### Summary
-- New analytics page at `/attendance/analytics` (admin only)
-- Shows which employees exceed 15-minute daily break limit
-- Detailed breakdown of each break type and duration
-- Confirmation dialog warns employees clocking out before 8 hours
-- Uses existing UI patterns (recharts, tables, badges) from PayrollAnalytics
+
+- Employees get 60m lunch + 15m other breaks for free
+- Any time over these limits adds to their 8-hour requirement
+- The early clock-out dialog will show exactly why they need extra time
+- The in-app warning will tell them how much extra time they owe
 
