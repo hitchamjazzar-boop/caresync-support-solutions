@@ -12,7 +12,7 @@ import { RequestEvaluationDialog } from "@/components/evaluations/RequestEvaluat
 import { RequestPeerEvaluationDialog } from "@/components/evaluations/RequestPeerEvaluationDialog";
 import { EvaluationList } from "@/components/evaluations/EvaluationList";
 import { EvaluationRequestCard } from "@/components/evaluations/EvaluationRequestCard";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface EvaluationRequest {
@@ -44,6 +44,7 @@ const Evaluations = () => {
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [peerRequestDialogOpen, setPeerRequestDialogOpen] = useState(false);
@@ -51,6 +52,28 @@ const Evaluations = () => {
   const [myPendingRequests, setMyPendingRequests] = useState<EvaluationRequest[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, draft: 0, finalized: 0, pendingRequests: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [preselectedEmployeeId, setPreselectedEmployeeId] = useState<string | null>(null);
+
+  // Handle link-based evaluation requests
+  useEffect(() => {
+    const evaluateTarget = searchParams.get('evaluateTarget');
+    if (evaluateTarget && user) {
+      // Check if user is trying to evaluate themselves
+      if (evaluateTarget === user.id) {
+        toast({ 
+          title: "Invalid Link", 
+          description: "You cannot evaluate yourself using this link.", 
+          variant: "destructive" 
+        });
+        setSearchParams({});
+        return;
+      }
+      setPreselectedEmployeeId(evaluateTarget);
+      setCreateDialogOpen(true);
+      // Clear the URL params after opening dialog
+      setSearchParams({});
+    }
+  }, [searchParams, user]);
 
   useEffect(() => {
     fetchStats();
@@ -337,7 +360,11 @@ const Evaluations = () => {
       {/* Dialogs */}
       <CreateEvaluationDialog
         open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
+        onOpenChange={(open) => {
+          setCreateDialogOpen(open);
+          if (!open) setPreselectedEmployeeId(null);
+        }}
+        preselectedEmployeeId={preselectedEmployeeId}
       />
       <RequestEvaluationDialog
         open={requestDialogOpen}
