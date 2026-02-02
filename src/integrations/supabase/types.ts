@@ -1284,6 +1284,7 @@ export type Database = {
           payment_method: string | null
           photo_url: string | null
           position: string | null
+          qr_code_url: string | null
           routing_number: string | null
           start_date: string
           updated_at: string
@@ -1307,6 +1308,7 @@ export type Database = {
           payment_method?: string | null
           photo_url?: string | null
           position?: string | null
+          qr_code_url?: string | null
           routing_number?: string | null
           start_date?: string
           updated_at?: string
@@ -1330,6 +1332,7 @@ export type Database = {
           payment_method?: string | null
           photo_url?: string | null
           position?: string | null
+          qr_code_url?: string | null
           routing_number?: string | null
           start_date?: string
           updated_at?: string
