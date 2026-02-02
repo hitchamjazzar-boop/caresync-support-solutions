@@ -14,7 +14,8 @@ export type AdminPermission =
   | 'achievements' 
   | 'voting' 
   | 'schedules' 
-  | 'calendar';
+  | 'calendar'
+  | 'attendance_analytics';
 
 export const useAdmin = () => {
   const { user } = useAuth();
