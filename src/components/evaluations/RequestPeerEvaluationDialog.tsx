@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { REVIEW_TYPES } from "@/lib/evaluationConstants";
-import { Loader2, Users, UserCheck } from "lucide-react";
+import { Loader2, Users, UserCheck, Link, Copy, Check } from "lucide-react";
 
 interface RequestPeerEvaluationDialogProps {
   open: boolean;
@@ -40,6 +40,8 @@ export const RequestPeerEvaluationDialog = ({
   const [dueDate, setDueDate] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -50,6 +52,8 @@ export const RequestPeerEvaluationDialog = ({
       setTargetEmployeeId('');
       setMessage('');
       setDueDate('');
+      setGeneratedLink(null);
+      setLinkCopied(false);
     }
   }, [open]);
 
@@ -142,6 +146,30 @@ export const RequestPeerEvaluationDialog = ({
       toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateLink = () => {
+    if (!targetEmployeeId) {
+      toast({ title: "Error", description: "Please select an employee to evaluate", variant: "destructive" });
+      return;
+    }
+    
+    const baseUrl = window.location.origin;
+    const link = `${baseUrl}/evaluations?evaluateTarget=${targetEmployeeId}&reviewType=${reviewType}`;
+    setGeneratedLink(link);
+  };
+
+  const handleCopyLink = async () => {
+    if (!generatedLink) return;
+    
+    try {
+      await navigator.clipboard.writeText(generatedLink);
+      setLinkCopied(true);
+      toast({ title: "Link Copied", description: "The evaluation link has been copied to your clipboard" });
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to copy link", variant: "destructive" });
     }
   };
 
@@ -260,21 +288,60 @@ export const RequestPeerEvaluationDialog = ({
               className="min-h-[100px] resize-none"
             />
           </div>
+
+          {generatedLink && (
+            <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
+              <Label className="flex items-center gap-2 text-primary">
+                <Link className="h-4 w-4" />
+                Shareable Evaluation Link
+              </Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Share this link with employees. They must be logged in to submit their evaluation.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  value={generatedLink}
+                  readOnly
+                  className="flex-1 text-sm bg-background"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={handleCopyLink}
+                >
+                  {linkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
           <Button 
-            onClick={handleRequest} 
-            disabled={!targetEmployeeId || (!requestAllEmployees && !reviewerId) || isLoading}
+            type="button"
+            variant="outline" 
+            onClick={handleGenerateLink}
+            disabled={!targetEmployeeId}
+            className="w-full sm:w-auto"
           >
-            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {requestAllEmployees 
-              ? `Send to ${eligibleReviewerCount} Employees` 
-              : "Send Request"}
+            <Link className="h-4 w-4 mr-2" />
+            Generate Link
           </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleRequest} 
+              disabled={!targetEmployeeId || (!requestAllEmployees && !reviewerId) || isLoading}
+            >
+              {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {requestAllEmployees 
+                ? `Send to ${eligibleReviewerCount} Employees` 
+                : "Send Request"}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
