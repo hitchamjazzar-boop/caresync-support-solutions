@@ -29,6 +29,7 @@ const PERMISSION_TYPES = [
   { key: 'shoutouts', label: 'Shout Outs', description: 'Manage shout outs' },
   { key: 'achievements', label: 'Achievements', description: 'Award achievements to employees' },
   { key: 'voting', label: 'Voting', description: 'Manage employee voting' },
+  { key: 'voting_weight', label: 'Voting Weight', description: 'Vote counts as weighted admin vote' },
   { key: 'calendar', label: 'Calendar', description: 'Manage calendar events' },
 ];
 

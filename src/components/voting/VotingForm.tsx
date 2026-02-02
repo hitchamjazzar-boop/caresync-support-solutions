@@ -32,12 +32,15 @@ interface VotingFormProps {
 
 export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVoted }: VotingFormProps) => {
   const { user } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { hasPermission } = useAdmin();
   const [nominees, setNominees] = useState<Nominee[]>([]);
   const [selectedNominee, setSelectedNominee] = useState('');
   const [reason, setReason] = useState('');
   const [loading, setLoading] = useState(false);
   const [fetchingNominees, setFetchingNominees] = useState(true);
+  
+  // Check if user has voting_weight permission for weighted admin votes
+  const hasVotingWeight = hasPermission('voting_weight');
 
   useEffect(() => {
     if (requiresNomination) {
@@ -150,7 +153,7 @@ export const VotingForm = ({ votingPeriodId, hasVoted, requiresNomination, onVot
           nominated_user_id: selectedNominee,
           voter_user_id: user?.id,
           reason: reason.trim(),
-          is_admin_vote: isAdmin
+          is_admin_vote: hasVotingWeight
         });
 
       if (error) throw error;
