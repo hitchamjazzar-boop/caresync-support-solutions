@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +71,8 @@ interface Profile {
 const EvaluationDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestId = searchParams.get('requestId');
   const { user } = useAuth();
   const { isAdmin } = useAdmin();
   
@@ -293,6 +295,14 @@ const EvaluationDetail = () => {
           .update({ status: 'submitted', submitted_at: new Date().toISOString() })
           .eq('campaign_id', evaluation.campaign_id)
           .eq('reviewer_id', user?.id);
+      }
+
+      // Mark the evaluation request as completed when submitting
+      if (submit && requestId) {
+        await supabase
+          .from('evaluation_requests')
+          .update({ status: 'completed' })
+          .eq('id', requestId);
       }
 
       toast({ 
