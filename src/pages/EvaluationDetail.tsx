@@ -499,7 +499,7 @@ const EvaluationDetail = () => {
           )}
           {/* View Campaign Summary - for admins when evaluation is part of a campaign */}
           {isAdmin && evaluation.campaign_id && (
-            <Button variant="outline" onClick={() => navigate(`/campaign/${evaluation.campaign_id}`)}>
+            <Button variant="outline" onClick={() => navigate(`/evaluations/campaign/${evaluation.campaign_id}`)}>
               <BarChart3 className="h-4 w-4 mr-2" />
               View Campaign Summary
             </Button>
