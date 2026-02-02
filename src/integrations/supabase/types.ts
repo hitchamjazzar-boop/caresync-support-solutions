@@ -1229,6 +1229,7 @@ export type Database = {
           period_id: string | null
           review_type: string
           status: string
+          target_employee_id: string | null
         }
         Insert: {
           admin_id: string
@@ -1241,6 +1242,7 @@ export type Database = {
           period_id?: string | null
           review_type: string
           status?: string
+          target_employee_id?: string | null
         }
         Update: {
           admin_id?: string
@@ -1253,6 +1255,7 @@ export type Database = {
           period_id?: string | null
           review_type?: string
           status?: string
+          target_employee_id?: string | null
         }
         Relationships: [
           {
@@ -1260,6 +1263,13 @@ export type Database = {
             columns: ["period_id"]
             isOneToOne: false
             referencedRelation: "evaluation_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_requests_target_employee_id_fkey"
+            columns: ["target_employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

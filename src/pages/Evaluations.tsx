@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { Plus, Send, ClipboardCheck, Users, Clock, FileText } from "lucide-react";
 import { CreateEvaluationDialog } from "@/components/evaluations/CreateEvaluationDialog";
 import { RequestEvaluationDialog } from "@/components/evaluations/RequestEvaluationDialog";
+import { RequestPeerEvaluationDialog } from "@/components/evaluations/RequestPeerEvaluationDialog";
 import { EvaluationList } from "@/components/evaluations/EvaluationList";
 import { EvaluationRequestCard } from "@/components/evaluations/EvaluationRequestCard";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +19,7 @@ interface EvaluationRequest {
   id: string;
   admin_id: string;
   employee_id: string;
+  target_employee_id?: string | null;
   review_type: string;
   message: string | null;
   due_date: string | null;
@@ -26,6 +28,9 @@ interface EvaluationRequest {
   admin?: {
     full_name: string;
   };
+  target_employee?: {
+    full_name: string;
+  } | null;
 }
 
 interface Stats {
@@ -41,6 +46,7 @@ const Evaluations = () => {
   const navigate = useNavigate();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [peerRequestDialogOpen, setPeerRequestDialogOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<EvaluationRequest[]>([]);
   const [myPendingRequests, setMyPendingRequests] = useState<EvaluationRequest[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, draft: 0, finalized: 0, pendingRequests: 0 });
@@ -91,18 +97,22 @@ const Evaluations = () => {
 
       if (error) throw error;
 
-      // Fetch admin names
       if (data && data.length > 0) {
+        // Collect all profile IDs we need
         const adminIds = [...new Set(data.map(r => r.admin_id))];
+        const targetIds = [...new Set(data.filter(r => r.target_employee_id).map(r => r.target_employee_id!))];
+        const allIds = [...new Set([...adminIds, ...targetIds])];
+        
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name')
-          .in('id', adminIds);
+          .in('id', allIds);
 
         const profileMap = new Map(profiles?.map(p => [p.id, p]));
         const enrichedData = data.map(request => ({
           ...request,
-          admin: profileMap.get(request.admin_id)
+          admin: profileMap.get(request.admin_id),
+          target_employee: request.target_employee_id ? profileMap.get(request.target_employee_id) : null
         }));
         setPendingRequests(enrichedData);
       } else {
@@ -126,16 +136,21 @@ const Evaluations = () => {
       if (error) throw error;
 
       if (data && data.length > 0) {
+        // Collect all profile IDs we need
         const adminIds = [...new Set(data.map(r => r.admin_id))];
+        const targetIds = [...new Set(data.filter(r => r.target_employee_id).map(r => r.target_employee_id!))];
+        const allIds = [...new Set([...adminIds, ...targetIds])];
+        
         const { data: profiles } = await supabase
           .from('profiles')
           .select('id, full_name')
-          .in('id', adminIds);
+          .in('id', allIds);
 
         const profileMap = new Map(profiles?.map(p => [p.id, p]));
         const enrichedData = data.map(request => ({
           ...request,
-          admin: profileMap.get(request.admin_id)
+          admin: profileMap.get(request.admin_id),
+          target_employee: request.target_employee_id ? profileMap.get(request.target_employee_id) : null
         }));
         setMyPendingRequests(enrichedData);
       } else {
@@ -146,9 +161,15 @@ const Evaluations = () => {
     }
   };
 
-  const handleStartSelfEvaluation = async (requestId: string) => {
-    // This would navigate to a self-evaluation form
-    toast({ title: "Coming soon", description: "Self-evaluation form will be available soon" });
+  const handleStartEvaluation = async (requestId: string, targetEmployeeId?: string | null) => {
+    if (targetEmployeeId) {
+      // Peer evaluation - navigate to create evaluation for specific employee
+      navigate(`/evaluations?createFor=${targetEmployeeId}&requestId=${requestId}`);
+      setCreateDialogOpen(true);
+    } else {
+      // Self-evaluation - coming soon
+      toast({ title: "Coming soon", description: "Self-evaluation form will be available soon" });
+    }
   };
 
   return (
@@ -168,7 +189,7 @@ const Evaluations = () => {
                 <EvaluationRequestCard
                   key={request.id}
                   request={request}
-                  onStartEvaluation={handleStartSelfEvaluation}
+                  onStartEvaluation={handleStartEvaluation}
                 />
               ))}
             </div>
@@ -187,12 +208,18 @@ const Evaluations = () => {
             Evaluate your colleagues' performance
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {isAdmin && (
-            <Button variant="outline" onClick={() => setRequestDialogOpen(true)}>
-              <Send className="h-4 w-4 mr-2" />
-              Request Self-Evaluation
-            </Button>
+            <>
+              <Button variant="outline" onClick={() => setRequestDialogOpen(true)}>
+                <Send className="h-4 w-4 mr-2" />
+                Request Self-Evaluation
+              </Button>
+              <Button variant="outline" onClick={() => setPeerRequestDialogOpen(true)}>
+                <Users className="h-4 w-4 mr-2" />
+                Request Peer Evaluation
+              </Button>
+            </>
           )}
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -298,7 +325,7 @@ const Evaluations = () => {
                   <EvaluationRequestCard
                     key={request.id}
                     request={request}
-                    onStartEvaluation={handleStartSelfEvaluation}
+                    onStartEvaluation={handleStartEvaluation}
                   />
                 ))}
               </div>
@@ -315,6 +342,14 @@ const Evaluations = () => {
       <RequestEvaluationDialog
         open={requestDialogOpen}
         onOpenChange={setRequestDialogOpen}
+        onSuccess={() => {
+          fetchStats();
+          fetchPendingRequests();
+        }}
+      />
+      <RequestPeerEvaluationDialog
+        open={peerRequestDialogOpen}
+        onOpenChange={setPeerRequestDialogOpen}
         onSuccess={() => {
           fetchStats();
           fetchPendingRequests();
