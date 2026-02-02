@@ -1,19 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { 
-  ArrowLeft, CheckCircle, Users, Loader2, 
-  ClipboardCheck, AlertTriangle, Eye, Trash2
-} from "lucide-react";
-import { EVALUATION_SECTIONS, getOverallResult } from "@/lib/evaluationConstants";
+import { ArrowLeft, CheckCircle, Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CampaignSummaryReport } from "@/components/evaluations/CampaignSummaryReport";
 
 interface Campaign {
   id: string;
@@ -61,6 +56,18 @@ interface AggregatedScore {
   section_name: string;
   average_rating: number;
   responses_count: number;
+  min_rating: number;
+  max_rating: number;
+}
+
+interface ReviewerScore {
+  reviewer_id: string;
+  reviewer_name: string;
+  reviewer_photo: string | null;
+  reviewer_position: string | null;
+  total_score: number;
+  max_score: number;
+  status: string;
 }
 
 const CampaignDetail = () => {
@@ -72,6 +79,7 @@ const CampaignDetail = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [aggregatedScores, setAggregatedScores] = useState<AggregatedScore[]>([]);
+  const [reviewerScores, setReviewerScores] = useState<ReviewerScore[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -131,6 +139,21 @@ const CampaignDetail = () => {
         .eq('campaign_id', id);
       setEvaluations(evaluationsData || []);
 
+      // Build reviewer scores for the report
+      const reviewerScoresList: ReviewerScore[] = enrichedAssignments.map(a => {
+        const evaluation = evaluationsData?.find(e => e.reviewer_id === a.reviewer_id);
+        return {
+          reviewer_id: a.reviewer_id,
+          reviewer_name: a.reviewer?.full_name || 'Unknown',
+          reviewer_photo: a.reviewer?.photo_url || null,
+          reviewer_position: a.reviewer?.position || null,
+          total_score: evaluation?.total_score || 0,
+          max_score: evaluation?.max_possible_score || (campaignData.include_leadership ? 50 : 45),
+          status: a.status
+        };
+      });
+      setReviewerScores(reviewerScoresList);
+
       // Fetch section scores for aggregation
       const evalIds = evaluationsData?.filter(e => e.status === 'submitted').map(e => e.id) || [];
       if (evalIds.length > 0) {
@@ -153,11 +176,15 @@ const CampaignDetail = () => {
         const aggregated: AggregatedScore[] = [];
         sectionMap.forEach((value, key) => {
           const avg = value.ratings.reduce((a, b) => a + b, 0) / value.ratings.length;
+          const min = Math.min(...value.ratings);
+          const max = Math.max(...value.ratings);
           aggregated.push({
             section_number: key,
             section_name: value.name,
             average_rating: Math.round(avg * 10) / 10,
-            responses_count: value.ratings.length
+            responses_count: value.ratings.length,
+            min_rating: min,
+            max_rating: max
           });
         });
         aggregated.sort((a, b) => a.section_number - b.section_number);
@@ -218,9 +245,6 @@ const CampaignDetail = () => {
   };
 
   const submittedCount = assignments.filter(a => a.status === 'submitted').length;
-  const totalAssignments = assignments.length;
-  const totalScore = aggregatedScores.reduce((sum, s) => sum + s.average_rating, 0);
-  const maxScore = campaign?.include_leadership ? 50 : 45;
 
   if (isLoading) {
     return (
@@ -307,145 +331,15 @@ const CampaignDetail = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Reviewers Progress */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Reviewers ({submittedCount}/{totalAssignments} submitted)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Progress 
-                value={(submittedCount / totalAssignments) * 100} 
-                className="h-2 mb-4"
-              />
-              <div className="space-y-3">
-                {assignments.map((assignment) => {
-                  const evaluation = evaluations.find(e => e.reviewer_id === assignment.reviewer_id);
-                  return (
-                    <div 
-                      key={assignment.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={assignment.reviewer?.photo_url || ''} />
-                          <AvatarFallback>
-                            {assignment.reviewer?.full_name?.charAt(0) || '?'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{assignment.reviewer?.full_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {assignment.reviewer?.position}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {assignment.status === 'submitted' ? (
-                          <>
-                            <Badge variant="default" className="bg-green-500/10 text-green-500">
-                              <ClipboardCheck className="h-3 w-3 mr-1" />
-                              Submitted
-                            </Badge>
-                            {evaluation && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => navigate(`/evaluations/${evaluation.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </>
-                        ) : (
-                          <Badge variant="outline">Pending</Badge>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Aggregated Scores */}
-          {aggregatedScores.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Aggregated Scores</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {aggregatedScores.map((score) => (
-                    <div key={score.section_number} className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">
-                          {score.section_number}. {score.section_name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {score.responses_count} response(s)
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Progress 
-                          value={(score.average_rating / 5) * 100} 
-                          className="w-24 h-2"
-                        />
-                        <span className="text-sm font-medium w-12 text-right">
-                          {score.average_rating}/5
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Summary */}
-        <div>
-          <Card className="sticky top-20">
-            <CardHeader>
-              <CardTitle>Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {aggregatedScores.length > 0 ? (
-                <>
-                  <div className="text-center">
-                    <p className="text-4xl font-bold">
-                      {totalScore.toFixed(1)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      out of {maxScore} points
-                    </p>
-                  </div>
-                  <Progress 
-                    value={(totalScore / maxScore) * 100}
-                    className="h-3"
-                  />
-                  <div className="text-center">
-                    <Badge className="text-lg px-4 py-1">
-                      {getOverallResult(totalScore, maxScore)}
-                    </Badge>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {((totalScore / maxScore) * 100).toFixed(1)}%
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <p className="text-center text-muted-foreground">
-                  No submissions yet
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* Summary Report */}
+      <CampaignSummaryReport
+        employeeName={employee?.full_name || ''}
+        reviewType={campaign.review_type}
+        includeLeadership={campaign.include_leadership}
+        reviewerScores={reviewerScores}
+        sectionScores={aggregatedScores}
+        status={campaign.status}
+      />
 
       {/* Finalize Dialog */}
       <AlertDialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
