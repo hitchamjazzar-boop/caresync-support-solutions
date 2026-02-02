@@ -14,7 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { 
   ArrowLeft, Save, CheckCircle, User, Calendar, 
-  FileText, Loader2, AlertTriangle 
+  FileText, Loader2, AlertTriangle, BarChart3 
 } from "lucide-react";
 import { EvaluationSectionCard } from "@/components/evaluations/EvaluationSectionCard";
 import { ScoreSummary } from "@/components/evaluations/ScoreSummary";
@@ -495,6 +495,13 @@ const EvaluationDetail = () => {
             <Button onClick={() => setAdminFinalizeDialogOpen(true)} disabled={isSaving} variant="default">
               <CheckCircle className="h-4 w-4 mr-2" />
               Finalize for Employee
+            </Button>
+          )}
+          {/* View Campaign Summary - for admins when evaluation is part of a campaign */}
+          {isAdmin && evaluation.campaign_id && (
+            <Button variant="outline" onClick={() => navigate(`/campaign/${evaluation.campaign_id}`)}>
+              <BarChart3 className="h-4 w-4 mr-2" />
+              View Campaign Summary
             </Button>
           )}
         </div>
