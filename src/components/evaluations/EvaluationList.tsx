@@ -8,12 +8,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/hooks/useAdmin";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { Search, Eye, FileText, ClipboardCheck, Pencil } from "lucide-react";
+import { Search, Eye, FileText, ClipboardCheck, Pencil, Trash2, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { getResultBadgeVariant, REVIEW_TYPES } from "@/lib/evaluationConstants";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Evaluation {
   id: string;
@@ -45,10 +56,14 @@ interface EvaluationListProps {
 export const EvaluationList = ({ employeeId, showFilters = true }: EvaluationListProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = useAdmin();
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [evaluationToDelete, setEvaluationToDelete] = useState<Evaluation | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchEvaluations();
@@ -115,6 +130,41 @@ export const EvaluationList = ({ employeeId, showFilters = true }: EvaluationLis
       finalized: 'default'
     };
     return <Badge variant={variants[status] || 'outline'}>{status}</Badge>;
+  };
+
+  const canDeleteEvaluation = (evaluation: Evaluation) => {
+    // Admins can delete any evaluation
+    if (isAdmin) return true;
+    // Reviewers can delete their own draft evaluations
+    return evaluation.reviewer_id === user?.id && evaluation.status === 'draft';
+  };
+
+  const handleDeleteClick = (evaluation: Evaluation) => {
+    setEvaluationToDelete(evaluation);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!evaluationToDelete) return;
+    setIsDeleting(true);
+    try {
+      // Delete section scores first
+      await supabase.from('evaluation_section_scores').delete().eq('evaluation_id', evaluationToDelete.id);
+      // Delete KPIs
+      await supabase.from('evaluation_kpis').delete().eq('evaluation_id', evaluationToDelete.id);
+      // Delete evaluation
+      const { error } = await supabase.from('employee_evaluations').delete().eq('id', evaluationToDelete.id);
+      
+      if (error) throw error;
+      toast({ title: "Success", description: "Evaluation deleted successfully." });
+      fetchEvaluations();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setEvaluationToDelete(null);
+    }
   };
 
   if (isLoading) {
@@ -240,23 +290,35 @@ export const EvaluationList = ({ employeeId, showFilters = true }: EvaluationLis
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/evaluations/${evaluation.id}`)}
-                      >
-                        {evaluation.status === 'draft' && evaluation.reviewer_id === user?.id ? (
-                          <>
-                            <Pencil className="h-4 w-4 mr-1" />
-                            Edit
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => navigate(`/evaluations/${evaluation.id}`)}
+                        >
+                          {evaluation.status === 'draft' && evaluation.reviewer_id === user?.id ? (
+                            <>
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Edit
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </>
+                          )}
+                        </Button>
+                        {canDeleteEvaluation(evaluation) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => handleDeleteClick(evaluation)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         )}
-                      </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -264,6 +326,29 @@ export const EvaluationList = ({ employeeId, showFilters = true }: EvaluationLis
             </Table>
           </div>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Evaluation</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this evaluation for {evaluationToDelete?.employee?.full_name}? 
+                This will also remove all section scores and KPIs. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteConfirm}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
