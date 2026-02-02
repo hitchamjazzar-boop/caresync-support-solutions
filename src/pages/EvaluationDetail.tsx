@@ -275,7 +275,9 @@ const EvaluationDetail = () => {
     }
   };
 
-  const isReadOnly = evaluation?.status === 'finalized' || !isAdmin;
+  // Determine if read-only: finalized evaluations are read-only, OR if user is not the reviewer
+  const isReviewer = evaluation?.reviewer_id === user?.id;
+  const isReadOnly = evaluation?.status === 'finalized' || (!isAdmin && !isReviewer);
 
   if (isLoading) {
     return (
@@ -333,10 +335,12 @@ const EvaluationDetail = () => {
               {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save Draft
             </Button>
-            <Button onClick={() => setFinalizeDialogOpen(true)} disabled={isSaving}>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Finalize
-            </Button>
+            {isAdmin && (
+              <Button onClick={() => setFinalizeDialogOpen(true)} disabled={isSaving}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Finalize
+              </Button>
+            )}
           </div>
         )}
       </div>

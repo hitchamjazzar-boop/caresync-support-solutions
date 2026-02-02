@@ -106,6 +106,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
     { name: 'My Achievements', href: '/profile#achievements', icon: Award },
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'EOD Reports', href: '/reports', icon: FileText },
+    { name: 'Evaluations', href: '/evaluations', icon: ClipboardCheck },
     { name: 'Payroll', href: '/payroll', icon: DollarSign, permission: 'payroll' },
     { name: 'My Invoices', href: '/invoices', icon: Receipt },
     { name: 'Announcements', href: '/announcements', icon: Megaphone, permission: 'announcements' },
@@ -122,7 +123,6 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const settingsNavigation: NavigationItem[] = [
     { name: 'Admin Management', href: '/admin-management', icon: Shield, adminOnly: true },
-    { name: 'Evaluations', href: '/evaluations', icon: ClipboardCheck, adminOnly: true },
     { name: 'Calendar Settings', href: '/calendar/settings', icon: Settings, permission: 'calendar' },
     { name: 'Manage Achievements', href: '/achievements', icon: Award, permission: 'achievements' },
     { name: 'Memo Analytics', href: '/memo-analytics', icon: BarChart3, permission: 'memos' },

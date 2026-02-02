@@ -57,7 +57,9 @@ export const CreateEvaluationDialog = ({
     if (error) {
       toast({ title: "Error", description: "Failed to load employees", variant: "destructive" });
     } else {
-      setEmployees(data || []);
+      // Filter out the current user - can't evaluate yourself
+      const filteredEmployees = (data || []).filter(emp => emp.id !== user?.id);
+      setEmployees(filteredEmployees);
     }
     setIsLoadingEmployees(false);
   };
@@ -74,7 +76,7 @@ export const CreateEvaluationDialog = ({
         .insert({
           employee_id: selectedEmployee,
           reviewer_id: user.id,
-          evaluation_type: 'admin_review',
+          evaluation_type: 'peer_review',
           status: 'draft',
           include_leadership: includeLeadership,
           max_possible_score: maxScore,
