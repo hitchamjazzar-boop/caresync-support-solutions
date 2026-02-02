@@ -11,6 +11,7 @@ import { Loader2, Upload, User, KeyRound } from 'lucide-react';
 import { z } from 'zod';
 import { PaymentMethodForm } from '@/components/profile/PaymentMethodForm';
 import { EmployeeAchievementsBadges } from '@/components/profile/EmployeeAchievementsBadges';
+import { QRCodeUpload } from '@/components/profile/QRCodeUpload';
 
 const profileSchema = z.object({
   full_name: z.string().trim().min(1, 'Name is required').max(100, 'Name must be less than 100 characters'),
@@ -581,6 +582,9 @@ export default function Profile() {
 
       {/* Payment Method Section */}
       <PaymentMethodForm />
+
+      {/* QR Code Section */}
+      <QRCodeUpload />
 
       {/* Achievements Section */}
       {user && <EmployeeAchievementsBadges userId={user.id} />}
