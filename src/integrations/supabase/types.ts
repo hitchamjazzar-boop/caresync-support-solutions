@@ -761,6 +761,7 @@ export type Database = {
         Row: {
           action_plan: string | null
           areas_for_improvement: string | null
+          campaign_id: string | null
           created_at: string
           employee_id: string
           evaluation_type: string
@@ -782,6 +783,7 @@ export type Database = {
         Insert: {
           action_plan?: string | null
           areas_for_improvement?: string | null
+          campaign_id?: string | null
           created_at?: string
           employee_id: string
           evaluation_type?: string
@@ -803,6 +805,7 @@ export type Database = {
         Update: {
           action_plan?: string | null
           areas_for_improvement?: string | null
+          campaign_id?: string | null
           created_at?: string
           employee_id?: string
           evaluation_type?: string
@@ -822,6 +825,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "employee_evaluations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employee_evaluations_period_id_fkey"
             columns: ["period_id"]
@@ -1061,6 +1071,77 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      evaluation_assignments: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          reviewer_id: string
+          status: string
+          submitted_at: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          reviewer_id: string
+          status?: string
+          submitted_at?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          reviewer_id?: string
+          status?: string
+          submitted_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_assignments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_campaigns: {
+        Row: {
+          created_at: string
+          created_by: string
+          employee_id: string
+          finalized_at: string | null
+          id: string
+          include_leadership: boolean
+          review_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          employee_id: string
+          finalized_at?: string | null
+          id?: string
+          include_leadership?: boolean
+          review_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          employee_id?: string
+          finalized_at?: string | null
+          id?: string
+          include_leadership?: boolean
+          review_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       evaluation_kpis: {
         Row: {

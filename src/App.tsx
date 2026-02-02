@@ -38,6 +38,7 @@ import AdminManagement from "./pages/AdminManagement";
 import Diary from "./pages/Diary";
 import Evaluations from "./pages/Evaluations";
 import EvaluationDetail from "./pages/EvaluationDetail";
+import CampaignDetail from "./pages/CampaignDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -355,6 +356,16 @@ const App = () => (
                 <ProtectedRoute>
                   <Layout>
                     <EvaluationDetail />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/evaluations/campaign/:id"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <CampaignDetail />
                   </Layout>
                 </ProtectedRoute>
               }
