@@ -13,6 +13,7 @@ export type AdminPermission =
   | 'memos' 
   | 'achievements' 
   | 'voting' 
+  | 'voting_weight'
   | 'schedules' 
   | 'calendar'
   | 'attendance_analytics';
@@ -58,8 +59,13 @@ export const useAdmin = () => {
   }, [user]);
 
   // Check if user has a specific permission (full admin or specific permission)
+  // Note: voting_weight must be explicitly granted, even for full admins
   const hasPermission = useCallback((permission: AdminPermission): boolean => {
-    if (isAdmin) return true; // Full admins have all permissions
+    if (permission === 'voting_weight') {
+      // voting_weight must be explicitly granted
+      return permissions.includes('voting_weight');
+    }
+    if (isAdmin) return true; // Full admins have all other permissions
     return permissions.includes(permission);
   }, [isAdmin, permissions]);
 
