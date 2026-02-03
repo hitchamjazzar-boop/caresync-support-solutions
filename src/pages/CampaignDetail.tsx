@@ -139,7 +139,7 @@ const CampaignDetail = () => {
         .eq('campaign_id', id);
       setEvaluations(evaluationsData || []);
 
-      // Build reviewer scores for the report
+      // Build reviewer scores for the report - use evaluation status, not assignment status
       const reviewerScoresList: ReviewerScore[] = enrichedAssignments.map(a => {
         const evaluation = evaluationsData?.find(e => e.reviewer_id === a.reviewer_id);
         return {
@@ -149,7 +149,7 @@ const CampaignDetail = () => {
           reviewer_position: a.reviewer?.position || null,
           total_score: evaluation?.total_score || 0,
           max_score: evaluation?.max_possible_score || (campaignData.include_leadership ? 50 : 45),
-          status: a.status
+          status: evaluation?.status || 'pending' // Use evaluation status, not assignment status
         };
       });
       setReviewerScores(reviewerScoresList);
@@ -244,7 +244,8 @@ const CampaignDetail = () => {
     }
   };
 
-  const submittedCount = assignments.filter(a => a.status === 'submitted').length;
+  // Use evaluations status for submitted count, not assignments
+  const submittedCount = evaluations.filter(e => e.status === 'submitted').length;
 
   if (isLoading) {
     return (
