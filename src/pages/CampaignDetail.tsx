@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CampaignSummaryReport } from "@/components/evaluations/CampaignSummaryReport";
+import { AISummaryReport } from "@/components/evaluations/AISummaryReport";
 
 interface Campaign {
   id: string;
@@ -70,6 +71,11 @@ interface ReviewerScore {
   status: string;
 }
 
+interface ReviewerComment {
+  section: string;
+  comment: string;
+}
+
 const CampaignDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -80,6 +86,7 @@ const CampaignDetail = () => {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [aggregatedScores, setAggregatedScores] = useState<AggregatedScore[]>([]);
   const [reviewerScores, setReviewerScores] = useState<ReviewerScore[]>([]);
+  const [reviewerComments, setReviewerComments] = useState<ReviewerComment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFinalizing, setIsFinalizing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -164,6 +171,8 @@ const CampaignDetail = () => {
 
         // Aggregate scores by section
         const sectionMap = new Map<number, { ratings: number[], name: string }>();
+        const allComments: ReviewerComment[] = [];
+        
         scores?.forEach(score => {
           if (score.rating !== null) {
             if (!sectionMap.has(score.section_number)) {
@@ -171,7 +180,16 @@ const CampaignDetail = () => {
             }
             sectionMap.get(score.section_number)!.ratings.push(score.rating);
           }
+          // Collect comments for AI summary
+          if (score.comments && score.comments.trim()) {
+            allComments.push({
+              section: score.section_name,
+              comment: score.comments
+            });
+          }
         });
+        
+        setReviewerComments(allComments);
 
         const aggregated: AggregatedScore[] = [];
         sectionMap.forEach((value, key) => {
@@ -341,6 +359,18 @@ const CampaignDetail = () => {
         sectionScores={aggregatedScores}
         status={campaign.status}
       />
+
+      {/* AI Summary Report */}
+      {aggregatedScores.length > 0 && (
+        <AISummaryReport
+          employeeName={employee?.full_name || ''}
+          reviewType={campaign.review_type.replace('_', ' ')}
+          sectionScores={aggregatedScores}
+          reviewerComments={reviewerComments}
+          overallScore={aggregatedScores.reduce((sum, s) => sum + s.average_rating, 0)}
+          overallPercentage={Math.round((aggregatedScores.reduce((sum, s) => sum + s.average_rating, 0) / (campaign.include_leadership ? 50 : 45)) * 100)}
+        />
+      )}
 
       {/* Finalize Dialog */}
       <AlertDialog open={finalizeDialogOpen} onOpenChange={setFinalizeDialogOpen}>
