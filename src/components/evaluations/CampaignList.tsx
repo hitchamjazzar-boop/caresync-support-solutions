@@ -77,15 +77,22 @@ export const CampaignList = ({ refreshTrigger }: CampaignListProps) => {
         .select('campaign_id, status')
         .in('campaign_id', campaignIds);
 
+      // Fetch actual submission counts from employee_evaluations
+      const { data: evaluations } = await supabase
+        .from('employee_evaluations')
+        .select('campaign_id, status')
+        .in('campaign_id', campaignIds);
+
       // Combine data
       const enrichedCampaigns = campaignsData?.map(campaign => {
         const employee = profiles?.find(p => p.id === campaign.employee_id);
         const campaignAssignments = assignments?.filter(a => a.campaign_id === campaign.id) || [];
+        const campaignEvaluations = evaluations?.filter(e => e.campaign_id === campaign.id) || [];
         return {
           ...campaign,
           employee,
           assignments_count: campaignAssignments.length,
-          submitted_count: campaignAssignments.filter(a => a.status === 'submitted').length
+          submitted_count: campaignEvaluations.filter(e => e.status === 'submitted').length
         };
       }) || [];
 
