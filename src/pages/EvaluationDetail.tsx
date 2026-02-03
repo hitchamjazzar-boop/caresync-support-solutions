@@ -228,26 +228,16 @@ const EvaluationDetail = () => {
       const maxScore = getMaxScore();
       const result = getOverallResult(totalScore, maxScore);
 
-      // Update evaluation
-      const { error: evalError } = await supabase
-        .from('employee_evaluations')
-        .update({
-          include_leadership: includeLeadership,
-          total_score: totalScore,
-          max_possible_score: maxScore,
-          overall_result: result,
-          status: submit ? 'submitted' : 'draft',
-          submitted_at: submit ? new Date().toISOString() : null,
-          strengths: feedback.strengths || null,
-          areas_for_improvement: feedback.areas_for_improvement || null,
-          training_needed: feedback.training_needed || null
-        })
-        .eq('id', id);
-
-      if (evalError) throw evalError;
-
+      // IMPORTANT: Save section scores FIRST while status is still 'draft'
+      // This prevents RLS policy issues during the submission flow
+      
       // Delete existing section scores
-      await supabase.from('evaluation_section_scores').delete().eq('evaluation_id', id);
+      const { error: deleteError } = await supabase
+        .from('evaluation_section_scores')
+        .delete()
+        .eq('evaluation_id', id);
+      
+      if (deleteError) throw deleteError;
 
       // Insert section scores
       const scoresToInsert = sectionScores
@@ -266,6 +256,24 @@ const EvaluationDetail = () => {
           .insert(scoresToInsert);
         if (scoresError) throw scoresError;
       }
+
+      // THEN update evaluation status (after scores are saved)
+      const { error: evalError } = await supabase
+        .from('employee_evaluations')
+        .update({
+          include_leadership: includeLeadership,
+          total_score: totalScore,
+          max_possible_score: maxScore,
+          overall_result: result,
+          status: submit ? 'submitted' : 'draft',
+          submitted_at: submit ? new Date().toISOString() : null,
+          strengths: feedback.strengths || null,
+          areas_for_improvement: feedback.areas_for_improvement || null,
+          training_needed: feedback.training_needed || null
+        })
+        .eq('id', id);
+
+      if (evalError) throw evalError;
 
       // Update assignment status if submitting
       if (submit && evaluation.campaign_id) {
