@@ -62,6 +62,7 @@ export const AttendanceHistory = () => {
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
   const [breaksMap, setBreaksMap] = useState<Record<string, BreakRecord[]>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     if (!user) return;
@@ -166,6 +167,12 @@ export const AttendanceHistory = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Update current time every second for live timers
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const formatTime = (dateString: string | null) => {
     if (!dateString) return '-';
     return new Date(dateString).toLocaleTimeString('en-US', {
@@ -227,6 +234,34 @@ export const AttendanceHistory = () => {
     return { totalTime, breakCounts, breaks, hasOngoingBreak };
   };
 
+  const getElapsedTime = (clockIn: string, breaks: BreakRecord[]) => {
+    const start = new Date(clockIn);
+    let elapsed = currentTime.getTime() - start.getTime();
+
+    // Subtract completed break times only
+    breaks.forEach(brk => {
+      if (brk.break_end) {
+        const breakStart = new Date(brk.break_start);
+        const breakEnd = new Date(brk.break_end);
+        elapsed -= (breakEnd.getTime() - breakStart.getTime());
+      }
+    });
+
+    const hours = Math.floor(elapsed / 1000 / 60 / 60);
+    const minutes = Math.floor((elapsed / 1000 / 60) % 60);
+    const seconds = Math.floor((elapsed / 1000) % 60);
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
+  const getBreakElapsedTime = (breakStart: string) => {
+    const start = new Date(breakStart);
+    const elapsed = currentTime.getTime() - start.getTime();
+    const minutes = Math.floor(elapsed / 1000 / 60);
+    const seconds = Math.floor((elapsed / 1000) % 60);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   const getTotalHours = () => {
     return records
       .filter((r) => r.total_hours)
@@ -234,7 +269,7 @@ export const AttendanceHistory = () => {
       .toFixed(2);
   };
 
-  const getStatusBadge = (status: string, attendanceId: string) => {
+  const getStatusBadge = (status: string, attendanceId: string, clockIn: string) => {
     if (status === 'active') {
       // Check if currently on a break
       const breaks = breaksMap[attendanceId] || [];
@@ -244,18 +279,28 @@ export const AttendanceHistory = () => {
         const breakInfo = BREAK_TYPES.find(b => b.value === activeBreak.break_type);
         const Icon = breakInfo?.icon || Coffee;
         return (
-          <Badge variant="secondary" className="gap-1 animate-pulse">
-            <Icon className={`h-3 w-3 ${breakInfo?.color || ''}`} />
-            On {breakInfo?.label || 'Break'}
-          </Badge>
+          <div className="flex flex-col items-start gap-1">
+            <Badge variant="secondary" className="gap-1 animate-pulse">
+              <Icon className={`h-3 w-3 ${breakInfo?.color || ''}`} />
+              On {breakInfo?.label || 'Break'}
+            </Badge>
+            <span className="text-xs text-muted-foreground font-mono">
+              Break: {getBreakElapsedTime(activeBreak.break_start)}
+            </span>
+          </div>
         );
       }
       
       return (
-        <Badge variant="default" className="gap-1">
-          <Briefcase className="h-3 w-3" />
-          Working
-        </Badge>
+        <div className="flex flex-col items-start gap-1">
+          <Badge variant="default" className="gap-1">
+            <Briefcase className="h-3 w-3" />
+            Working
+          </Badge>
+          <span className="text-xs text-primary font-mono font-medium">
+            {getElapsedTime(clockIn, breaks)}
+          </span>
+        </div>
       );
     }
     
@@ -430,7 +475,7 @@ export const AttendanceHistory = () => {
                           '-'
                         )}
                       </TableCell>
-                      <TableCell>{getStatusBadge(record.status, record.id)}</TableCell>
+                      <TableCell>{getStatusBadge(record.status, record.id, record.clock_in)}</TableCell>
                       {isAdmin && (
                         <TableCell>
                           <Button variant="ghost" size="sm" className="gap-1">
