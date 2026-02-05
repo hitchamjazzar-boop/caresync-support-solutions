@@ -19,7 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Calendar, Clock, Edit, Coffee, User, Timer, MoreHorizontal, Briefcase } from 'lucide-react';
+import { Calendar, Clock, Edit, Coffee, User, Timer, MoreHorizontal, Briefcase, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -61,6 +61,7 @@ export const AttendanceHistory = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
   const [breaksMap, setBreaksMap] = useState<Record<string, BreakRecord[]>>({});
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -155,7 +156,15 @@ export const AttendanceHistory = () => {
     };
 
     fetchData();
-  }, [user, selectedPeriod, selectedEmployee]);
+  }, [user, selectedPeriod, selectedEmployee, refreshKey]);
+
+  // Auto-refresh every 30 seconds to catch break status changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshKey(k => k + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const formatTime = (dateString: string | null) => {
     if (!dateString) return '-';
@@ -182,13 +191,17 @@ export const AttendanceHistory = () => {
   };
 
   const calculateTotalBreakTime = (breaks: BreakRecord[]) => {
+    const now = new Date().getTime();
     return breaks.reduce((total, brk) => {
       if (brk.break_end) {
         const start = new Date(brk.break_start);
         const end = new Date(brk.break_end);
         return total + (end.getTime() - start.getTime());
+      } else {
+        // Include ongoing break time
+        const start = new Date(brk.break_start);
+        return total + (now - start.getTime());
       }
-      return total;
     }, 0);
   };
 
@@ -205,12 +218,13 @@ export const AttendanceHistory = () => {
     if (breaks.length === 0) return null;
     
     const totalTime = calculateTotalBreakTime(breaks);
+    const hasOngoingBreak = breaks.some(brk => !brk.break_end);
     const breakCounts = breaks.reduce((acc, brk) => {
       acc[brk.break_type] = (acc[brk.break_type] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
-    return { totalTime, breakCounts, breaks };
+    return { totalTime, breakCounts, breaks, hasOngoingBreak };
   };
 
   const getTotalHours = () => {
@@ -278,7 +292,15 @@ export const AttendanceHistory = () => {
               Total Hours: <span className="font-semibold text-foreground">{getTotalHours()}</span>
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 items-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setRefreshKey(k => k + 1)}
+              title="Refresh"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
             {isAdmin && (
               <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
                 <SelectTrigger className="w-full sm:w-[200px]">
@@ -343,10 +365,16 @@ export const AttendanceHistory = () => {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className="flex items-center gap-1 cursor-help">
-                                  <span className="text-sm">
+                                <div className="flex items-center gap-1.5 cursor-help">
+                                  <span className={`text-sm ${breaksSummary.hasOngoingBreak ? 'text-amber-600 font-medium' : ''}`}>
                                     {formatBreakDuration(breaksSummary.totalTime)}
                                   </span>
+                                  {breaksSummary.hasOngoingBreak && (
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-warning opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                                    </span>
+                                  )}
                                   <div className="flex -space-x-1">
                                     {Object.entries(breaksSummary.breakCounts).slice(0, 3).map(([type, count]) => {
                                       const breakInfo = BREAK_TYPES.find(b => b.value === type);
