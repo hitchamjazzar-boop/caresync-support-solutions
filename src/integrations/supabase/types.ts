@@ -285,6 +285,7 @@ export type Database = {
           id: string
           lunch_end: string | null
           lunch_start: string | null
+          screen_monitoring_enabled: boolean
           status: string | null
           total_hours: number | null
           updated_at: string
@@ -297,6 +298,7 @@ export type Database = {
           id?: string
           lunch_end?: string | null
           lunch_start?: string | null
+          screen_monitoring_enabled?: boolean
           status?: string | null
           total_hours?: number | null
           updated_at?: string
@@ -309,6 +311,7 @@ export type Database = {
           id?: string
           lunch_end?: string | null
           lunch_start?: string | null
+          screen_monitoring_enabled?: boolean
           status?: string | null
           total_hours?: number | null
           updated_at?: string
@@ -1702,6 +1705,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      screen_captures: {
+        Row: {
+          attendance_id: string
+          captured_at: string
+          created_at: string
+          id: string
+          image_url: string
+          user_id: string
+        }
+        Insert: {
+          attendance_id: string
+          captured_at?: string
+          created_at?: string
+          id?: string
+          image_url: string
+          user_id: string
+        }
+        Update: {
+          attendance_id?: string
+          captured_at?: string
+          created_at?: string
+          id?: string
+          image_url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "screen_captures_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendance"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       secret_santa_assignments: {
         Row: {
