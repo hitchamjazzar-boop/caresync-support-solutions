@@ -62,6 +62,7 @@ export const ClockInOut = () => {
   const [loading, setLoading] = useState(false);
   const [showEarlyClockOutDialog, setShowEarlyClockOutDialog] = useState(false);
   const [showScreenMonitoringDialog, setShowScreenMonitoringDialog] = useState(false);
+  const [screenMonitoringRequired, setScreenMonitoringRequired] = useState(false);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [pendingClockOutData, setPendingClockOutData] = useState<{
     hours: number;
@@ -83,6 +84,15 @@ export const ClockInOut = () => {
     if (!user) return;
 
     const fetchActiveAttendance = async () => {
+      // Check if screen monitoring is required for this user
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('screen_monitoring_required')
+        .eq('id', user.id)
+        .single();
+
+      setScreenMonitoringRequired(!!(profileData as any)?.screen_monitoring_required);
+
       // Fetch active attendance
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance')
@@ -199,7 +209,6 @@ export const ClockInOut = () => {
       toast.error('Failed to clock in');
       console.error(error);
     } else {
-      toast.success('Clocked in successfully!');
       const { data } = await supabase
         .from('attendance')
         .select('*')
@@ -209,7 +218,13 @@ export const ClockInOut = () => {
       setActiveAttendance(data);
       setTodaysBreaks([]);
       setActiveBreak(null);
-      setShowScreenMonitoringDialog(true);
+
+      // Show screen monitoring dialog only if required for this employee
+      if (screenMonitoringRequired) {
+        setShowScreenMonitoringDialog(true);
+      } else {
+        toast.success('Clocked in successfully!');
+      }
     }
 
     setLoading(false);
@@ -235,15 +250,32 @@ export const ClockInOut = () => {
         toast.info('Screen sharing has ended');
       });
 
-      toast.success('Screen monitoring enabled');
+      toast.success('Screen monitoring enabled — clocked in!');
     } catch (err) {
       console.error('Screen sharing denied:', err);
-      toast.info('Screen monitoring skipped');
+      // If required, revert the clock-in
+      if (activeAttendance) {
+        await supabase
+          .from('attendance')
+          .delete()
+          .eq('id', activeAttendance.id);
+        setActiveAttendance(null);
+      }
+      toast.error('Screen sharing is required. Clock-in has been cancelled.');
     }
   };
 
-  const handleSkipScreenMonitoring = () => {
+  const handleCancelScreenMonitoring = async () => {
     setShowScreenMonitoringDialog(false);
+    // Revert the clock-in
+    if (activeAttendance) {
+      await supabase
+        .from('attendance')
+        .delete()
+        .eq('id', activeAttendance.id);
+      setActiveAttendance(null);
+    }
+    toast.error('Screen sharing is required. Clock-in has been cancelled.');
   };
 
   const handleStartBreak = async (breakType: string) => {
@@ -677,7 +709,7 @@ export const ClockInOut = () => {
       <ScreenMonitoringDialog
         open={showScreenMonitoringDialog}
         onAllow={handleAllowScreenMonitoring}
-        onSkip={handleSkipScreenMonitoring}
+        onCancel={handleCancelScreenMonitoring}
       />
     </Card>
   );

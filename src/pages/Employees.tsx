@@ -13,7 +13,9 @@ import { AdminPermissionsDialog } from '@/components/employees/AdminPermissionsD
 import { SendMemoDialog } from '@/components/memos/SendMemoDialog';
 import { SendShoutoutRequestDialog } from '@/components/shoutouts/SendShoutoutRequestDialog';
 import { Button } from '@/components/ui/button';
-import { Send, Megaphone, Shield } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Send, Megaphone, Shield, Monitor } from 'lucide-react';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 export default function Employees() {
@@ -167,7 +169,7 @@ export default function Employees() {
                       }
                     />
                   </div>
-                  <Button
+                    <Button
                     variant="outline"
                     size="sm"
                     className="w-full"
@@ -179,6 +181,24 @@ export default function Employees() {
                     <Shield className="h-4 w-4 mr-2" />
                     Admin Permissions
                   </Button>
+                  <div className="flex items-center justify-between rounded-md border px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                    <Label htmlFor={`screen-monitor-${employee.id}`} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <Monitor className="h-4 w-4" />
+                      Screen Monitoring
+                    </Label>
+                    <Switch
+                      id={`screen-monitor-${employee.id}`}
+                      checked={!!employee.screen_monitoring_required}
+                      onCheckedChange={async (checked) => {
+                        await supabase
+                          .from('profiles')
+                          .update({ screen_monitoring_required: checked } as any)
+                          .eq('id', employee.id);
+                        fetchEmployees();
+                        toast.success(`Screen monitoring ${checked ? 'enabled' : 'disabled'} for ${employee.full_name}`);
+                      }}
+                    />
+                  </div>
                   <DeleteEmployeeDialog
                     employeeId={employee.id}
                     employeeName={employee.full_name}

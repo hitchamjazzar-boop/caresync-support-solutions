@@ -1616,6 +1616,7 @@ export type Database = {
           position: string | null
           qr_code_url: string | null
           routing_number: string | null
+          screen_monitoring_required: boolean
           start_date: string
           updated_at: string
           zodiac_sign: string | null
@@ -1640,6 +1641,7 @@ export type Database = {
           position?: string | null
           qr_code_url?: string | null
           routing_number?: string | null
+          screen_monitoring_required?: boolean
           start_date?: string
           updated_at?: string
           zodiac_sign?: string | null
@@ -1664,6 +1666,7 @@ export type Database = {
           position?: string | null
           qr_code_url?: string | null
           routing_number?: string | null
+          screen_monitoring_required?: boolean
           start_date?: string
           updated_at?: string
           zodiac_sign?: string | null
