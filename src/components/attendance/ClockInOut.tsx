@@ -75,7 +75,7 @@ export const ClockInOut = () => {
     otherExcess: number;
   } | null>(null);
 
-  const { stopCapture } = useScreenCapture({
+  const { stopCapture, pauseCapture } = useScreenCapture({
     stream: screenStream,
     attendanceId: activeAttendance?.id || null,
     userId: user?.id || null,
@@ -238,9 +238,10 @@ export const ClockInOut = () => {
   };
 
   const handleAllowScreenMonitoring = async () => {
-    setShowScreenMonitoringDialog(false);
     try {
+      // CRITICAL: Call getDisplayMedia BEFORE closing dialog to preserve user gesture context
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: "monitor" } } as any);
+      setShowScreenMonitoringDialog(false);
       setScreenStream(stream);
 
       // Update attendance record
@@ -319,14 +320,8 @@ export const ClockInOut = () => {
       setActiveBreak(data);
       setTodaysBreaks([...todaysBreaks, data]);
 
-      // Stop screen sharing during break
-      if (screenStream && screenMonitoringRequired) {
-        intentionalClockOutRef.current = true; // Prevent the 'ended' handler from reverting clock-in
-        stopCapture();
-        setScreenStream(null);
-        intentionalClockOutRef.current = false;
-        toast.info('Screen sharing paused for break');
-      }
+      // Pause screenshot captures during break (keep stream alive so we don't need re-prompt)
+      // The isOnBreak prop in useScreenCapture handles pausing the interval automatically
     }
 
     setLoading(false);
@@ -357,10 +352,8 @@ export const ClockInOut = () => {
       );
       setActiveBreak(null);
 
-      // Re-prompt screen sharing if required
-      if (screenMonitoringRequired && !screenStream) {
-        setShowScreenMonitoringDialog(true);
-      }
+      // Screen sharing resumes automatically since stream is still alive
+      // The isOnBreak prop change in useScreenCapture will restart the capture interval
     }
 
     setLoading(false);

@@ -165,11 +165,15 @@ export const useScreenCapture = ({ stream, attendanceId, userId, isOnBreak }: Us
     };
   }, [stream, attendanceId, userId, isOnBreak, captureAndUpload]);
 
-  const stopCapture = useCallback(() => {
+  const pauseCapture = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+  }, []);
+
+  const stopCapture = useCallback(() => {
+    pauseCapture();
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
     }
@@ -177,7 +181,7 @@ export const useScreenCapture = ({ stream, attendanceId, userId, isOnBreak }: Us
       videoRef.current.srcObject = null;
     }
     videoReadyRef.current = false;
-  }, [stream]);
+  }, [stream, pauseCapture]);
 
-  return { stopCapture, captureAndUpload };
+  return { stopCapture, pauseCapture, captureAndUpload };
 };
