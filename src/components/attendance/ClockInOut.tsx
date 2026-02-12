@@ -270,9 +270,23 @@ export const ClockInOut = () => {
       });
 
       toast.success('Screen monitoring enabled — clocked in!');
-    } catch (err) {
-      console.error('Screen sharing denied:', err);
-      // If required, revert the clock-in
+    } catch (err: any) {
+      console.error('Screen sharing error:', err?.name, err?.message, err);
+      
+      // Check if it's a permission/environment issue vs user cancellation
+      const isPermissionError = err?.name === 'NotAllowedError' && err?.message?.includes('permissions policy');
+      const isNotSupported = err?.name === 'TypeError' || !navigator.mediaDevices?.getDisplayMedia;
+      
+      if (isPermissionError || isNotSupported) {
+        // Environment doesn't support screen capture (e.g., iframe without display-capture permission)
+        // Allow clock-in without screen monitoring in unsupported environments
+        console.warn('[ScreenCapture] Environment does not support getDisplayMedia, proceeding without screen monitoring');
+        setShowScreenMonitoringDialog(false);
+        toast.warning('Screen sharing is not available in this browser environment. Clocked in without screen monitoring.');
+        return;
+      }
+      
+      // User actively denied/cancelled the screen picker
       if (activeAttendance) {
         await supabase
           .from('attendance')
