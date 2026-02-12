@@ -94,7 +94,11 @@ export const ScreenCaptureViewer = ({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(val) => {
+        // Prevent closing dialog when lightbox is open
+        if (selectedIndex !== null && !val) return;
+        onOpenChange(val);
+      }}>
         <DialogContent className="max-w-4xl max-h-[85vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -147,8 +151,8 @@ export const ScreenCaptureViewer = ({
       {/* Fullscreen lightbox */}
       {selectedIndex !== null && selectedCapture && (
         <div
-          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center"
-          onClick={() => setSelectedIndex(null)}
+          className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center"
+          onClick={(e) => { e.stopPropagation(); setSelectedIndex(null); }}
         >
           <Button
             variant="ghost"
@@ -163,7 +167,7 @@ export const ScreenCaptureViewer = ({
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-4 text-white hover:bg-white/20 z-10"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-10"
               onClick={(e) => { e.stopPropagation(); setSelectedIndex(selectedIndex - 1); }}
             >
               <ChevronLeft className="h-8 w-8" />
@@ -174,14 +178,14 @@ export const ScreenCaptureViewer = ({
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-16 text-white hover:bg-white/20 z-10"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-10"
               onClick={(e) => { e.stopPropagation(); setSelectedIndex(selectedIndex + 1); }}
             >
               <ChevronRight className="h-8 w-8" />
             </Button>
           )}
 
-          <div className="max-w-[90vw] max-h-[90vh] flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+          <div className="max-w-[90vw] max-h-[90vh] flex flex-col items-center gap-2 px-16" onClick={(e) => e.stopPropagation()}>
             {imageUrls[selectedCapture.id] ? (
               <img
                 src={imageUrls[selectedCapture.id]}
