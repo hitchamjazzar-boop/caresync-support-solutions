@@ -284,7 +284,7 @@ export const ClockInOut = () => {
         // Allow clock-in without screen monitoring in unsupported environments
         console.warn('[ScreenCapture] Environment does not support getDisplayMedia, proceeding without screen monitoring');
         setShowScreenMonitoringDialog(false);
-        toast.warning('Screen sharing is not available in this browser environment. Clocked in without screen monitoring.');
+        toast.success('Clocked in successfully!');
         return;
       }
       
