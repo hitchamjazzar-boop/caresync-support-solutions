@@ -64,6 +64,7 @@ export const ClockInOut = () => {
   const [showScreenMonitoringDialog, setShowScreenMonitoringDialog] = useState(false);
   const [screenMonitoringRequired, setScreenMonitoringRequired] = useState(false);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const [eodRequired, setEodRequired] = useState(true);
   const intentionalClockOutRef = useRef(false);
   const activeAttendanceRef = useRef<ActiveAttendance | null>(null);
   const [pendingClockOutData, setPendingClockOutData] = useState<{
@@ -94,11 +95,12 @@ export const ClockInOut = () => {
       // Check if screen monitoring is required for this user
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('screen_monitoring_required')
+        .select('screen_monitoring_required, eod_required')
         .eq('id', user.id)
         .single();
 
       setScreenMonitoringRequired(!!(profileData as any)?.screen_monitoring_required);
+      setEodRequired((profileData as any)?.eod_required !== false);
 
       // Fetch active attendance
       const { data: attendanceData, error: attendanceError } = await supabase
@@ -384,13 +386,8 @@ export const ClockInOut = () => {
       return;
     }
 
-    // Check if EOD report exists (exempt specific users)
-    const EOD_EXEMPT_USERS = [
-      '37d5aa8d-63a0-4c90-8660-74d0551c9ace', // Bill Joseph Bustillo
-      '85448d67-644a-4141-9208-577800afd537', // Zayrene Bustillo
-    ];
-    
-    if (!EOD_EXEMPT_USERS.includes(user.id)) {
+    // Check if EOD report exists (only if eod_required is enabled for this user)
+    if (eodRequired) {
       const { data: eodReport, error: eodError } = await supabase
         .from('eod_reports')
         .select('id')
