@@ -1,48 +1,31 @@
 
 
-## Fix Screen Sharing Flow for Zayrene's Account
+## Enforce Mandatory Screen Sharing for All Employees
 
-### Problem Identified
-The core issue is a **browser security restriction**: `getDisplayMedia()` must be called as a direct result of a user gesture (click). In the current code, the dialog is dismissed first (`setShowScreenMonitoringDialog(false)`) which triggers a React re-render, and THEN `getDisplayMedia` is called. By that point, the browser no longer considers it a valid user gesture and blocks the request, throwing an error that triggers the catch block -- which cancels the clock-in with "Screen sharing is required. Clock-in has been cancelled."
+### Problem
+Currently, the clock-in flow has a fallback that silently allows employees to clock in **without** screen sharing when `getDisplayMedia` is blocked (e.g., in restricted browser environments). This means employees could potentially bypass the screen monitoring requirement.
 
-### Root Cause
-In `handleAllowScreenMonitoring` (line 240-284 of ClockInOut.tsx):
-```
-setShowScreenMonitoringDialog(false);  // <-- closes dialog, triggers re-render
-const stream = await navigator.mediaDevices.getDisplayMedia(...)  // <-- too late, gesture lost
-```
+### Solution
+Remove the permissive fallback. If screen sharing is required for an employee and it fails for **any** reason, the clock-in will be cancelled. Employees must use the published app URL where screen sharing works in all modern browsers.
 
-### Fix Plan
+### Changes
 
 **File: `src/components/attendance/ClockInOut.tsx`**
 
-1. **Reorder the getDisplayMedia call** -- Call `getDisplayMedia()` FIRST (while still in the direct click handler chain), and only close the dialog AFTER the stream is obtained successfully. This preserves the user gesture context.
+1. **Remove the environment fallback** (lines 282-288) that currently allows clock-in without screen sharing when `getDisplayMedia` is blocked.
+2. **Treat all failures the same**: whether the user cancels, the browser blocks it, or the API is unavailable -- if screen monitoring is required, clock-in gets reverted with a clear error message telling the employee to use a supported browser.
+3. **Add a more helpful error message** that guides the employee: "Screen sharing is required. Please use a supported browser (Chrome, Edge, or Firefox) and access the app directly (not in an embedded frame)."
 
-2. **Improve the `ended` event handler** -- Use a dedicated ref-based callback pattern (as recommended) so the handler always has access to the latest attendance state, preventing stale closure bugs.
+### Technical Details
 
-3. **Ensure break flow works correctly** -- Currently `stopCapture()` calls `stream.getTracks().forEach(track => track.stop())` which permanently kills the stream. During breaks, we should only pause the capture interval without stopping the stream tracks. This way, when the break ends, the existing stream can resume capturing without needing a new `getDisplayMedia` prompt.
+The catch block in `handleAllowScreenMonitoring` currently has two paths:
+- **Environment restriction** (iframe/unsupported): silently allows clock-in -- this will be removed
+- **User cancellation**: reverts clock-in -- this stays
 
-**File: `src/hooks/useScreenCapture.ts`**
+After the change, there will be one unified path: any failure reverts the clock-in with a helpful error message.
 
-4. **Split stop logic** -- Create a `pauseCapture()` method that only clears the interval (for breaks) vs `stopCapture()` that fully stops tracks (for clock-out/cancel). The current `stopCapture` kills the stream tracks which means after a break, we'd need to re-prompt -- but browsers require a fresh user gesture for `getDisplayMedia`, making seamless resumption impossible with the current approach.
-
-5. **Alternative break approach** -- Since `getDisplayMedia` always requires user interaction, the break flow will keep the stream alive but pause screenshots. The `isOnBreak` flag already stops the capture interval (line 129). The fix is to NOT call `stopCapture()` during breaks -- just let the `isOnBreak` prop handle pausing screenshots naturally.
-
-### Summary of Changes
-
-| Change | File | What |
-|--------|------|------|
-| Fix gesture timing | ClockInOut.tsx | Call `getDisplayMedia` before closing dialog |
-| Fix break flow | ClockInOut.tsx | Remove `stopCapture()` call during breaks; keep stream alive, just pause captures via `isOnBreak` |
-| Add `pauseCapture` | useScreenCapture.ts | New method that only clears interval without stopping tracks |
-| Fix clock-out flow | ClockInOut.tsx | Keep using `stopCapture` (with track.stop()) only for actual clock-out |
-| Fix stop-sharing handler | ClockInOut.tsx | Ensure the `ended` listener reliably cancels attendance using refs |
-
-### Expected Behavior After Fix
-- Clock in with screen sharing: works because `getDisplayMedia` runs in direct click context
-- Screenshots every 5 minutes: already works (confirmed 1 capture in storage), will continue working
-- Clock out: automatically stops screen sharing (stream tracks stopped)
-- Break: pauses screenshots but keeps stream alive (no re-prompt needed)
-- Back from break: screenshots resume automatically (stream still active)
-- Manual "Stop sharing": cancels attendance and stops work timer
+### What This Means for Testing
+- The Lovable preview (iframe) will **not** support screen sharing -- this is expected and cannot be changed
+- Employees must use the **published app URL** where screen sharing works perfectly in Chrome, Edge, and Firefox
+- Admins can still toggle screen monitoring on/off per employee from the Employees page
 
