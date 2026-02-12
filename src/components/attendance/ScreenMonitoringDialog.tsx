@@ -31,7 +31,7 @@ export const ScreenMonitoringDialog = ({ open, onAllow, onCancel }: ScreenMonito
         <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground space-y-1.5">
           <div className="flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 mt-0.5 text-primary" />
-            <span>Your entire screen will be captured every 5 minutes</span>
+            <span>Your entire screen will be captured every 3 minutes</span>
           </div>
           <div className="flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 mt-0.5 text-primary" />
