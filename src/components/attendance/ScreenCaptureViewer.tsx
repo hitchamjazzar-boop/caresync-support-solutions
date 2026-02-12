@@ -49,23 +49,30 @@ export const ScreenCaptureViewer = ({
       if (error) {
         console.error('Error fetching screen captures:', error);
         setCaptures([]);
-      } else {
-        const captures = (data || []) as ScreenCapture[];
-        setCaptures(captures);
-
-        const urls: Record<string, string> = {};
-        for (const capture of captures) {
-          const { data: signedData } = await supabase.storage
-            .from('screen-captures')
-            .createSignedUrl(capture.image_url, 3600);
-          if (signedData?.signedUrl) {
-            urls[capture.id] = signedData.signedUrl;
-          }
-        }
-        setImageUrls(urls);
+        setLoading(false);
+        return;
       }
 
+      const captures = (data || []) as ScreenCapture[];
+      setCaptures(captures);
       setLoading(false);
+
+      if (captures.length === 0) return;
+
+      // Generate signed URLs in parallel instead of sequentially
+      const urlPromises = captures.map(async (capture) => {
+        const { data: signedData } = await supabase.storage
+          .from('screen-captures')
+          .createSignedUrl(capture.image_url, 3600);
+        return { id: capture.id, url: signedData?.signedUrl };
+      });
+
+      const results = await Promise.all(urlPromises);
+      const urls: Record<string, string> = {};
+      for (const r of results) {
+        if (r.url) urls[r.id] = r.url;
+      }
+      setImageUrls(urls);
     };
 
     fetchCaptures();
