@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const CAPTURE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const CAPTURE_INTERVAL_MS = 3 * 60 * 1000; // 3 minutes
 
 interface UseScreenCaptureOptions {
   stream: MediaStream | null;
