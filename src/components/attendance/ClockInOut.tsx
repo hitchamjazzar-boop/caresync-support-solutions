@@ -240,7 +240,7 @@ export const ClockInOut = () => {
   const handleAllowScreenMonitoring = async () => {
     try {
       // CRITICAL: Call getDisplayMedia BEFORE closing dialog to preserve user gesture context
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: "monitor" } } as any);
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       setShowScreenMonitoringDialog(false);
       setScreenStream(stream);
 
