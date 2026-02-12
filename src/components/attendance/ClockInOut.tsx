@@ -311,6 +311,15 @@ export const ClockInOut = () => {
       toast.success(`${breakLabel} started`);
       setActiveBreak(data);
       setTodaysBreaks([...todaysBreaks, data]);
+
+      // Stop screen sharing during break
+      if (screenStream && screenMonitoringRequired) {
+        intentionalClockOutRef.current = true; // Prevent the 'ended' handler from reverting clock-in
+        stopCapture();
+        setScreenStream(null);
+        intentionalClockOutRef.current = false;
+        toast.info('Screen sharing paused for break');
+      }
     }
 
     setLoading(false);
@@ -340,6 +349,11 @@ export const ClockInOut = () => {
         )
       );
       setActiveBreak(null);
+
+      // Re-prompt screen sharing if required
+      if (screenMonitoringRequired && !screenStream) {
+        setShowScreenMonitoringDialog(true);
+      }
     }
 
     setLoading(false);
