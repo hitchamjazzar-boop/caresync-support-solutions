@@ -255,7 +255,7 @@ export const EODReportList = () => {
       <CardContent className="space-y-4">
         <div>
           <h4 className="font-semibold text-sm mb-2">Tasks Completed</h4>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap break-all overflow-hidden">
             {report.tasks_completed}
           </p>
         </div>
@@ -263,7 +263,7 @@ export const EODReportList = () => {
         {report.client_updates && (
           <div>
             <h4 className="font-semibold text-sm mb-2">Client Updates</h4>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap break-all overflow-hidden">
               {report.client_updates}
             </p>
           </div>
@@ -272,7 +272,7 @@ export const EODReportList = () => {
         {report.content_liked && (
           <div>
             <h4 className="font-semibold text-sm mb-2">Content Liked</h4>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap break-all overflow-hidden">
               {report.content_liked}
             </p>
           </div>
@@ -281,7 +281,7 @@ export const EODReportList = () => {
         {report.issues && (
           <div>
             <h4 className="font-semibold text-sm mb-2">Issues/Blockers</h4>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap break-all overflow-hidden">
               {report.issues}
             </p>
           </div>
@@ -290,7 +290,7 @@ export const EODReportList = () => {
         {report.notes && (
           <div>
             <h4 className="font-semibold text-sm mb-2">Additional Notes</h4>
-            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap break-all overflow-hidden">
               {report.notes}
             </p>
           </div>

@@ -244,10 +244,20 @@ export const ClockInOut = () => {
           .eq('id', activeAttendance.id);
       }
 
-      // Listen for stream ending (user stops sharing)
-      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+      // Listen for stream ending (user stops sharing) — also stop attendance
+      stream.getVideoTracks()[0]?.addEventListener('ended', async () => {
         setScreenStream(null);
-        toast.info('Screen sharing has ended');
+        // Auto clock-out: delete the attendance record (revert clock-in)
+        if (activeAttendance) {
+          await supabase
+            .from('attendance')
+            .delete()
+            .eq('id', activeAttendance.id);
+          setActiveAttendance(null);
+          setActiveBreak(null);
+          setTodaysBreaks([]);
+        }
+        toast.error('Screen sharing stopped. Your clock-in has been cancelled and work time will not be counted.');
       });
 
       toast.success('Screen monitoring enabled — clocked in!');
