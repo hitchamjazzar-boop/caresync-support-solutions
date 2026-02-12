@@ -377,24 +377,31 @@ export const ClockInOut = () => {
       return;
     }
 
-    // Check if EOD report exists
-    const { data: eodReport, error: eodError } = await supabase
-      .from('eod_reports')
-      .select('id')
-      .eq('attendance_id', activeAttendance.id)
-      .maybeSingle();
+    // Check if EOD report exists (exempt specific users)
+    const EOD_EXEMPT_USERS = [
+      '37d5aa8d-63a0-4c90-8660-74d0551c9ace', // Bill Joseph Bustillo
+      '85448d67-644a-4141-9208-577800afd537', // Zayrene Bustillo
+    ];
+    
+    if (!EOD_EXEMPT_USERS.includes(user.id)) {
+      const { data: eodReport, error: eodError } = await supabase
+        .from('eod_reports')
+        .select('id')
+        .eq('attendance_id', activeAttendance.id)
+        .maybeSingle();
 
-    if (eodError) {
-      console.error('Error checking EOD report:', eodError);
-    }
+      if (eodError) {
+        console.error('Error checking EOD report:', eodError);
+      }
 
-    if (!eodReport) {
-      toast.error('Please submit your EOD report before clocking out', {
-        description: 'Go to Reports page to submit your end-of-day report',
-        duration: 5000,
-      });
-      setLoading(false);
-      return;
+      if (!eodReport) {
+        toast.error('Please submit your EOD report before clocking out', {
+          description: 'Go to Reports page to submit your end-of-day report',
+          duration: 5000,
+        });
+        setLoading(false);
+        return;
+      }
     }
 
     // Calculate total elapsed time (clock-in to now) - breaks are INCLUDED in the 8 hours
