@@ -279,16 +279,7 @@ export const ClockInOut = () => {
       const isPermissionError = err?.name === 'NotAllowedError' && err?.message?.includes('permissions policy');
       const isNotSupported = err?.name === 'TypeError' || !navigator.mediaDevices?.getDisplayMedia;
       
-      if (isPermissionError || isNotSupported) {
-        // Environment doesn't support screen capture (e.g., iframe without display-capture permission)
-        // Allow clock-in without screen monitoring in unsupported environments
-        console.warn('[ScreenCapture] Environment does not support getDisplayMedia, proceeding without screen monitoring');
-        setShowScreenMonitoringDialog(false);
-        toast.success('Clocked in successfully!');
-        return;
-      }
-      
-      // User actively denied/cancelled the screen picker
+      // Any failure (user cancel, environment restriction, unsupported browser) reverts clock-in
       if (activeAttendance) {
         await supabase
           .from('attendance')
@@ -296,7 +287,7 @@ export const ClockInOut = () => {
           .eq('id', activeAttendance.id);
         setActiveAttendance(null);
       }
-      toast.error('Screen sharing is required. Clock-in has been cancelled.');
+      toast.error('Screen sharing is required. Please use a supported browser (Chrome, Edge, or Firefox) and access the app directly (not in an embedded frame).');
     }
   };
 
