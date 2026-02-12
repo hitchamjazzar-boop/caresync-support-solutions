@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -59,7 +59,6 @@ export const ScreenCaptureViewer = ({
 
       if (captures.length === 0) return;
 
-      // Generate signed URLs in parallel instead of sequentially
       const urlPromises = captures.map(async (capture) => {
         const { data: signedData } = await supabase.storage
           .from('screen-captures')
@@ -82,6 +81,31 @@ export const ScreenCaptureViewer = ({
     if (!open) setSelectedIndex(null);
   }, [open]);
 
+  // Keyboard navigation for lightbox
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (selectedIndex === null) return;
+    if (e.key === 'ArrowRight' && selectedIndex < captures.length - 1) {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedIndex(selectedIndex + 1);
+    } else if (e.key === 'ArrowLeft' && selectedIndex > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedIndex(selectedIndex - 1);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedIndex(null);
+    }
+  }, [selectedIndex, captures.length]);
+
+  useEffect(() => {
+    if (selectedIndex !== null) {
+      window.addEventListener('keydown', handleKeyDown, true);
+      return () => window.removeEventListener('keydown', handleKeyDown, true);
+    }
+  }, [selectedIndex, handleKeyDown]);
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -95,11 +119,21 @@ export const ScreenCaptureViewer = ({
   return (
     <>
       <Dialog open={open} onOpenChange={(val) => {
-        // Prevent closing dialog when lightbox is open
         if (selectedIndex !== null && !val) return;
         onOpenChange(val);
       }}>
-        <DialogContent className="max-w-4xl max-h-[85vh]">
+        <DialogContent
+          className="max-w-4xl max-h-[85vh]"
+          onEscapeKeyDown={(e) => {
+            if (selectedIndex !== null) e.preventDefault();
+          }}
+          onPointerDownOutside={(e) => {
+            if (selectedIndex !== null) e.preventDefault();
+          }}
+          onInteractOutside={(e) => {
+            if (selectedIndex !== null) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Monitor className="h-5 w-5" />
