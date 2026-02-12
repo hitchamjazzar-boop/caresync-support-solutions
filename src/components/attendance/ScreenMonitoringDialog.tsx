@@ -31,11 +31,11 @@ export const ScreenMonitoringDialog = ({ open, onAllow, onCancel }: ScreenMonito
         <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground space-y-1.5">
           <div className="flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 mt-0.5 text-primary" />
-            <span>Screenshots are captured periodically and stored securely</span>
+            <span>Your entire screen will be captured every 5 minutes</span>
           </div>
           <div className="flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 mt-0.5 text-primary" />
-            <span>You choose which screen or window to share</span>
+            <span>Screenshots are stored securely and visible only to admins</span>
           </div>
           <div className="flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 mt-0.5 text-primary" />

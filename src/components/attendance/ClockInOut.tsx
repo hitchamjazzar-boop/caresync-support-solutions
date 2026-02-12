@@ -233,7 +233,7 @@ export const ClockInOut = () => {
   const handleAllowScreenMonitoring = async () => {
     setShowScreenMonitoringDialog(false);
     try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: "monitor" } } as any);
       setScreenStream(stream);
 
       // Update attendance record
