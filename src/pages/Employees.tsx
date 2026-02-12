@@ -15,7 +15,7 @@ import { SendShoutoutRequestDialog } from '@/components/shoutouts/SendShoutoutRe
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Send, Megaphone, Shield, Monitor } from 'lucide-react';
+import { Send, Megaphone, Shield, Monitor, ClipboardCheck } from 'lucide-react';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
 
 export default function Employees() {
@@ -196,6 +196,24 @@ export default function Employees() {
                           .eq('id', employee.id);
                         fetchEmployees();
                         toast.success(`Screen monitoring ${checked ? 'enabled' : 'disabled'} for ${employee.full_name}`);
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-md border px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                    <Label htmlFor={`eod-required-${employee.id}`} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <ClipboardCheck className="h-4 w-4" />
+                      EOD Required
+                    </Label>
+                    <Switch
+                      id={`eod-required-${employee.id}`}
+                      checked={!!(employee as any).eod_required}
+                      onCheckedChange={async (checked) => {
+                        await supabase
+                          .from('profiles')
+                          .update({ eod_required: checked } as any)
+                          .eq('id', employee.id);
+                        fetchEmployees();
+                        toast.success(`EOD requirement ${checked ? 'enabled' : 'disabled'} for ${employee.full_name}`);
                       }}
                     />
                   </div>

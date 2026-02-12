@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN eod_required boolean NOT NULL DEFAULT true;

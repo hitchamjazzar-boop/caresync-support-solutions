@@ -1607,6 +1607,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           department: string | null
+          eod_required: boolean
           full_name: string
           hourly_rate: number | null
           id: string
@@ -1632,6 +1633,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           department?: string | null
+          eod_required?: boolean
           full_name: string
           hourly_rate?: number | null
           id: string
@@ -1657,6 +1659,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           department?: string | null
+          eod_required?: boolean
           full_name?: string
           hourly_rate?: number | null
           id?: string
