@@ -65,6 +65,7 @@ export const ClockInOut = () => {
   const [screenMonitoringRequired, setScreenMonitoringRequired] = useState(false);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const intentionalClockOutRef = useRef(false);
+  const activeAttendanceRef = useRef<ActiveAttendance | null>(null);
   const [pendingClockOutData, setPendingClockOutData] = useState<{
     hours: number;
     minutes: number;
@@ -80,6 +81,11 @@ export const ClockInOut = () => {
     userId: user?.id || null,
     isOnBreak: !!activeBreak,
   });
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    activeAttendanceRef.current = activeAttendance;
+  }, [activeAttendance]);
 
   useEffect(() => {
     if (!user) return;
@@ -249,11 +255,12 @@ export const ClockInOut = () => {
       stream.getVideoTracks()[0]?.addEventListener('ended', async () => {
         setScreenStream(null);
         // Only revert clock-in if this wasn't an intentional clock-out
-        if (!intentionalClockOutRef.current && activeAttendance) {
+        const currentAttendance = activeAttendanceRef.current;
+        if (!intentionalClockOutRef.current && currentAttendance) {
           await supabase
             .from('attendance')
             .delete()
-            .eq('id', activeAttendance.id);
+            .eq('id', currentAttendance.id);
           setActiveAttendance(null);
           setActiveBreak(null);
           setTodaysBreaks([]);
