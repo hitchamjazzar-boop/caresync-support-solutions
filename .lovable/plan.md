@@ -1,84 +1,48 @@
 
 
-## Opt-In Screen Monitoring on Clock-In
+## Fix Screen Sharing Flow for Zayrene's Account
 
-When an employee clocks in, they'll be prompted to share their screen. If they consent, the app will capture periodic screenshots and upload them to the backend. If they decline, they still clock in normally -- but admins can see who opted in and who didn't.
+### Problem Identified
+The core issue is a **browser security restriction**: `getDisplayMedia()` must be called as a direct result of a user gesture (click). In the current code, the dialog is dismissed first (`setShowScreenMonitoringDialog(false)`) which triggers a React re-render, and THEN `getDisplayMedia` is called. By that point, the browser no longer considers it a valid user gesture and blocks the request, throwing an error that triggers the catch block -- which cancels the clock-in with "Screen sharing is required. Clock-in has been cancelled."
 
-### How It Works
+### Root Cause
+In `handleAllowScreenMonitoring` (line 240-284 of ClockInOut.tsx):
+```
+setShowScreenMonitoringDialog(false);  // <-- closes dialog, triggers re-render
+const stream = await navigator.mediaDevices.getDisplayMedia(...)  // <-- too late, gesture lost
+```
 
-1. **After clock-in**, a dialog appears asking the employee to share their screen
-2. If they click "Allow", the browser's native screen-sharing prompt appears (`getDisplayMedia`)
-3. Once granted, a screenshot is captured every 5 minutes from the shared stream
-4. Screenshots are uploaded to file storage and logged in a new database table
-5. If they click "Skip", they clock in without monitoring (admins see this)
-6. The screen share stops automatically on clock-out
+### Fix Plan
 
-### What the Admin Sees
+**File: `src/components/attendance/ClockInOut.tsx`**
 
-- In the Attendance History, a small icon/badge shows whether an employee allowed screen monitoring
-- A new "Screen Activity" section (or button) lets admins view the captured screenshots for any session, with timestamps
+1. **Reorder the getDisplayMedia call** -- Call `getDisplayMedia()` FIRST (while still in the direct click handler chain), and only close the dialog AFTER the stream is obtained successfully. This preserves the user gesture context.
 
-### Important Limitations
+2. **Improve the `ended` event handler** -- Use a dedicated ref-based callback pattern (as recommended) so the handler always has access to the latest attendance state, preventing stale closure bugs.
 
-- The browser will show its own permission dialog -- this cannot be bypassed
-- If the employee closes/refreshes the tab, the screen share stream ends and no more screenshots are captured until they re-enable it
-- Screenshots only capture what the employee chose to share (a specific screen, window, or tab)
+3. **Ensure break flow works correctly** -- Currently `stopCapture()` calls `stream.getTracks().forEach(track => track.stop())` which permanently kills the stream. During breaks, we should only pause the capture interval without stopping the stream tracks. This way, when the break ends, the existing stream can resume capturing without needing a new `getDisplayMedia` prompt.
 
----
+**File: `src/hooks/useScreenCapture.ts`**
 
-### Technical Details
+4. **Split stop logic** -- Create a `pauseCapture()` method that only clears the interval (for breaks) vs `stopCapture()` that fully stops tracks (for clock-out/cancel). The current `stopCapture` kills the stream tracks which means after a break, we'd need to re-prompt -- but browsers require a fresh user gesture for `getDisplayMedia`, making seamless resumption impossible with the current approach.
 
-**1. New Database Table: `screen_captures`**
+5. **Alternative break approach** -- Since `getDisplayMedia` always requires user interaction, the break flow will keep the stream alive but pause screenshots. The `isOnBreak` flag already stops the capture interval (line 129). The fix is to NOT call `stopCapture()` during breaks -- just let the `isOnBreak` prop handle pausing screenshots naturally.
 
-| Column | Type | Description |
-|---|---|---|
-| id | uuid (PK) | Auto-generated |
-| attendance_id | uuid (FK) | Links to the attendance session |
-| user_id | uuid | The employee |
-| image_url | text | Storage path of the screenshot |
-| captured_at | timestamptz | When the screenshot was taken |
+### Summary of Changes
 
-RLS: Admins can view all; employees cannot view their own captures (monitoring purpose).
+| Change | File | What |
+|--------|------|------|
+| Fix gesture timing | ClockInOut.tsx | Call `getDisplayMedia` before closing dialog |
+| Fix break flow | ClockInOut.tsx | Remove `stopCapture()` call during breaks; keep stream alive, just pause captures via `isOnBreak` |
+| Add `pauseCapture` | useScreenCapture.ts | New method that only clears interval without stopping tracks |
+| Fix clock-out flow | ClockInOut.tsx | Keep using `stopCapture` (with track.stop()) only for actual clock-out |
+| Fix stop-sharing handler | ClockInOut.tsx | Ensure the `ended` listener reliably cancels attendance using refs |
 
-**2. New Storage Bucket: `screen-captures`**
-
-- Private bucket for storing screenshot images
-- RLS: authenticated users can upload (insert); admins can read all
-
-**3. Add `screen_monitoring_enabled` column to `attendance` table**
-
-- Boolean, default `false`
-- Set to `true` when the employee consents to screen sharing
-
-**4. New Component: `ScreenMonitoringDialog.tsx`**
-
-- Shown after successful clock-in
-- Two buttons: "Allow Screen Monitoring" and "Skip"
-- On allow: calls `navigator.mediaDevices.getDisplayMedia({ video: true })` to get a stream
-- Stores the stream reference in a React ref
-
-**5. New Hook: `useScreenCapture.ts`**
-
-- Accepts the MediaStream and attendance_id
-- Every 5 minutes, draws the video frame to an off-screen canvas, converts to a blob, uploads to storage, and inserts a record into `screen_captures`
-- Cleans up on clock-out (stops the stream and clears the interval)
-- Pauses capturing during breaks, resumes after
-
-**6. Updates to `ClockInOut.tsx`**
-
-- After successful clock-in, show the `ScreenMonitoringDialog`
-- If user consents, start the capture hook
-- On clock-out, stop the stream and interval
-- Update the attendance record's `screen_monitoring_enabled` field
-
-**7. New Component: `ScreenCaptureViewer.tsx` (Admin)**
-
-- Accessible from AttendanceHistory for admin users
-- Shows a grid/timeline of screenshots for a given attendance session
-- Displays capture timestamps
-
-**8. Updates to `AttendanceHistory.tsx`**
-
-- Show a small monitor icon next to status badge when `screen_monitoring_enabled` is true
-- Add a button for admins to open the `ScreenCaptureViewer` for that session
+### Expected Behavior After Fix
+- Clock in with screen sharing: works because `getDisplayMedia` runs in direct click context
+- Screenshots every 5 minutes: already works (confirmed 1 capture in storage), will continue working
+- Clock out: automatically stops screen sharing (stream tracks stopped)
+- Break: pauses screenshots but keeps stream alive (no re-prompt needed)
+- Back from break: screenshots resume automatically (stream still active)
+- Manual "Stop sharing": cancels attendance and stops work timer
 
