@@ -64,6 +64,7 @@ export const ClockInOut = () => {
   const [showScreenMonitoringDialog, setShowScreenMonitoringDialog] = useState(false);
   const [screenMonitoringRequired, setScreenMonitoringRequired] = useState(false);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
+  const intentionalClockOutRef = useRef(false);
   const [pendingClockOutData, setPendingClockOutData] = useState<{
     hours: number;
     minutes: number;
@@ -247,8 +248,8 @@ export const ClockInOut = () => {
       // Listen for stream ending (user stops sharing) — also stop attendance
       stream.getVideoTracks()[0]?.addEventListener('ended', async () => {
         setScreenStream(null);
-        // Auto clock-out: delete the attendance record (revert clock-in)
-        if (activeAttendance) {
+        // Only revert clock-in if this wasn't an intentional clock-out
+        if (!intentionalClockOutRef.current && activeAttendance) {
           await supabase
             .from('attendance')
             .delete()
@@ -256,8 +257,8 @@ export const ClockInOut = () => {
           setActiveAttendance(null);
           setActiveBreak(null);
           setTodaysBreaks([]);
+          toast.error('Screen sharing stopped. Your clock-in has been cancelled and work time will not be counted.');
         }
-        toast.error('Screen sharing stopped. Your clock-in has been cancelled and work time will not be counted.');
       });
 
       toast.success('Screen monitoring enabled — clocked in!');
@@ -447,8 +448,10 @@ export const ClockInOut = () => {
       toast.error('Failed to clock out');
     } else {
       toast.success(`Clocked out successfully! Total hours: ${totalHours}`);
+      intentionalClockOutRef.current = true;
       stopCapture();
       setScreenStream(null);
+      intentionalClockOutRef.current = false;
       setActiveAttendance(null);
       setActiveBreak(null);
       setTodaysBreaks([]);
