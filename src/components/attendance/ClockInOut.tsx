@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { EarlyClockOutDialog } from './EarlyClockOutDialog';
+import { ScreenMonitoringDialog } from './ScreenMonitoringDialog';
+import { useScreenCapture } from '@/hooks/useScreenCapture';
 
 interface ActiveAttendance {
   id: string;
@@ -59,6 +61,8 @@ export const ClockInOut = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
   const [showEarlyClockOutDialog, setShowEarlyClockOutDialog] = useState(false);
+  const [showScreenMonitoringDialog, setShowScreenMonitoringDialog] = useState(false);
+  const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
   const [pendingClockOutData, setPendingClockOutData] = useState<{
     hours: number;
     minutes: number;
@@ -67,6 +71,13 @@ export const ClockInOut = () => {
     lunchExcess: number;
     otherExcess: number;
   } | null>(null);
+
+  const { stopCapture } = useScreenCapture({
+    stream: screenStream,
+    attendanceId: activeAttendance?.id || null,
+    userId: user?.id || null,
+    isOnBreak: !!activeBreak,
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -198,9 +209,41 @@ export const ClockInOut = () => {
       setActiveAttendance(data);
       setTodaysBreaks([]);
       setActiveBreak(null);
+      setShowScreenMonitoringDialog(true);
     }
 
     setLoading(false);
+  };
+
+  const handleAllowScreenMonitoring = async () => {
+    setShowScreenMonitoringDialog(false);
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      setScreenStream(stream);
+
+      // Update attendance record
+      if (activeAttendance) {
+        await supabase
+          .from('attendance')
+          .update({ screen_monitoring_enabled: true } as any)
+          .eq('id', activeAttendance.id);
+      }
+
+      // Listen for stream ending (user stops sharing)
+      stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+        setScreenStream(null);
+        toast.info('Screen sharing has ended');
+      });
+
+      toast.success('Screen monitoring enabled');
+    } catch (err) {
+      console.error('Screen sharing denied:', err);
+      toast.info('Screen monitoring skipped');
+    }
+  };
+
+  const handleSkipScreenMonitoring = () => {
+    setShowScreenMonitoringDialog(false);
   };
 
   const handleStartBreak = async (breakType: string) => {
@@ -362,6 +405,8 @@ export const ClockInOut = () => {
       toast.error('Failed to clock out');
     } else {
       toast.success(`Clocked out successfully! Total hours: ${totalHours}`);
+      stopCapture();
+      setScreenStream(null);
       setActiveAttendance(null);
       setActiveBreak(null);
       setTodaysBreaks([]);
@@ -626,6 +671,13 @@ export const ClockInOut = () => {
         lunchExcess={pendingClockOutData?.lunchExcess || 0}
         otherExcess={pendingClockOutData?.otherExcess || 0}
         onConfirm={executeClockOut}
+      />
+
+      {/* Screen Monitoring Dialog */}
+      <ScreenMonitoringDialog
+        open={showScreenMonitoringDialog}
+        onAllow={handleAllowScreenMonitoring}
+        onSkip={handleSkipScreenMonitoring}
       />
     </Card>
   );

@@ -19,9 +19,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Calendar, Clock, Edit, Coffee, User, Timer, MoreHorizontal, Briefcase, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, Edit, Coffee, User, Timer, MoreHorizontal, Briefcase, RefreshCw, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { ScreenCaptureViewer } from './ScreenCaptureViewer';
 
 const BREAK_TYPES = [
   { value: 'lunch', label: 'Lunch', icon: Coffee, color: 'text-orange-500' },
@@ -49,6 +50,7 @@ interface AttendanceRecord {
   total_hours: number | null;
   status: string;
   created_at: string;
+  screen_monitoring_enabled?: boolean;
 }
 
 export const AttendanceHistory = () => {
@@ -63,6 +65,8 @@ export const AttendanceHistory = () => {
   const [breaksMap, setBreaksMap] = useState<Record<string, BreakRecord[]>>({});
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [viewerAttendanceId, setViewerAttendanceId] = useState<string | null>(null);
+  const [viewerEmployeeName, setViewerEmployeeName] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -325,6 +329,7 @@ export const AttendanceHistory = () => {
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -475,13 +480,43 @@ export const AttendanceHistory = () => {
                           '-'
                         )}
                       </TableCell>
-                      <TableCell>{getStatusBadge(record.status, record.id, record.clock_in)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          {getStatusBadge(record.status, record.id, record.clock_in)}
+                          {(record as any).screen_monitoring_enabled && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <Monitor className="h-3.5 w-3.5 text-primary" />
+                                </TooltipTrigger>
+                                <TooltipContent>Screen monitoring enabled</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
+                      </TableCell>
                       {isAdmin && (
                         <TableCell>
-                          <Button variant="ghost" size="sm" className="gap-1">
-                            <Edit className="h-3 w-3" />
-                            Edit
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            {(record as any).screen_monitoring_enabled && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => {
+                                  setViewerAttendanceId(record.id);
+                                  setViewerEmployeeName(profilesMap[record.user_id] || 'Employee');
+                                }}
+                              >
+                                <Monitor className="h-3 w-3" />
+                                Screens
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="sm" className="gap-1">
+                              <Edit className="h-3 w-3" />
+                              Edit
+                            </Button>
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>
@@ -493,5 +528,15 @@ export const AttendanceHistory = () => {
         )}
       </CardContent>
     </Card>
+
+    {viewerAttendanceId && (
+      <ScreenCaptureViewer
+        open={!!viewerAttendanceId}
+        onOpenChange={(open) => { if (!open) setViewerAttendanceId(null); }}
+        attendanceId={viewerAttendanceId}
+        employeeName={viewerEmployeeName}
+      />
+    )}
+    </>
   );
 };
