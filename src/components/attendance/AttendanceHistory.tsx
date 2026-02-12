@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,12 +67,13 @@ export const AttendanceHistory = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [viewerAttendanceId, setViewerAttendanceId] = useState<string | null>(null);
   const [viewerEmployeeName, setViewerEmployeeName] = useState('');
+  const isBackgroundRefresh = useRef(false);
 
   useEffect(() => {
     if (!user) return;
 
     const fetchData = async () => {
-      setLoading(true);
+      if (!isBackgroundRefresh.current) setLoading(true);
 
       // Check if user is admin
       const { data: roleData } = await supabase
@@ -161,15 +162,18 @@ export const AttendanceHistory = () => {
     };
 
     fetchData();
+    isBackgroundRefresh.current = false;
   }, [user, selectedPeriod, selectedEmployee, refreshKey]);
 
-  // Auto-refresh every 30 seconds to catch break status changes
+  // Auto-refresh every 30 seconds to catch break status changes - pause when viewer is open
   useEffect(() => {
+    if (viewerAttendanceId) return; // Don't refresh while viewing captures
     const interval = setInterval(() => {
+      isBackgroundRefresh.current = true;
       setRefreshKey(k => k + 1);
     }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [viewerAttendanceId]);
 
   // Update current time every second for live timers
   useEffect(() => {
