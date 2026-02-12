@@ -16,11 +16,24 @@ export const useScreenCapture = ({ stream, attendanceId, userId, isOnBreak }: Us
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const videoReadyRef = useRef(false);
 
+  // Use refs for values needed in the interval callback to avoid dependency changes
+  const streamRef = useRef(stream);
+  const attendanceIdRef = useRef(attendanceId);
+  const userIdRef = useRef(userId);
+
+  useEffect(() => { streamRef.current = stream; }, [stream]);
+  useEffect(() => { attendanceIdRef.current = attendanceId; }, [attendanceId]);
+  useEffect(() => { userIdRef.current = userId; }, [userId]);
+
   const captureAndUpload = useCallback(async () => {
-    if (!stream || !attendanceId || !userId || !videoRef.current || !canvasRef.current) {
-      console.log('[ScreenCapture] Skipping capture - missing refs:', { 
-        stream: !!stream, attendanceId, userId, 
-        video: !!videoRef.current, canvas: !!canvasRef.current 
+    const currentStream = streamRef.current;
+    const currentAttendanceId = attendanceIdRef.current;
+    const currentUserId = userIdRef.current;
+
+    if (!currentStream || !currentAttendanceId || !currentUserId || !videoRef.current || !canvasRef.current) {
+      console.log('[ScreenCapture] Skipping capture - missing refs:', {
+        stream: !!currentStream, attendanceId: currentAttendanceId, userId: currentUserId,
+        video: !!videoRef.current, canvas: !!canvasRef.current
       });
       return;
     }
@@ -53,7 +66,7 @@ export const useScreenCapture = ({ stream, attendanceId, userId, isOnBreak }: Us
       }
 
       const timestamp = new Date().toISOString();
-      const fileName = `${userId}/${attendanceId}/${timestamp.replace(/[:.]/g, '-')}.jpg`;
+      const fileName = `${currentUserId}/${currentAttendanceId}/${timestamp.replace(/[:.]/g, '-')}.jpg`;
 
       console.log('[ScreenCapture] Uploading capture:', fileName, 'size:', blob.size);
 
@@ -69,8 +82,8 @@ export const useScreenCapture = ({ stream, attendanceId, userId, isOnBreak }: Us
       const { error: insertError } = await (supabase as any)
         .from('screen_captures')
         .insert({
-          attendance_id: attendanceId,
-          user_id: userId,
+          attendance_id: currentAttendanceId,
+          user_id: currentUserId,
           image_url: fileName,
           captured_at: timestamp,
         });
@@ -83,7 +96,7 @@ export const useScreenCapture = ({ stream, attendanceId, userId, isOnBreak }: Us
     } catch (err) {
       console.error('[ScreenCapture] Capture error:', err);
     }
-  }, [stream, attendanceId, userId]);
+  }, []); // No dependencies - uses refs instead
 
   // Set up video element with the stream
   useEffect(() => {
@@ -128,6 +141,9 @@ export const useScreenCapture = ({ stream, attendanceId, userId, isOnBreak }: Us
   useEffect(() => {
     if (!stream || !attendanceId || !userId || isOnBreak) {
       if (intervalRef.current) {
+        console.log('[ScreenCapture] Clearing interval - conditions not met:', {
+          stream: !!stream, attendanceId, userId, isOnBreak
+        });
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
@@ -136,9 +152,12 @@ export const useScreenCapture = ({ stream, attendanceId, userId, isOnBreak }: Us
 
     // Wait for video to be ready before first capture
     const startCapturing = () => {
-      console.log('[ScreenCapture] Starting capture interval');
+      console.log('[ScreenCapture] Starting capture interval (every', CAPTURE_INTERVAL_MS / 1000, 'seconds)');
       captureAndUpload();
-      intervalRef.current = setInterval(captureAndUpload, CAPTURE_INTERVAL_MS);
+      intervalRef.current = setInterval(() => {
+        console.log('[ScreenCapture] Interval tick - capturing...');
+        captureAndUpload();
+      }, CAPTURE_INTERVAL_MS);
     };
 
     // Poll until video is ready (max 5 seconds)
@@ -159,6 +178,7 @@ export const useScreenCapture = ({ stream, attendanceId, userId, isOnBreak }: Us
     return () => {
       clearInterval(checkReady);
       if (intervalRef.current) {
+        console.log('[ScreenCapture] Cleanup - clearing interval');
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
