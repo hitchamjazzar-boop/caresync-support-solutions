@@ -58,7 +58,7 @@ export const AttendanceHistory = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>('week');
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('week');
   const [employees, setEmployees] = useState<Array<{ id: string; full_name: string }>>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
@@ -104,12 +104,12 @@ export const AttendanceHistory = () => {
 
       // Calculate date range based on selected period
       const now = new Date();
-      let startDate: Date;
+      let startDate: Date | null = null;
 
       if (selectedPeriod === 'week') {
         startDate = new Date(now);
         startDate.setDate(now.getDate() - 7);
-      } else {
+      } else if (selectedPeriod === 'month') {
         startDate = new Date(now);
         startDate.setDate(now.getDate() - 30);
       }
@@ -118,8 +118,11 @@ export const AttendanceHistory = () => {
       let query = supabase
         .from('attendance')
         .select('*')
-        .gte('clock_in', startDate.toISOString())
         .order('clock_in', { ascending: false });
+
+      if (startDate) {
+        query = query.gte('clock_in', startDate.toISOString());
+      }
 
       // If not admin, filter to own records
       if (!roleData) {
@@ -370,10 +373,11 @@ export const AttendanceHistory = () => {
                 </SelectContent>
               </Select>
             )}
-            <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as 'week' | 'month')}>
+            <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as 'week' | 'month' | 'all')}>
               <TabsList>
                 <TabsTrigger value="week">This Week</TabsTrigger>
                 <TabsTrigger value="month">This Month</TabsTrigger>
+                <TabsTrigger value="all">All Time</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
