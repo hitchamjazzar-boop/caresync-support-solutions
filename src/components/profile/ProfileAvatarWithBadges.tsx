@@ -39,7 +39,7 @@ export const ProfileAvatarWithBadges = ({
       
       // Set up real-time listener for profile changes
       const channel = supabase
-        .channel(`profile-status-${userId}`)
+        .channel(`profile-status-${userId}-${Math.random().toString(36).slice(2)}`)
         .on(
           'postgres_changes',
           {
