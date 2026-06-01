@@ -117,50 +117,72 @@ export const AttendanceHistory = () => {
         startDate.setDate(now.getDate() - 30);
       }
 
-      // Fetch attendance records without join
-      let query = supabase
-        .from('attendance')
-        .select('*')
-        .order('clock_in', { ascending: false });
+      const allRecords: AttendanceRecord[] = [];
+      let pageStart = 0;
+      let hasMoreRecords = true;
+      let fetchError: unknown = null;
 
-      if (startDate) {
-        query = query.gte('clock_in', startDate.toISOString());
+      while (hasMoreRecords) {
+        let query = supabase
+          .from('attendance')
+          .select('*')
+          .order('clock_in', { ascending: false })
+          .range(pageStart, pageStart + ATTENDANCE_PAGE_SIZE - 1);
+
+        if (startDate) {
+          query = query.gte('clock_in', startDate.toISOString());
+        }
+
+        // If not admin, filter to own records
+        if (!roleData) {
+          query = query.eq('user_id', user.id);
+        } else if (selectedEmployee !== 'all') {
+          query = query.eq('user_id', selectedEmployee);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          fetchError = error;
+          break;
+        }
+
+        allRecords.push(...((data || []) as AttendanceRecord[]));
+        hasMoreRecords = (data?.length || 0) === ATTENDANCE_PAGE_SIZE;
+        pageStart += ATTENDANCE_PAGE_SIZE;
       }
 
-      // If not admin, filter to own records
-      if (!roleData) {
-        query = query.eq('user_id', user.id);
-      } else if (selectedEmployee !== 'all') {
-        query = query.eq('user_id', selectedEmployee);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
+      if (fetchError) {
         toast.error('Failed to load attendance records');
-        console.error(error);
+        console.error(fetchError);
       } else {
-        setRecords(data || []);
+        setRecords(allRecords);
         
         // Fetch breaks for all attendance records
-        if (data && data.length > 0) {
-          const attendanceIds = data.map((r) => r.id);
-          const { data: breaksData } = await supabase
-            .from('attendance_breaks')
-            .select('*')
-            .in('attendance_id', attendanceIds)
-            .order('break_start', { ascending: true });
+        if (allRecords.length > 0) {
+          const attendanceIds = allRecords.map((r) => r.id);
+          const breakResults = await Promise.all(
+            Array.from({ length: Math.ceil(attendanceIds.length / BREAKS_BATCH_SIZE) }, (_, index) => {
+              const batch = attendanceIds.slice(index * BREAKS_BATCH_SIZE, (index + 1) * BREAKS_BATCH_SIZE);
+              return supabase
+                .from('attendance_breaks')
+                .select('*')
+                .in('attendance_id', batch)
+                .order('break_start', { ascending: true });
+            })
+          );
 
-          if (breaksData) {
-            const breaksByAttendance = breaksData.reduce((acc, brk) => {
-              if (!acc[brk.attendance_id]) {
-                acc[brk.attendance_id] = [];
-              }
-              acc[brk.attendance_id].push(brk);
-              return acc;
-            }, {} as Record<string, BreakRecord[]>);
-            setBreaksMap(breaksByAttendance);
-          }
+          const breaksData = breakResults.flatMap((result) => result.data || []);
+          const breaksByAttendance = breaksData.reduce((acc, brk) => {
+            if (!acc[brk.attendance_id]) {
+              acc[brk.attendance_id] = [];
+            }
+            acc[brk.attendance_id].push(brk);
+            return acc;
+          }, {} as Record<string, BreakRecord[]>);
+          setBreaksMap(breaksByAttendance);
+        } else {
+          setBreaksMap({});
         }
       }
 
