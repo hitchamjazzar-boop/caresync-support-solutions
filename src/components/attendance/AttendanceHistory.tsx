@@ -32,6 +32,9 @@ const BREAK_TYPES = [
   { value: 'other', label: 'Other', icon: MoreHorizontal, color: 'text-muted-foreground' },
 ] as const;
 
+const ATTENDANCE_PAGE_SIZE = 1000;
+const BREAKS_BATCH_SIZE = 100;
+
 interface BreakRecord {
   id: string;
   attendance_id: string;
@@ -58,7 +61,7 @@ export const AttendanceHistory = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('week');
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('all');
   const [employees, setEmployees] = useState<Array<{ id: string; full_name: string }>>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
