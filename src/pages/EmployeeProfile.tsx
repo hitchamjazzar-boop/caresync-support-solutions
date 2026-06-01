@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { ResetPasswordDialog } from '@/components/employees/ResetPasswordDialog';
+import { DeleteEmployeeDialog } from '@/components/employees/DeleteEmployeeDialog';
 import { ProfilePhotoUpload } from '@/components/profile/ProfilePhotoUpload';
 import { EmployeeAchievementsBadges } from '@/components/profile/EmployeeAchievementsBadges';
 import { ProfileAvatarWithBadges } from '@/components/profile/ProfileAvatarWithBadges';
@@ -112,17 +113,7 @@ export default function EmployeeProfile() {
     // Wait for admin status to load before checking permissions
     if (adminLoading) return;
 
-    // Check permissions
-    if (!isAdmin && user?.id !== id) {
-      toast({
-        title: 'Access Denied',
-        description: 'You can only view your own profile',
-        variant: 'destructive',
-      });
-      navigate('/employees');
-      return;
-    }
-
+    // All authenticated users can view any profile (transparency)
     fetchEmployeeData();
   }, [id, user, isAdmin, adminLoading]);
 
@@ -142,13 +133,12 @@ export default function EmployeeProfile() {
       if (profileError) throw profileError;
       setProfile(profileData);
 
-      // Fetch attendance records (last 30 days)
+      // Fetch ALL attendance records
       const { data: attendanceData, error: attendanceError } = await supabase
         .from('attendance')
         .select('*')
         .eq('user_id', id)
-        .order('clock_in', { ascending: false })
-        .limit(20);
+        .order('clock_in', { ascending: false });
 
       if (attendanceError) throw attendanceError;
       setAttendance(attendanceData || []);
@@ -237,12 +227,19 @@ export default function EmployeeProfile() {
           </div>
         </div>
         {isAdmin && id !== user?.id && (
-          <ResetPasswordDialog 
-            userId={profile.id} 
-            userName={profile.full_name}
-            variant="default"
-            size="default"
-          />
+          <div className="flex items-center gap-2">
+            <ResetPasswordDialog 
+              userId={profile.id} 
+              userName={profile.full_name}
+              variant="default"
+              size="default"
+            />
+            <DeleteEmployeeDialog
+              employeeId={profile.id}
+              employeeName={profile.full_name}
+              onSuccess={() => navigate('/employees')}
+            />
+          </div>
         )}
       </div>
 
@@ -319,7 +316,7 @@ export default function EmployeeProfile() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalHours.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">Last 20 records</p>
+            <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
 
@@ -330,7 +327,7 @@ export default function EmployeeProfile() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.completedDays}</div>
-            <p className="text-xs text-muted-foreground">Last 20 records</p>
+            <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
 
@@ -535,7 +532,7 @@ export default function EmployeeProfile() {
           <Card>
             <CardHeader>
               <CardTitle>Attendance History</CardTitle>
-              <CardDescription>Recent clock in/out records</CardDescription>
+              <CardDescription>Complete clock in/out history ({attendance.length} records)</CardDescription>
             </CardHeader>
             <CardContent>
               {attendance.length === 0 ? (
