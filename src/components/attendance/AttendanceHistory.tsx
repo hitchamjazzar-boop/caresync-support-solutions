@@ -374,7 +374,7 @@ export const AttendanceHistory = () => {
               Total Hours: <span className="font-semibold text-foreground">{getTotalHours()}</span>
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 items-center">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 items-stretch sm:items-center">
             <Button
               variant="ghost"
               size="icon"
@@ -399,7 +399,7 @@ export const AttendanceHistory = () => {
               </Select>
             )}
             <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as 'week' | 'month' | 'all')}>
-              <TabsList>
+              <TabsList className="grid h-auto w-full grid-cols-3 sm:w-auto sm:inline-flex">
                 <TabsTrigger value="week">This Week</TabsTrigger>
                 <TabsTrigger value="month">This Month</TabsTrigger>
                 <TabsTrigger value="all">All Time</TabsTrigger>
