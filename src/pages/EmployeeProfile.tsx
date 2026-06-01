@@ -93,6 +93,8 @@ interface EODReport {
   issues: string | null;
 }
 
+const ATTENDANCE_PAGE_SIZE = 1000;
+
 export default function EmployeeProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -133,15 +135,27 @@ export default function EmployeeProfile() {
       if (profileError) throw profileError;
       setProfile(profileData);
 
-      // Fetch ALL attendance records
-      const { data: attendanceData, error: attendanceError } = await supabase
-        .from('attendance')
-        .select('*')
-        .eq('user_id', id)
-        .order('clock_in', { ascending: false });
+      // Fetch ALL attendance records, including beyond the backend's default page size
+      const allAttendance: AttendanceRecord[] = [];
+      let pageStart = 0;
+      let hasMoreAttendance = true;
 
-      if (attendanceError) throw attendanceError;
-      setAttendance(attendanceData || []);
+      while (hasMoreAttendance) {
+        const { data: attendanceData, error: attendanceError } = await supabase
+          .from('attendance')
+          .select('*')
+          .eq('user_id', id)
+          .order('clock_in', { ascending: false })
+          .range(pageStart, pageStart + ATTENDANCE_PAGE_SIZE - 1);
+
+        if (attendanceError) throw attendanceError;
+
+        allAttendance.push(...((attendanceData || []) as AttendanceRecord[]));
+        hasMoreAttendance = (attendanceData?.length || 0) === ATTENDANCE_PAGE_SIZE;
+        pageStart += ATTENDANCE_PAGE_SIZE;
+      }
+
+      setAttendance(allAttendance);
 
       // Fetch payroll records
       const { data: payrollData, error: payrollError } = await supabase

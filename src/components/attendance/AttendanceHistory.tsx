@@ -32,6 +32,9 @@ const BREAK_TYPES = [
   { value: 'other', label: 'Other', icon: MoreHorizontal, color: 'text-muted-foreground' },
 ] as const;
 
+const ATTENDANCE_PAGE_SIZE = 1000;
+const BREAKS_BATCH_SIZE = 100;
+
 interface BreakRecord {
   id: string;
   attendance_id: string;
@@ -58,7 +61,7 @@ export const AttendanceHistory = () => {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('week');
+  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'all'>('all');
   const [employees, setEmployees] = useState<Array<{ id: string; full_name: string }>>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [profilesMap, setProfilesMap] = useState<Record<string, string>>({});
@@ -114,50 +117,72 @@ export const AttendanceHistory = () => {
         startDate.setDate(now.getDate() - 30);
       }
 
-      // Fetch attendance records without join
-      let query = supabase
-        .from('attendance')
-        .select('*')
-        .order('clock_in', { ascending: false });
+      const allRecords: AttendanceRecord[] = [];
+      let pageStart = 0;
+      let hasMoreRecords = true;
+      let fetchError: unknown = null;
 
-      if (startDate) {
-        query = query.gte('clock_in', startDate.toISOString());
+      while (hasMoreRecords) {
+        let query = supabase
+          .from('attendance')
+          .select('*')
+          .order('clock_in', { ascending: false })
+          .range(pageStart, pageStart + ATTENDANCE_PAGE_SIZE - 1);
+
+        if (startDate) {
+          query = query.gte('clock_in', startDate.toISOString());
+        }
+
+        // If not admin, filter to own records
+        if (!roleData) {
+          query = query.eq('user_id', user.id);
+        } else if (selectedEmployee !== 'all') {
+          query = query.eq('user_id', selectedEmployee);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          fetchError = error;
+          break;
+        }
+
+        allRecords.push(...((data || []) as AttendanceRecord[]));
+        hasMoreRecords = (data?.length || 0) === ATTENDANCE_PAGE_SIZE;
+        pageStart += ATTENDANCE_PAGE_SIZE;
       }
 
-      // If not admin, filter to own records
-      if (!roleData) {
-        query = query.eq('user_id', user.id);
-      } else if (selectedEmployee !== 'all') {
-        query = query.eq('user_id', selectedEmployee);
-      }
-
-      const { data, error } = await query;
-
-      if (error) {
+      if (fetchError) {
         toast.error('Failed to load attendance records');
-        console.error(error);
+        console.error(fetchError);
       } else {
-        setRecords(data || []);
+        setRecords(allRecords);
         
         // Fetch breaks for all attendance records
-        if (data && data.length > 0) {
-          const attendanceIds = data.map((r) => r.id);
-          const { data: breaksData } = await supabase
-            .from('attendance_breaks')
-            .select('*')
-            .in('attendance_id', attendanceIds)
-            .order('break_start', { ascending: true });
+        if (allRecords.length > 0) {
+          const attendanceIds = allRecords.map((r) => r.id);
+          const breakResults = await Promise.all(
+            Array.from({ length: Math.ceil(attendanceIds.length / BREAKS_BATCH_SIZE) }, (_, index) => {
+              const batch = attendanceIds.slice(index * BREAKS_BATCH_SIZE, (index + 1) * BREAKS_BATCH_SIZE);
+              return supabase
+                .from('attendance_breaks')
+                .select('*')
+                .in('attendance_id', batch)
+                .order('break_start', { ascending: true });
+            })
+          );
 
-          if (breaksData) {
-            const breaksByAttendance = breaksData.reduce((acc, brk) => {
-              if (!acc[brk.attendance_id]) {
-                acc[brk.attendance_id] = [];
-              }
-              acc[brk.attendance_id].push(brk);
-              return acc;
-            }, {} as Record<string, BreakRecord[]>);
-            setBreaksMap(breaksByAttendance);
-          }
+          const breaksData = breakResults.flatMap((result) => result.data || []);
+          const breaksByAttendance = breaksData.reduce((acc, brk) => {
+            if (!acc[brk.attendance_id]) {
+              acc[brk.attendance_id] = [];
+            }
+            acc[brk.attendance_id].push(brk);
+            return acc;
+          }, {} as Record<string, BreakRecord[]>);
+          setBreaksMap(breaksByAttendance);
+        } else {
+          setBreaksMap({});
         }
       }
 
@@ -349,7 +374,7 @@ export const AttendanceHistory = () => {
               Total Hours: <span className="font-semibold text-foreground">{getTotalHours()}</span>
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2 items-center">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 items-stretch sm:items-center">
             <Button
               variant="ghost"
               size="icon"
@@ -374,7 +399,7 @@ export const AttendanceHistory = () => {
               </Select>
             )}
             <Tabs value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v as 'week' | 'month' | 'all')}>
-              <TabsList>
+              <TabsList className="grid h-auto w-full grid-cols-3 sm:w-auto sm:inline-flex">
                 <TabsTrigger value="week">This Week</TabsTrigger>
                 <TabsTrigger value="month">This Month</TabsTrigger>
                 <TabsTrigger value="all">All Time</TabsTrigger>
