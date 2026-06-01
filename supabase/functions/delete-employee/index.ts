@@ -53,48 +53,58 @@ Deno.serve(async (req) => {
       throw new Error('Employee ID is required');
     }
 
-    // Delete related records first (in order of dependencies)
-    // 1. Delete EOD reports
-    const { error: eodError } = await supabaseClient
-      .from('eod_reports')
-      .delete()
-      .eq('user_id', employeeId);
+    // Delete from all tables that reference this user (profiles or auth.users)
+    const deleteByUserId: string[] = [
+      'eod_reports',
+      'schedules',
+      'payroll',
+      'attendance',
+      'user_roles',
+      'employee_feedback',
+      'announcement_comments',
+      'announcement_reactions',
+      'notification_acknowledgments',
+      'org_chart',
+      'employee_achievements',
+      'secret_santa_participants',
+      'secret_santa_wishlists',
+      'calendar_event_responses',
+      'admin_permissions',
+    ];
 
-    if (eodError) throw eodError;
+    for (const table of deleteByUserId) {
+      const { error } = await supabaseClient.from(table).delete().eq('user_id', employeeId);
+      if (error) console.error(`Delete ${table} by user_id:`, error.message);
+    }
 
-    // 2. Delete schedules
-    const { error: schedulesError } = await supabaseClient
-      .from('schedules')
-      .delete()
-      .eq('user_id', employeeId);
+    // Tables with multiple FK columns or different column names
+    const multiCol: Array<{ table: string; cols: string[] }> = [
+      { table: 'memos', cols: ['sender_id', 'recipient_id'] },
+      { table: 'announcements', cols: ['featured_user_id'] },
+      { table: 'secret_santa_events', cols: ['created_by'] },
+      { table: 'secret_santa_assignments', cols: ['giver_id', 'receiver_id'] },
+      { table: 'calendar_events', cols: ['created_by'] },
+      { table: 'award_categories', cols: ['created_by'] },
+      { table: 'voting_periods', cols: ['winner_id'] },
+      { table: 'employee_nominations', cols: ['approved_by'] },
+      { table: 'shoutout_requests', cols: ['target_user_id'] },
+      { table: 'feedback_requests', cols: ['target_user_id'] },
+      { table: 'evaluation_requests', cols: ['target_employee_id'] },
+    ];
 
-    if (schedulesError) throw schedulesError;
+    for (const { table, cols } of multiCol) {
+      for (const col of cols) {
+        const { error } = await supabaseClient.from(table).delete().eq(col, employeeId);
+        if (error) console.error(`Delete ${table} by ${col}:`, error.message);
+      }
+    }
 
-    // 3. Delete payroll records
-    const { error: payrollError } = await supabaseClient
-      .from('payroll')
-      .delete()
-      .eq('user_id', employeeId);
+    // Null out optional references
+    await supabaseClient.from('memos').update({ resolved_by: null }).eq('resolved_by', employeeId);
+    await supabaseClient.from('employee_achievements').update({ awarded_by: null }).eq('awarded_by', employeeId);
+    await supabaseClient.from('admin_permissions').update({ granted_by: null }).eq('granted_by', employeeId);
 
-    if (payrollError) throw payrollError;
-
-    // 4. Delete attendance records
-    const { error: attendanceError } = await supabaseClient
-      .from('attendance')
-      .delete()
-      .eq('user_id', employeeId);
-
-    if (attendanceError) throw attendanceError;
-
-    // 5. Delete user roles
-    const { error: rolesError } = await supabaseClient
-      .from('user_roles')
-      .delete()
-      .eq('user_id', employeeId);
-
-    if (rolesError) throw rolesError;
-
-    // 6. Delete profile
+    // Delete profile
     const { error: profileError } = await supabaseClient
       .from('profiles')
       .delete()
