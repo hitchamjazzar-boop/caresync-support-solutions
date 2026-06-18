@@ -247,11 +247,22 @@ export default function Employees() {
                       }}
                     />
                   </div>
-                  <DeleteEmployeeDialog
-                    employeeId={employee.id}
-                    employeeName={employee.full_name}
-                    onSuccess={fetchEmployees}
-                  />
+                  {employee.archived_at ? (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleRestore(employee.id, employee.full_name)}
+                    >
+                      Restore Employee
+                    </Button>
+                  ) : (
+                    <DeleteEmployeeDialog
+                      employeeId={employee.id}
+                      employeeName={employee.full_name}
+                      onSuccess={fetchEmployees}
+                    />
+                  )}
                 </div>
               )}
             </CardContent>
