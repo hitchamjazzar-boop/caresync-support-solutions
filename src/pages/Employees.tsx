@@ -27,6 +27,7 @@ export default function Employees() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; full_name: string } | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const fetchEmployees = async () => {
     if (!user) return;
@@ -60,6 +61,24 @@ export default function Employees() {
   useEffect(() => {
     fetchEmployees();
   }, [user, isAdmin]);
+
+  const handleRestore = async (employeeId: string, employeeName: string) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ archived_at: null, archived_by: null } as any)
+      .eq('id', employeeId);
+    if (error) {
+      toast.error('Failed to restore employee');
+    } else {
+      toast.success(`${employeeName} restored`);
+      fetchEmployees();
+    }
+  };
+
+  const visibleEmployees = isAdmin
+    ? employees.filter((e) => (showArchived ? !!e.archived_at : !e.archived_at))
+    : employees;
+  const archivedCount = employees.filter((e) => !!e.archived_at).length;
 
   const handleManagePermissions = (employee: { id: string; full_name: string }) => {
     setSelectedEmployee(employee);
