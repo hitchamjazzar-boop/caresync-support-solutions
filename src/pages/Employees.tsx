@@ -99,12 +99,23 @@ export default function Employees() {
           </p>
         </div>
         {isAdmin && (
-          <AddEmployeeDialog onSuccess={fetchEmployees} />
+          <div className="flex gap-2">
+            {(showArchived || archivedCount > 0) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowArchived((v) => !v)}
+              >
+                {showArchived ? 'Show Active' : `Show Archived (${archivedCount})`}
+              </Button>
+            )}
+            <AddEmployeeDialog onSuccess={fetchEmployees} />
+          </div>
         )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {employees.map((employee) => (
+        {visibleEmployees.map((employee) => (
           <Card
             key={employee.id}
             className="flex flex-col cursor-pointer hover:shadow-md transition-shadow"
