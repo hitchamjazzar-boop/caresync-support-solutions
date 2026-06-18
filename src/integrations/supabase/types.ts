@@ -1600,6 +1600,8 @@ export type Database = {
           account_holder_name: string | null
           account_number: string | null
           address: string | null
+          archived_at: string | null
+          archived_by: string | null
           bank_name: string | null
           birthday: string | null
           calendar_color: string | null
@@ -1626,6 +1628,8 @@ export type Database = {
           account_holder_name?: string | null
           account_number?: string | null
           address?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           bank_name?: string | null
           birthday?: string | null
           calendar_color?: string | null
@@ -1652,6 +1656,8 @@ export type Database = {
           account_holder_name?: string | null
           account_number?: string | null
           address?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           bank_name?: string | null
           birthday?: string | null
           calendar_color?: string | null
