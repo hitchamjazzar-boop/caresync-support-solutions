@@ -13,7 +13,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Trash2 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Loader2, UserMinus } from 'lucide-react';
 
 interface DeleteEmployeeDialogProps {
   employeeId: string;
@@ -27,33 +28,35 @@ export const DeleteEmployeeDialog = ({
   onSuccess,
 }: DeleteEmployeeDialogProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleDelete = async () => {
+  const handleOffboard = async () => {
     setLoading(true);
-
     try {
-      // Call secure backend function to delete employee and related data
-      const { data, error } = await supabase.functions.invoke('delete-employee', {
-        body: { employeeId },
-      });
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          archived_at: new Date().toISOString(),
+          archived_by: user?.id ?? null,
+        } as any)
+        .eq('id', employeeId);
 
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
       toast({
-        title: 'Employee Deleted',
-        description: `${employeeName} has been removed from the system`,
+        title: 'Employee Offboarded',
+        description: `${employeeName} has been archived. Their history is preserved and can be restored anytime.`,
       });
 
       setOpen(false);
       onSuccess();
     } catch (error: any) {
-      console.error('Error deleting employee:', error);
+      console.error('Error offboarding employee:', error);
       toast({
-        title: 'Delete Failed',
-        description: error?.message || 'Failed to delete employee. Please try again.',
+        title: 'Offboard Failed',
+        description: error?.message || 'Failed to offboard employee.',
         variant: 'destructive',
       });
     } finally {
@@ -65,28 +68,24 @@ export const DeleteEmployeeDialog = ({
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger asChild>
         <Button variant="destructive" size="sm" className="w-full">
-          <Trash2 className="mr-2 h-4 w-4" />
-          Delete Employee
+          <UserMinus className="mr-2 h-4 w-4" />
+          Offboard Employee
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogTitle>Offboard {employeeName}?</AlertDialogTitle>
           <AlertDialogDescription className="space-y-2">
             <p>
-              This action cannot be undone. This will permanently delete{' '}
-              <strong>{employeeName}</strong>'s account and remove all associated data
-              from the system.
+              This will archive <strong>{employeeName}</strong> and hide them from active
+              employee lists. <strong>All historical data is preserved</strong> (attendance,
+              EOD reports, payroll, etc.) and the employee can be restored at any time from
+              the Archived view.
             </p>
-            <p className="text-destructive font-medium">The following data will be deleted:</p>
-            <ul className="list-disc list-inside text-sm space-y-1">
-              <li>Profile information</li>
-              <li>Attendance records</li>
-              <li>Schedule assignments</li>
-              <li>Payroll history</li>
-              <li>EOD reports</li>
-              <li>User account access</li>
-            </ul>
+            <p className="text-muted-foreground text-sm">
+              The user account remains in the system but will no longer appear in active
+              rosters.
+            </p>
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -94,7 +93,7 @@ export const DeleteEmployeeDialog = ({
           <AlertDialogAction
             onClick={(e) => {
               e.preventDefault();
-              handleDelete();
+              handleOffboard();
             }}
             disabled={loading}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
@@ -102,10 +101,10 @@ export const DeleteEmployeeDialog = ({
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Deleting...
+                Offboarding...
               </>
             ) : (
-              'Delete Employee'
+              'Offboard'
             )}
           </AlertDialogAction>
         </AlertDialogFooter>
