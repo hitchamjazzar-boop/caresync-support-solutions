@@ -27,6 +27,7 @@ export default function Employees() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<{ id: string; full_name: string } | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const fetchEmployees = async () => {
     if (!user) return;
@@ -61,6 +62,24 @@ export default function Employees() {
     fetchEmployees();
   }, [user, isAdmin]);
 
+  const handleRestore = async (employeeId: string, employeeName: string) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ archived_at: null, archived_by: null } as any)
+      .eq('id', employeeId);
+    if (error) {
+      toast.error('Failed to restore employee');
+    } else {
+      toast.success(`${employeeName} restored`);
+      fetchEmployees();
+    }
+  };
+
+  const visibleEmployees = isAdmin
+    ? employees.filter((e) => (showArchived ? !!e.archived_at : !e.archived_at))
+    : employees;
+  const archivedCount = employees.filter((e) => !!e.archived_at).length;
+
   const handleManagePermissions = (employee: { id: string; full_name: string }) => {
     setSelectedEmployee(employee);
     setPermissionsDialogOpen(true);
@@ -80,12 +99,23 @@ export default function Employees() {
           </p>
         </div>
         {isAdmin && (
-          <AddEmployeeDialog onSuccess={fetchEmployees} />
+          <div className="flex gap-2">
+            {(showArchived || archivedCount > 0) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowArchived((v) => !v)}
+              >
+                {showArchived ? 'Show Active' : `Show Archived (${archivedCount})`}
+              </Button>
+            )}
+            <AddEmployeeDialog onSuccess={fetchEmployees} />
+          </div>
         )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {employees.map((employee) => (
+        {visibleEmployees.map((employee) => (
           <Card
             key={employee.id}
             className="flex flex-col cursor-pointer hover:shadow-md transition-shadow"
@@ -217,11 +247,22 @@ export default function Employees() {
                       }}
                     />
                   </div>
-                  <DeleteEmployeeDialog
-                    employeeId={employee.id}
-                    employeeName={employee.full_name}
-                    onSuccess={fetchEmployees}
-                  />
+                  {employee.archived_at ? (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleRestore(employee.id, employee.full_name)}
+                    >
+                      Restore Employee
+                    </Button>
+                  ) : (
+                    <DeleteEmployeeDialog
+                      employeeId={employee.id}
+                      employeeName={employee.full_name}
+                      onSuccess={fetchEmployees}
+                    />
+                  )}
                 </div>
               )}
             </CardContent>
